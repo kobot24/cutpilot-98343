@@ -1,6 +1,6 @@
-
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
+import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 
 export type UploadedFile = {
   id: string;
@@ -138,19 +138,84 @@ export const useFileStorage = () => {
     }
   };
 
+  const createCutContourPath = (width: number, height: number, offset: number): string => {
+    // Create a rectanglar path with rounded corners
+    const offsetPt = offset * 2.83; // Convert mm to points (72 dpi)
+    const x = offsetPt;
+    const y = offsetPt;
+    const w = width - (offsetPt * 2);
+    const h = height - (offsetPt * 2);
+    const r = 10; // Corner radius
+
+    return `M ${x+r} ${y} L ${x+w-r} ${y} Q ${x+w} ${y} ${x+w} ${y+r} L ${x+w} ${y+h-r} Q ${x+w} ${y+h} ${x+w-r} ${y+h} L ${x+r} ${y+h} Q ${x} ${y+h} ${x} ${y+h-r} L ${x} ${y+r} Q ${x} ${y} ${x+r} ${y} Z`;
+  };
+
   const convertToPdf = async (fileId: string) => {
     setIsLoading(true);
     try {
-      // Here we just create a mock PDF conversion
-      // In a real app, this would call an API or use a PDF generation library
+      // Find the file to convert
       const file = files.find(f => f.id === fileId);
-      if (!file) return;
+      if (!file) {
+        toast.error('Datei nicht gefunden');
+        return;
+      }
       
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Create image element to get dimensions
+      const img = document.createElement('img');
+      img.src = file.url;
       
-      // Mock PDF URL (just using the image URL for now)
-      const pdfUrl = file.url;
+      // Wait for image to load
+      await new Promise<void>((resolve) => {
+        img.onload = () => resolve();
+      });
+
+      // Get settings from localStorage
+      const storedSettings = localStorage.getItem('userSettings');
+      const settings = storedSettings 
+        ? JSON.parse(storedSettings)
+        : { cutContourOffset: 3, spotColorName: 'CutContour' };
+      
+      // Create PDF document
+      const pdfDoc = await PDFDocument.create();
+      
+      // Add image to PDF
+      const jpgImage = await pdfDoc.embedJpg(file.url);
+      const imgDims = jpgImage.scale(1);
+
+      // Create page slightly larger than the image
+      const page = pdfDoc.addPage([
+        imgDims.width + 40,
+        imgDims.height + 40
+      ]);
+      
+      // Place image centered on the page
+      page.drawImage(jpgImage, {
+        x: 20,
+        y: 20,
+        width: imgDims.width,
+        height: imgDims.height,
+      });
+      
+      // Add cut contour path
+      page.drawSvgPath(createCutContourPath(imgDims.width + 40, imgDims.height + 40, settings.cutContourOffset), {
+        borderColor: rgb(1, 0, 0), // Using RGB values for spot color simulation
+        borderWidth: 1,
+        borderOpacity: 1,
+      });
+      
+      // Add spot color marker
+      const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+      page.drawText(settings.spotColorName, {
+        x: 5,
+        y: 5,
+        size: 8,
+        font,
+        color: rgb(1, 0, 0), // Same color as the cut contour
+      });
+
+      // Save PDF as base64
+      const pdfBytes = await pdfDoc.save();
+      const pdfUrl = `data:application/pdf;base64,${Buffer.from(pdfBytes).toString('base64')}`;
       
       // Update file with converted PDF URL
       setFiles(files.map(f => 
