@@ -5,8 +5,10 @@ import { Document, Page, pdfjs } from 'react-pdf';
 import 'react-pdf/dist/esm/Page/TextLayer.css';
 import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
 
-// Set up the PDF.js worker source
-pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
+// Set up the PDF.js worker with a local worker source instead of CDN
+// This helps avoid CORS issues and white screens from failed worker loading
+import pdfWorker from 'pdfjs-dist/build/pdf.worker.entry';
+pdfjs.GlobalWorkerOptions.workerSrc = pdfWorker;
 
 type PDFPreviewProps = {
   pdfUrl: string;
@@ -20,14 +22,33 @@ export const PDFPreview = ({ pdfUrl, fileName }: PDFPreviewProps) => {
   const [showCutContour, setShowCutContour] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [pdfDimensions, setPdfDimensions] = useState<{ width: number, height: number } | null>(null);
+  const [loadAttempt, setLoadAttempt] = useState<number>(0);
 
   // Track when PDF URL changes
   useEffect(() => {
+    console.log("PDF URL changed:", pdfUrl ? "Valid URL" : "Empty URL");
     setIsLoading(true);
     setError(null);
+    // Reset the load attempt counter when URL changes
+    setLoadAttempt(0);
   }, [pdfUrl]);
 
+  // If loading fails, retry a few times (helpful for blob URLs that might take time)
+  useEffect(() => {
+    if (error && loadAttempt < 3) {
+      const timer = setTimeout(() => {
+        console.log(`Retrying PDF load (attempt ${loadAttempt + 1})`);
+        setError(null);
+        setIsLoading(true);
+        setLoadAttempt(prev => prev + 1);
+      }, 1000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [error, loadAttempt]);
+
   const handleDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
+    console.log("PDF loaded successfully with", numPages, "pages");
     setNumPages(numPages);
     setIsLoading(false);
     setError(null);
@@ -36,6 +57,7 @@ export const PDFPreview = ({ pdfUrl, fileName }: PDFPreviewProps) => {
   const handlePageLoadSuccess = (page: any) => {
     // Get PDF dimensions from the loaded page
     if (page && page.width && page.height) {
+      console.log(`PDF page dimensions: ${page.width}x${page.height} pt`);
       setPdfDimensions({
         width: page.width,
         height: page.height
@@ -77,6 +99,23 @@ export const PDFPreview = ({ pdfUrl, fileName }: PDFPreviewProps) => {
       `${(pdfDimensions.width / 72 * 2.54).toFixed(1)}×${(pdfDimensions.height / 72 * 2.54).toFixed(1)} cm` : 
       '';
   };
+
+  // If the PDF URL is empty or invalid, show a helpful message
+  if (!pdfUrl || pdfUrl === 'data:application/pdf;base64,') {
+    return (
+      <div className="h-full flex flex-col">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-medium">PDF Vorschau</h3>
+        </div>
+        <div className="flex-1 bg-gray-100 border border-gray-200 rounded-lg overflow-hidden relative flex items-center justify-center">
+          <div className="text-center p-4">
+            <p className="mb-2 text-gray-500">Kein PDF verfügbar</p>
+            <p className="text-sm text-gray-400">Bitte konvertieren Sie zuerst ein Bild</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="h-full flex flex-col">
@@ -120,8 +159,20 @@ export const PDFPreview = ({ pdfUrl, fileName }: PDFPreviewProps) => {
             </svg>
             <p className="text-center mb-2">{error}</p>
             <p className="text-sm text-gray-600 text-center">
-              Hinweis: Das PDF könnte möglicherweise nicht mit Adobe Illustrator kompatibel sein. Versuchen Sie, es mit Adobe Reader zu öffnen.
+              Tipp: Überprüfen Sie die Größe des Bildes. Sehr große Bilder können Probleme verursachen.
             </p>
+            <Button 
+              variant="outline" 
+              size="sm"
+              className="mt-4"
+              onClick={() => {
+                setError(null);
+                setIsLoading(true);
+                setLoadAttempt(prev => prev + 1);
+              }}
+            >
+              Neu laden versuchen
+            </Button>
           </div>
         ) : (
           <Document
@@ -131,6 +182,11 @@ export const PDFPreview = ({ pdfUrl, fileName }: PDFPreviewProps) => {
             className="w-full h-full"
             loading={<div className="w-full h-full flex items-center justify-center">Lade PDF...</div>}
             error={<div className="w-full h-full flex items-center justify-center text-red-500">Fehler beim Laden des PDFs</div>}
+            options={{
+              cMapUrl: 'https://unpkg.com/pdfjs-dist@3.11.174/cmaps/',
+              cMapPacked: true,
+              standardFontDataUrl: 'https://unpkg.com/pdfjs-dist@3.11.174/standard_fonts/'
+            }}
           >
             <Page 
               pageNumber={pageNumber} 
