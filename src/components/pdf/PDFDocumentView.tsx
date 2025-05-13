@@ -1,0 +1,69 @@
+
+import React from 'react';
+import { Document, Page } from 'react-pdf';
+import { PDFCutContour } from './PDFCutContour';
+import { PDFPageIndicator } from './PDFPageIndicator';
+
+type PDFDocumentViewProps = {
+  pdfUrl: string;
+  fileName: string;
+  showCutContour: boolean;
+  pageNumber: number;
+  numPages: number | null;
+  handleDocumentLoadSuccess: ({ numPages }: { numPages: number }) => void;
+  handlePageLoadSuccess: (page: any) => void;
+  handleLoadError: (err: Error) => void;
+  isLoading: boolean;
+  error: string | null;
+};
+
+export const PDFDocumentView = ({ 
+  pdfUrl, 
+  fileName, 
+  showCutContour, 
+  pageNumber, 
+  numPages,
+  handleDocumentLoadSuccess,
+  handlePageLoadSuccess,
+  handleLoadError,
+  isLoading,
+  error
+}: PDFDocumentViewProps) => {
+  return (
+    <>
+      {isLoading && (
+        <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-80 z-10">
+          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
+        </div>
+      )}
+      
+      {!error && (
+        <Document
+          file={pdfUrl}
+          onLoadSuccess={handleDocumentLoadSuccess}
+          onError={handleLoadError}
+          className="w-full h-full"
+          loading={<div className="w-full h-full flex items-center justify-center">Lade PDF...</div>}
+          error={<div className="w-full h-full flex items-center justify-center text-red-500">Fehler beim Laden des PDFs</div>}
+          options={{
+            cMapUrl: 'https://unpkg.com/pdfjs-dist@3.11.174/cmaps/',
+            cMapPacked: true,
+            standardFontDataUrl: 'https://unpkg.com/pdfjs-dist@3.11.174/standard_fonts/'
+          }}
+        >
+          <Page 
+            pageNumber={pageNumber} 
+            width={window.innerWidth * 0.4}
+            renderTextLayer={false}
+            renderAnnotationLayer={false}
+            className="flex justify-center"
+            onLoadSuccess={handlePageLoadSuccess}
+          />
+        </Document>
+      )}
+      
+      <PDFCutContour fileName={fileName} show={showCutContour && !error && !isLoading} />
+      <PDFPageIndicator pageNumber={pageNumber} numPages={numPages} />
+    </>
+  );
+};
