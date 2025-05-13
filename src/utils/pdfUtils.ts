@@ -1,5 +1,5 @@
 
-import { PDFDocument, PDFDict, PDFName, PDFArray, PDFNumber } from 'pdf-lib';
+import { PDFDocument, PDFName, PDFArray, PDFNumber } from 'pdf-lib';
 
 // Create a rectangular path with rounded corners
 export const createCutContourPath = (width: number, height: number, offset: number): string => {
@@ -70,10 +70,16 @@ export const createPdfWithCutContour = async (
   
   // Add resources to the page
   const resources = page.node.Resources();
-  if (!resources.has(PDFName.of('ColorSpace'))) {
-    resources.set(PDFName.of('ColorSpace'), pdfContext.obj({}));
+  if (!resources) return;
+  
+  // Get or create ColorSpace dictionary
+  let colorSpaceDict = resources.get(PDFName.of('ColorSpace'));
+  if (!colorSpaceDict) {
+    colorSpaceDict = pdfContext.obj({});
+    resources.set(PDFName.of('ColorSpace'), colorSpaceDict);
   }
-  const colorSpaceDict = resources.get(PDFName.of('ColorSpace'));
+  
+  // Set the spot color in the ColorSpace dictionary
   if (colorSpaceDict) {
     colorSpaceDict.set(PDFName.of('CS1'), spotColorRef);
   }
@@ -86,10 +92,14 @@ export const createPdfWithCutContour = async (
   });
   const gsRef = pdfContext.register(gsDict);
   
-  if (!resources.has(PDFName.of('ExtGState'))) {
-    resources.set(PDFName.of('ExtGState'), pdfContext.obj({}));
+  // Get or create ExtGState dictionary
+  let extGState = resources.get(PDFName.of('ExtGState'));
+  if (!extGState) {
+    extGState = pdfContext.obj({});
+    resources.set(PDFName.of('ExtGState'), extGState);
   }
-  const extGState = resources.get(PDFName.of('ExtGState'));
+  
+  // Set the graphics state in the ExtGState dictionary
   if (extGState) {
     extGState.set(PDFName.of('GS1'), gsRef);
   }
