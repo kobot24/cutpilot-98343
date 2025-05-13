@@ -1,25 +1,6 @@
 
 import { PDFName, PDFNumber, PDFContext } from 'pdf-lib';
-
-// Constants for DPI conversion
-const POINTS_PER_INCH = 72; // PDF standard
-const CM_PER_INCH = 2.54;
-const MM_PER_INCH = 25.4;
-
-// Convert cm to points
-export const cmToPoints = (cm: number): number => {
-  return (cm * POINTS_PER_INCH) / CM_PER_INCH;
-};
-
-// Convert mm to points
-export const mmToPoints = (mm: number): number => {
-  return (mm * POINTS_PER_INCH) / MM_PER_INCH;
-};
-
-// Convert points to cm
-export const pointsToCm = (points: number): number => {
-  return (points * CM_PER_INCH) / POINTS_PER_INCH;
-};
+import { mmToPoints } from './dimensionUtils';
 
 // Create a rectangular path with rounded corners using explicit PostScript operators
 export const createCutContourPath = (width: number, height: number, offset: number): string => {
