@@ -8,17 +8,17 @@ const MM_PER_INCH = 25.4;
 
 // Convert cm to points
 export const cmToPoints = (cm: number): number => {
-  return (cm / CM_PER_INCH) * POINTS_PER_INCH;
+  return (cm * POINTS_PER_INCH) / CM_PER_INCH;
 };
 
 // Convert mm to points
 export const mmToPoints = (mm: number): number => {
-  return (mm / MM_PER_INCH) * POINTS_PER_INCH;
+  return (mm * POINTS_PER_INCH) / MM_PER_INCH;
 };
 
 // Convert points to cm
 export const pointsToCm = (points: number): number => {
-  return (points / POINTS_PER_INCH) * CM_PER_INCH;
+  return (points * CM_PER_INCH) / POINTS_PER_INCH;
 };
 
 // Create a rectangular path with rounded corners using explicit PostScript operators

@@ -27,21 +27,26 @@ export const createPdfWithCutContour = async (
     // Add image to PDF - preserving original dimensions
     const jpgImage = await pdfDoc.embedJpg(await fetch(imageUrl).then(r => r.arrayBuffer()));
     
-    // Use natural dimensions directly from the image
-    const naturalWidth = img.naturalWidth;  // Get actual pixel width
-    const naturalHeight = img.naturalHeight; // Get actual pixel height
+    // Calculate the desired physical size in cm (based on 72 DPI standard for PDFs)
+    // We'll determine the actual physical size based on the image's natural dimensions
+    // Assuming a target DPI of 300 for print quality
+    const TARGET_DPI = 300;
+    const POINTS_PER_INCH = 72;
+    const DPI_SCALE_FACTOR = POINTS_PER_INCH / TARGET_DPI;
     
-    // Determine the target page size in physical dimensions (cm)
-    // Calculate based on standard 72 DPI for PDF
-    const widthInCm = pointsToCm(naturalWidth);
-    const heightInCm = pointsToCm(naturalHeight);
+    // Calculate the target page size in physical dimensions (cm)
+    // For a 300 DPI image, divide the pixel dimensions by 300 and multiply by 2.54 (cm per inch)
+    const widthInCm = (img.naturalWidth / TARGET_DPI) * 2.54;
+    const heightInCm = (img.naturalHeight / TARGET_DPI) * 2.54;
     
-    console.log(`Image dimensions: ${naturalWidth}x${naturalHeight} pixels (${widthInCm.toFixed(2)}x${heightInCm.toFixed(2)} cm)`);
+    console.log(`Image dimensions: ${img.naturalWidth}x${img.naturalHeight} pixels`);
+    console.log(`Target physical size: ${widthInCm.toFixed(2)}x${heightInCm.toFixed(2)} cm`);
     
-    // We want the physical size to match, so convert to points for the PDF
-    // This ensures the PDF page will be the same physical size as the image
-    const pdfPageWidth = naturalWidth;
-    const pdfPageHeight = naturalHeight;
+    // Convert from cm to points for the PDF
+    const pdfPageWidth = cmToPoints(widthInCm);
+    const pdfPageHeight = cmToPoints(heightInCm);
+    
+    console.log(`PDF page size in points: ${pdfPageWidth.toFixed(2)}x${pdfPageHeight.toFixed(2)} pt`);
     
     // Create page with dimensions that match the physical size
     const page = pdfDoc.addPage([pdfPageWidth, pdfPageHeight]);
