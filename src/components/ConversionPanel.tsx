@@ -73,29 +73,29 @@ export const ConversionPanel = ({
       </div>
 
       {/* Full-width preview section at the top */}
-      <Card className="overflow-hidden">
-        <CardContent className="p-4">
-          <div className="w-full">
-            {selectedFile.convertedPdfUrl ? (
-              <PDFPreview 
-                pdfUrl={selectedFile.convertedPdfUrl} 
-                fileName={selectedFile.name.replace(/\.[^/.]+$/, '.pdf')}
+      <Card className="overflow-hidden w-full">
+        {selectedFile.convertedPdfUrl ? (
+          <CardContent className="p-4">
+            <PDFPreview 
+              pdfUrl={selectedFile.convertedPdfUrl} 
+              fileName={selectedFile.name.replace(/\.[^/.]+$/, '.pdf')}
+            />
+          </CardContent>
+        ) : (
+          <CardContent className="p-4">
+            <AspectRatio ratio={21/9} className="bg-gray-100 rounded-md overflow-hidden">
+              <img
+                src={selectedFile.url}
+                alt={selectedFile.name}
+                className="object-contain w-full h-full"
               />
-            ) : (
-              <AspectRatio ratio={21/9} className="bg-gray-100 rounded-md overflow-hidden">
-                <img
-                  src={selectedFile.url}
-                  alt={selectedFile.name}
-                  className="object-contain w-full h-full"
-                />
-              </AspectRatio>
-            )}
-          </div>
-        </CardContent>
+            </AspectRatio>
+          </CardContent>
+        )}
       </Card>
 
       {/* Grid with info and convert button */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Card className="col-span-1">
           <CardContent className="p-6 space-y-4">
             <h3 className="text-lg font-medium">Dateiinformation</h3>

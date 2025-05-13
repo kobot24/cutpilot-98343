@@ -69,7 +69,7 @@ export const PlateCanvas = ({ items, onItemsChange }: PlateCanvasProps) => {
   return (
     <div 
       ref={canvasRef}
-      className="w-full h-[60vh] bg-white print-plate relative border border-gray-200 rounded"
+      className="w-full h-[60vh] bg-white print-plate relative border border-gray-200 rounded-lg overflow-hidden"
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
       onMouseLeave={handleMouseUp}
