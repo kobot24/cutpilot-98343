@@ -1,4 +1,3 @@
-
 import { PDFDocument, PDFArray } from 'pdf-lib';
 import { createCutContourPath, createSpotColor, createCutContourGraphicsState } from './cutContourUtils';
 import { setPdfMetadata, addPdfXCompatibility, arrayBufferToBase64 } from './pdfMetadataUtils';
@@ -31,20 +30,15 @@ export const createPdfWithCutContour = async (
     const naturalWidth = img.naturalWidth;  // Get actual pixel width
     const naturalHeight = img.naturalHeight; // Get actual pixel height
     
-    // Convert offset from mm to points (1mm ≈ 2.83 points at 72 DPI)
-    const offsetPt = settings.cutContourOffset * 2.83;
+    // Create page with EXACT image dimensions - no extra space for offset
+    const page = pdfDoc.addPage([naturalWidth, naturalHeight]);
     
-    // Create page with dimensions that include image size PLUS the offset on all sides
-    const pageWidth = naturalWidth + (offsetPt * 2);
-    const pageHeight = naturalHeight + (offsetPt * 2);
-    const page = pdfDoc.addPage([pageWidth, pageHeight]);
-    
-    // Place image at offset position so there's space for the cut contour
+    // Place image at exact coordinates (0,0) - no offset
     page.drawImage(jpgImage, {
-      x: offsetPt,  // Position image with offset from left edge
-      y: offsetPt,  // Position image with offset from bottom edge
-      width: naturalWidth,  // Use original image width
-      height: naturalHeight, // Use original image height
+      x: 0,
+      y: 0,
+      width: naturalWidth,
+      height: naturalHeight,
     });
     
     const pdfContext = pdfDoc.context;
@@ -64,12 +58,12 @@ export const createPdfWithCutContour = async (
     // Add the graphics state to the page resources
     addGraphicsStateToResources(page, pdfContext, gsRef);
     
-    // Define cut contour path data based on entire page dimensions
-    // The offset is applied by making the path larger than the image
+    // Define cut contour path data based on image dimensions
+    // We now pass the offset to create an INSET path from the image edges
     const pathData = createCutContourPath(
       naturalWidth, 
       naturalHeight, 
-      settings.cutContourOffset // Pass the actual offset value
+      settings.cutContourOffset // Pass the offset to create an inset path
     );
     
     // Add the cut contour path to the page

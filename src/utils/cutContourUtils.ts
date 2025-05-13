@@ -6,12 +6,12 @@ export const createCutContourPath = (width: number, height: number, offset: numb
   // Convert mm to points (1mm ≈ 2.83 points at 72 DPI)
   const offsetPt = offset * 2.83;
   
-  // Create a path that's LARGER than the image by the offset
-  // The path starts at negative coordinates to create space around the image
-  const x = -offsetPt;
-  const y = -offsetPt;
-  const w = width + (offsetPt * 2); // Wider than the image
-  const h = height + (offsetPt * 2); // Taller than the image
+  // Create a path that's INSET from the image edges by the offset
+  // This creates a cutting path inside the image boundaries
+  const x = offsetPt;
+  const y = offsetPt;
+  const w = width - (offsetPt * 2); // Narrower than the image
+  const h = height - (offsetPt * 2); // Shorter than the image
   const r = 0; // No corner radius for precise cutting
   
   // Format with proper PostScript path operators and spacing
