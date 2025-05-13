@@ -12,6 +12,7 @@ export const addCutContourToPage = (page: PDFPage, pdfContext: PDFContext, pathD
   // Using a raw stream approach for better TypeScript compatibility
   
   // Create the content stream containing the cut contour with proper PDF operators
+  // No longer using 'd' operator for dashed lines - using solid lines instead
   const cutContourStream = pdfContext.stream(`
 q
 /CutContour cs
