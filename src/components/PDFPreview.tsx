@@ -69,18 +69,20 @@ export const PDFPreview = ({ pdfUrl, fileName }: PDFPreviewProps) => {
         {error ? (
           <PDFErrorDisplay error={error} retryLoading={retryLoading} />
         ) : (
-          <PDFDocumentView
-            pdfUrl={pdfUrl}
-            fileName={fileName}
-            showCutContour={showCutContour}
-            pageNumber={pageNumber}
-            numPages={numPages}
-            handleDocumentLoadSuccess={handleDocumentLoadSuccess}
-            handlePageLoadSuccess={handlePageLoadSuccess}
-            handleLoadError={handleLoadError}
-            isLoading={isLoading}
-            error={error}
-          />
+          <div className="w-full h-full flex flex-col">
+            <PDFDocumentView
+              pdfUrl={pdfUrl}
+              fileName={fileName}
+              showCutContour={showCutContour}
+              pageNumber={pageNumber}
+              numPages={numPages}
+              handleDocumentLoadSuccess={handleDocumentLoadSuccess}
+              handlePageLoadSuccess={handlePageLoadSuccess}
+              handleLoadError={handleLoadError}
+              isLoading={isLoading}
+              error={error}
+            />
+          </div>
         )}
       </div>
     </div>
