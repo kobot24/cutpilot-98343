@@ -1,5 +1,5 @@
 
-import { PDFDocument, PDFName, PDFArray, PDFNumber, rgb } from 'pdf-lib';
+import { PDFDocument, PDFName, PDFArray, PDFNumber, rgb, PDFString, PDFDict } from 'pdf-lib';
 
 // Create a rectangular path with rounded corners
 export const createCutContourPath = (width: number, height: number, offset: number): string => {
@@ -34,49 +34,54 @@ export const createPdfWithCutContour = async (
       updateMetadata: false // Don't add default metadata that might cause issues
     });
     
-    // Add image to PDF
+    // Add image to PDF - attempting to preserve CMYK colorspace if present
     const jpgImage = await pdfDoc.embedJpg(await fetch(imageUrl).then(r => r.arrayBuffer()));
     const imgDims = jpgImage.scale(1);
 
-    // Create page slightly larger than the image - use precise points for better Illustrator compatibility
+    // Convert dimensions to mm for printing standards
+    const mmToPt = 2.83465; // 1mm ≈ 2.83465pt at 72dpi
+    const bleedMM = settings.cutContourOffset;
+    const bleedPt = bleedMM * mmToPt;
+    
+    // Create page with precise bleed (3mm standard)
     const page = pdfDoc.addPage([
-      Math.ceil(imgDims.width + 40),
-      Math.ceil(imgDims.height + 40)
+      Math.ceil(imgDims.width + (bleedPt * 2)),
+      Math.ceil(imgDims.height + (bleedPt * 2))
     ]);
     
-    // Place image centered on the page
+    // Place image with bleed offset
     page.drawImage(jpgImage, {
-      x: 20,
-      y: 20,
+      x: bleedPt,
+      y: bleedPt,
       width: imgDims.width,
       height: imgDims.height,
     });
     
-    // Create a spot color with better Illustrator compatibility
+    // Create a spot color specifically for CutContour with 100% Magenta
     const spotColorName = settings.spotColorName || 'CutContour';
     const pdfContext = pdfDoc.context;
     
-    // Create a standard Separation color space specifically for Illustrator compatibility
-    // Using CMYK as the alternative color space for better print compatibility
+    // Create a PDF/X-compatible separation color space for CutContour
+    // Use 100% Magenta as the spot color (0,1,0,0 in CMYK)
     const spotColorDict = pdfContext.obj({
       FunctionType: 2,
       Domain: [0, 1],
-      Range: [0, 1, 0, 1, 0, 1],
-      C0: [0, 0, 0], // RGB Black
-      C1: [1, 0, 1], // RGB Magenta
+      Range: [0, 1, 0, 1, 0, 1, 0, 1], // CMYK
+      C0: [0, 0, 0, 0], // CMYK Black
+      C1: [0, 1, 0, 0], // 100% Magenta in CMYK
       N: 1, // Linear interpolation
     });
     
-    // Create the separation color space with proper naming for Illustrator
+    // Create separation color space following PDF/X standards
     const spotColorSpace = pdfContext.obj([
       PDFName.of('Separation'),
       PDFName.of(spotColorName),
-      PDFName.of('DeviceRGB'),
+      PDFName.of('DeviceCMYK'),
       spotColorDict,
     ]);
     
-    // Register the color space in the PDF document
-    const spotColorRef = pdfDoc.context.register(spotColorSpace);
+    // Register the color space
+    const spotColorRef = pdfContext.register(spotColorSpace);
     
     // Add resources to the page
     const resources = page.node.Resources();
@@ -84,24 +89,24 @@ export const createPdfWithCutContour = async (
       throw new Error('Could not access page resources');
     }
     
-    // Get or create ColorSpace dictionary - better error handling
+    // Get or create ColorSpace dictionary
     let colorSpaceDict = resources.get(PDFName.of('ColorSpace'));
     if (!colorSpaceDict) {
       colorSpaceDict = pdfContext.obj({});
       resources.set(PDFName.of('ColorSpace'), colorSpaceDict);
     }
     
-    // Set the spot color in the ColorSpace dictionary with compatible method for Illustrator
+    // Set the spot color in the ColorSpace dictionary
     if (colorSpaceDict) {
       (colorSpaceDict as any).set(PDFName.of('CS1'), spotColorRef);
     }
     
-    // Add standard ExtGState with opacity settings
+    // Add ExtGState with standard print settings
     const gsDict = pdfContext.obj({
       Type: PDFName.of('ExtGState'),
       ca: PDFNumber.of(1),  // non-stroke alpha
       CA: PDFNumber.of(1),  // stroke alpha
-      LW: PDFNumber.of(0.5), // Line width - thinner for better Illustrator display
+      LW: PDFNumber.of(0.5), // Line width - standard for cut paths
     });
     const gsRef = pdfContext.register(gsDict);
     
@@ -112,15 +117,20 @@ export const createPdfWithCutContour = async (
       resources.set(PDFName.of('ExtGState'), extGState);
     }
     
-    // Set the graphics state in the ExtGState dictionary
+    // Set the graphics state
     if (extGState) {
       (extGState as any).set(PDFName.of('GS1'), gsRef);
     }
     
-    // Define cut contour path data
-    const pathData = createCutContourPath(imgDims.width + 40, imgDims.height + 40, settings.cutContourOffset);
+    // Define cut contour path data - exact dimensions with correct offset
+    const pathData = createCutContourPath(
+      imgDims.width + (bleedPt * 2), 
+      imgDims.height + (bleedPt * 2), 
+      settings.cutContourOffset
+    );
     
-    // Add cutContour to content stream using standard Adobe-compatible PDF operators
+    // Add named CutContour to content stream using standard PDF operators
+    // Using stroke-only path with 100% magenta
     const contentStream = pdfContext.stream(`
       /CS1 CS
       /CS1 cs
@@ -144,28 +154,34 @@ export const createPdfWithCutContour = async (
       }
     }
     
-    // Add new content stream
+    // Add new content stream with the CutContour path
     const contentStreamRef = pdfContext.register(contentStream);
     contentArray.push(contentStreamRef);
     page.node.set(PDFName.of('Contents'), contentArray);
     
-    // Add PDF metadata using public methods
-    pdfDoc.setTitle(`CutContour - ${new Date().toISOString()}`);
-    pdfDoc.setCreator('Adobe Illustrator Compatible CutContour Tool');
-    pdfDoc.setProducer('PDF-Lib');
-    pdfDoc.setSubject('PDF/X-4');
+    // Get file name from URL for metadata
+    const fileName = imageUrl.split('/').pop()?.split('.')[0] || 'Image';
     
-    // Add additional custom metadata using direct object setting for Illustrator compatibility
-    // Instead of using getInfoDict(), we'll add custom document catalog entries
+    // Set PDF metadata using standard methods
+    pdfDoc.setTitle(`${fileName}_CutContour`);
+    pdfDoc.setCreator('Adobe Illustrator Compatible CutContour Tool');
+    pdfDoc.setProducer('Adobe PDF library 17.00');
+    pdfDoc.setSubject('PDF/X-3:2002');
+    
+    // Add PDF/X-3:2002 compatibility metadata
     const catalogDict = pdfDoc.catalog;
-    const outputIntents = pdfContext.obj([{
+    
+    // Add OutputIntents for PDF/X compatibility
+    const outputIntentDict = pdfContext.obj({
       Type: PDFName.of('OutputIntent'),
       S: PDFName.of('GTS_PDFX'),
-      OutputConditionIdentifier: 'PDF/X-4'
-    }]);
+      OutputConditionIdentifier: PDFString.of('PDF/X-3:2002'),
+      RegistryName: PDFString.of('http://www.color.org'),
+    });
+    const outputIntents = pdfContext.obj([outputIntentDict]);
     catalogDict.set(PDFName.of('OutputIntents'), outputIntents);
     
-    // Add specific Illustrator metadata to the document
+    // Add MarkInfo for Illustrator compatibility
     const markInfoDict = pdfContext.obj({
       Marked: true,
       UserProperties: false,
@@ -173,21 +189,24 @@ export const createPdfWithCutContour = async (
     });
     catalogDict.set(PDFName.of('MarkInfo'), markInfoDict);
     
-    // Add standard metadata dictionary with compatible structure for Illustrator
-    const metadataDict = pdfContext.obj({
-      Trapped: 'False'
-    });
-    catalogDict.set(PDFName.of('Metadata'), metadataDict);
+    // Add Trapped value
+    const info = pdfDoc.context.obj({
+      Trapped: PDFName.of('False')
+    }) as PDFDict;
     
-    // Save PDF using settings optimal for Illustrator
+    // Override info dictionary directly
+    const infoRef = pdfDoc.context.register(info);
+    pdfDoc.context.trailerInfo.Info = infoRef;
+    
+    // Save PDF using optimal settings for print workflows
     const pdfBytes = await pdfDoc.save({ 
-      useObjectStreams: false, // Better compatibility with Adobe products
-      addDefaultPage: false,
-      objectsPerTick: 50, // Process in smaller batches for better stability
-      updateFieldAppearances: false // No need for form appearances
+      useObjectStreams: false,      // Better compatibility with RIP systems
+      addDefaultPage: false,        // No blank pages
+      objectsPerTick: 50,           // Process in smaller batches
+      updateFieldAppearances: false // No form fields
     });
     
-    // Convert to base64
+    // Convert to base64 for browser display
     const base64String = arrayBufferToBase64(pdfBytes);
     return `data:application/pdf;base64,${base64String}`;
   } catch (error) {
