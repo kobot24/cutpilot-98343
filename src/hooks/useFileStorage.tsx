@@ -1,17 +1,9 @@
-
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
-import { PDFDocument, rgb, StandardFonts, PDFDict, PDFName, PDFArray, PDFNumber } from 'pdf-lib';
-
-export type UploadedFile = {
-  id: string;
-  name: string;
-  url: string;
-  type: string;
-  size: number;
-  createdAt: Date;
-  convertedPdfUrl?: string;
-};
+import { UploadedFile } from '../types/fileTypes';
+import { readFileAsDataURL, generateId } from '../utils/fileUtils';
+import { createPdfWithCutContour } from '../utils/pdfUtils';
+import { useLocalStorage } from './useLocalStorage';
 
 // Constants for storage management
 const MAX_FILES = 10;
@@ -19,49 +11,33 @@ const MAX_FILE_SIZE_MB = 200;
 const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
 
 export const useFileStorage = () => {
-  const [files, setFiles] = useState<UploadedFile[]>([]);
+  const [files, setFiles] = useLocalStorage<UploadedFile[]>('uploadedFiles', [], handleStorageQuotaExceeded);
   const [selectedFile, setSelectedFile] = useState<UploadedFile | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Load files from localStorage on initial render
-  useEffect(() => {
-    const storedFiles = localStorage.getItem('uploadedFiles');
-    if (storedFiles) {
-      try {
-        const parsedFiles = JSON.parse(storedFiles).map((file: any) => ({
-          ...file,
-          createdAt: new Date(file.createdAt),
-        }));
-        setFiles(parsedFiles);
-      } catch (error) {
-        console.error('Error parsing stored files:', error);
-      }
+  // Handle local storage quota exceeded
+  function handleStorageQuotaExceeded() {
+    toast.error(`Speicherlimit erreicht. Bitte löschen Sie einige Dateien.`);
+    
+    // If we have files in state already, keep only the most recent ones
+    if (files.length > 1) {
+      // Keep only the most recent files to recover from this state
+      const sortedFiles = [...files].sort((a, b) => 
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
+      const reducedFiles = sortedFiles.slice(0, Math.max(1, Math.floor(files.length / 2)));
+      setFiles(reducedFiles);
     }
-  }, []);
+  }
 
-  // Save files to localStorage whenever they change
+  // Initialize selected file when files change
   useEffect(() => {
-    try {
-      localStorage.setItem('uploadedFiles', JSON.stringify(files));
-    } catch (error) {
-      console.error('Error saving files to localStorage:', error);
-      
-      // Show error to the user
-      if (error instanceof DOMException && error.name === 'QuotaExceededError') {
-        toast.error(`Speicherlimit erreicht. Bitte löschen Sie einige Dateien.`);
-        
-        // If we have files in state already, keep only the most recent ones
-        if (files.length > 1) {
-          // Keep only the 5 most recent files to recover from this state
-          const sortedFiles = [...files].sort((a, b) => 
-            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-          );
-          const reducedFiles = sortedFiles.slice(0, Math.max(1, Math.floor(files.length / 2)));
-          setFiles(reducedFiles);
-        }
-      }
+    if (files.length > 0 && !selectedFile) {
+      setSelectedFile(files[0]);
+    } else if (files.length === 0) {
+      setSelectedFile(null);
     }
-  }, [files]);
+  }, [files, selectedFile]);
 
   const addFiles = async (newFiles: FileList) => {
     setIsLoading(true);
@@ -139,18 +115,6 @@ export const useFileStorage = () => {
     }
   };
 
-  const createCutContourPath = (width: number, height: number, offset: number): string => {
-    // Create a rectanglar path with rounded corners
-    const offsetPt = offset * 2.83; // Convert mm to points (72 dpi)
-    const x = offsetPt;
-    const y = offsetPt;
-    const w = width - (offsetPt * 2);
-    const h = height - (offsetPt * 2);
-    const r = 10; // Corner radius
-
-    return `M ${x+r} ${y} L ${x+w-r} ${y} Q ${x+w} ${y} ${x+w} ${y+r} L ${x+w} ${y+h-r} Q ${x+w} ${y+h} ${x+w-r} ${y+h} L ${x+r} ${y+h} Q ${x} ${y+h} ${x} ${y+h-r} L ${x} ${y+r} Q ${x} ${y} ${x+r} ${y} Z`;
-  };
-
   const convertToPdf = async (fileId: string) => {
     setIsLoading(true);
     try {
@@ -161,126 +125,14 @@ export const useFileStorage = () => {
         return;
       }
       
-      // Create image element to get dimensions
-      const img = document.createElement('img');
-      img.src = file.url;
-      
-      // Wait for image to load
-      await new Promise<void>((resolve) => {
-        img.onload = () => resolve();
-      });
-
       // Get settings from localStorage
       const storedSettings = localStorage.getItem('userSettings');
       const settings = storedSettings 
         ? JSON.parse(storedSettings)
         : { cutContourOffset: 3, spotColorName: 'CutContour' };
       
-      // Create PDF document
-      const pdfDoc = await PDFDocument.create();
-      
-      // Add image to PDF
-      const jpgImage = await pdfDoc.embedJpg(file.url);
-      const imgDims = jpgImage.scale(1);
-
-      // Create page slightly larger than the image
-      const page = pdfDoc.addPage([
-        imgDims.width + 40,
-        imgDims.height + 40
-      ]);
-      
-      // Place image centered on the page
-      page.drawImage(jpgImage, {
-        x: 20,
-        y: 20,
-        width: imgDims.width,
-        height: imgDims.height,
-      });
-      
-      // Create a spot color
-      const spotColorName = settings.spotColorName || 'CutContour';
-      const pdfContext = pdfDoc.context;
-      
-      // Create a Separation color space
-      const spotColorDict = pdfContext.obj({
-        ColorSpace: PDFName.of('Separation'),
-        Name: PDFName.of(spotColorName),
-        AlternateSpace: PDFName.of('DeviceRGB'),
-        Tint: PDFNumber.of(1),
-        C: PDFNumber.of(0), 
-        M: PDFNumber.of(100),
-        Y: PDFNumber.of(0),
-        K: PDFNumber.of(0),
-      });
-      
-      // Register the color space in the PDF document
-      const spotColorRef = pdfDoc.context.register(spotColorDict);
-      
-      // Add resources to the page
-      const resources = page.node.Resources();
-      if (!resources.ColorSpace) {
-        resources.set(PDFName.of('ColorSpace'), pdfContext.obj({}));
-      }
-      const colorSpaceDict = resources.get(PDFName.of('ColorSpace'));
-      colorSpaceDict.set(PDFName.of('CS1'), spotColorRef);
-      
-      // Add custom ExtGState with opacity settings
-      const gsDict = pdfContext.obj({
-        Type: PDFName.of('ExtGState'),
-        ca: PDFNumber.of(1),
-        CA: PDFNumber.of(1),
-      });
-      const gsRef = pdfContext.register(gsDict);
-      
-      if (!resources.ExtGState) {
-        resources.set(PDFName.of('ExtGState'), pdfContext.obj({}));
-      }
-      const extGState = resources.get(PDFName.of('ExtGState'));
-      extGState.set(PDFName.of('GS1'), gsRef);
-      
-      // Define cut contour path data
-      const pathData = createCutContourPath(imgDims.width + 40, imgDims.height + 40, settings.cutContourOffset);
-      
-      // Add cutContour to content stream
-      const contentStream = pdfContext.stream(`
-        /CS1 CS
-        /CS1 cs
-        1 0 0 RG
-        1 0 0 rg
-        1 w
-        /GS1 gs
-        ${pathData} S
-      `);
-      
-      // Get current content streams
-      const currentContents = page.node.Contents();
-      let contentArray;
-      
-      if (currentContents instanceof PDFArray) {
-        contentArray = currentContents;
-      } else {
-        contentArray = pdfContext.obj([]);
-        if (currentContents) {
-          contentArray.push(currentContents);
-        }
-      }
-      
-      // Add new content stream
-      const contentStreamRef = pdfContext.register(contentStream);
-      contentArray.push(contentStreamRef);
-      page.node.set(PDFName.of('Contents'), contentArray);
-      
-      // Save PDF as base64
-      const pdfBytes = await pdfDoc.save();
-      
-      // Convert to base64 without using Buffer (which may not be available in browser)
-      const uint8Array = new Uint8Array(pdfBytes);
-      const base64String = btoa(
-        Array.from(uint8Array)
-          .map(b => String.fromCharCode(b))
-          .join('')
-      );
-      const pdfUrl = `data:application/pdf;base64,${base64String}`;
+      // Create PDF with cut contour
+      const pdfUrl = await createPdfWithCutContour(file.url, settings);
       
       // Update file with converted PDF URL
       setFiles(files.map(f => 
@@ -321,18 +173,4 @@ export const useFileStorage = () => {
     MAX_FILE_SIZE_MB,
     MAX_FILES
   };
-};
-
-// Helper functions
-const readFileAsDataURL = (file: File): Promise<string> => {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result as string);
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-};
-
-const generateId = (): string => {
-  return Date.now().toString(36) + Math.random().toString(36).substring(2);
 };
