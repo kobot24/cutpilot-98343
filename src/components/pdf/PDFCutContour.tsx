@@ -12,17 +12,17 @@ export const PDFCutContour = ({ fileName, show }: PDFCutContourProps) => {
   
   if (!show) return null;
   
-  // Set inset percentage based on settings offset value (default 3mm)
-  // We use percentage to maintain scale at different viewport sizes
-  const offsetPercentage = `${settings.cutContourOffset}%`;
+  // Use a fixed position that follows the exact edge instead of percentage inset
+  // This will align the CutContour with the black border in the design
   
   return (
     <>
-      {/* Magenta solid border with correct offset */}
+      {/* Magenta solid border following the exact edge of the content */}
       <div 
-        className="absolute pointer-events-none border-2 border-[#D946EF] opacity-70"
+        className="absolute pointer-events-none border-[1.5px] border-[#D946EF] opacity-90"
         style={{ 
-          inset: offsetPercentage,
+          inset: '0', // Place exactly at the edge of the PDF content
+          boxSizing: 'border-box'
         }}
       />
       <div className="absolute bottom-2 right-2 bg-white/80 text-xs px-2 py-1 rounded text-[#D946EF] font-medium">

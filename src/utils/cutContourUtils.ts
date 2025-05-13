@@ -7,12 +7,12 @@ export const createCutContourPath = (width: number, height: number, offset: numb
   // Convert mm to points using our conversion function
   const offsetPt = mmToPoints(offset);
   
-  // Create a path that's INSET from the image edges by the offset
-  // This creates a cutting path inside the image boundaries
-  const x = offsetPt;
-  const y = offsetPt;
-  const w = width - (offsetPt * 2); // Narrower than the image
-  const h = height - (offsetPt * 2); // Shorter than the image
+  // In this case we want to create a path that follows exactly the edge of the PDF
+  // Not inset from it, to match the black border in the design
+  const x = 0;
+  const y = 0;
+  const w = width;
+  const h = height;
   const r = 0; // No corner radius for precise cutting
   
   // Format with proper PostScript path operators and spacing
@@ -70,7 +70,7 @@ export const createCutContourGraphicsState = (pdfContext: PDFContext) => {
     Type: PDFName.of('ExtGState'),
     ca: PDFNumber.of(1),  // non-stroke alpha
     CA: PDFNumber.of(1),  // stroke alpha
-    LW: PDFNumber.of(0.1), // Line width - exactly 0.1pt for cut paths
+    LW: PDFNumber.of(0.5), // Thicker line width - 0.5pt for better visibility
     OPM: 1,               // Overprint mode
     OP: true,             // Overprint
     op: true              // Overprint for fill
