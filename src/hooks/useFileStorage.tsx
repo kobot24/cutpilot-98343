@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
-import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
+import { PDFDocument, rgb, StandardFonts, PDFDict, PDFName, PDFArray, PDFNumber } from 'pdf-lib';
 
 export type UploadedFile = {
   id: string;
@@ -197,23 +197,79 @@ export const useFileStorage = () => {
         height: imgDims.height,
       });
       
-      // Add cut contour path
-      page.drawSvgPath(createCutContourPath(imgDims.width + 40, imgDims.height + 40, settings.cutContourOffset), {
-        borderColor: rgb(1, 0, 0), // Using RGB values for spot color simulation
-        borderWidth: 1,
-        borderOpacity: 1,
+      // Create a spot color
+      const spotColorName = settings.spotColorName || 'CutContour';
+      const pdfContext = pdfDoc.context;
+      
+      // Create a Separation color space
+      const spotColorDict = pdfContext.obj({
+        ColorSpace: PDFName.of('Separation'),
+        Name: PDFName.of(spotColorName),
+        AlternateSpace: PDFName.of('DeviceRGB'),
+        Tint: PDFNumber.of(1),
+        C: PDFNumber.of(0), 
+        M: PDFNumber.of(100),
+        Y: PDFNumber.of(0),
+        K: PDFNumber.of(0),
       });
       
-      // Add spot color marker
-      const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
-      page.drawText(settings.spotColorName, {
-        x: 5,
-        y: 5,
-        size: 8,
-        font,
-        color: rgb(1, 0, 0), // Same color as the cut contour
+      // Register the color space in the PDF document
+      const spotColorRef = pdfDoc.context.register(spotColorDict);
+      
+      // Add resources to the page
+      const resources = page.node.Resources();
+      if (!resources.ColorSpace) {
+        resources.set(PDFName.of('ColorSpace'), pdfContext.obj({}));
+      }
+      const colorSpaceDict = resources.get(PDFName.of('ColorSpace'));
+      colorSpaceDict.set(PDFName.of('CS1'), spotColorRef);
+      
+      // Add custom ExtGState with opacity settings
+      const gsDict = pdfContext.obj({
+        Type: PDFName.of('ExtGState'),
+        ca: PDFNumber.of(1),
+        CA: PDFNumber.of(1),
       });
-
+      const gsRef = pdfContext.register(gsDict);
+      
+      if (!resources.ExtGState) {
+        resources.set(PDFName.of('ExtGState'), pdfContext.obj({}));
+      }
+      const extGState = resources.get(PDFName.of('ExtGState'));
+      extGState.set(PDFName.of('GS1'), gsRef);
+      
+      // Define cut contour path data
+      const pathData = createCutContourPath(imgDims.width + 40, imgDims.height + 40, settings.cutContourOffset);
+      
+      // Add cutContour to content stream
+      const contentStream = pdfContext.stream(`
+        /CS1 CS
+        /CS1 cs
+        1 0 0 RG
+        1 0 0 rg
+        1 w
+        /GS1 gs
+        ${pathData} S
+      `);
+      
+      // Get current content streams
+      const currentContents = page.node.Contents();
+      let contentArray;
+      
+      if (currentContents instanceof PDFArray) {
+        contentArray = currentContents;
+      } else {
+        contentArray = pdfContext.obj([]);
+        if (currentContents) {
+          contentArray.push(currentContents);
+        }
+      }
+      
+      // Add new content stream
+      const contentStreamRef = pdfContext.register(contentStream);
+      contentArray.push(contentStreamRef);
+      page.node.set(PDFName.of('Contents'), contentArray);
+      
       // Save PDF as base64
       const pdfBytes = await pdfDoc.save();
       
