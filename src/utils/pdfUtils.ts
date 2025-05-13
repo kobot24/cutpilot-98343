@@ -26,11 +26,14 @@ export const createPdfWithCutContour = async (
     
     // Add image to PDF - preserving original dimensions
     const jpgImage = await pdfDoc.embedJpg(await fetch(imageUrl).then(r => r.arrayBuffer()));
-    const imgDims = jpgImage.scale(1);
-
-    // Convert dimensions to points (72 dpi)
-    const width = imgDims.width;
-    const height = imgDims.height;
+    
+    // Use natural dimensions directly from the image - no scaling
+    const naturalWidth = img.naturalWidth;  // Get actual pixel width
+    const naturalHeight = img.naturalHeight; // Get actual pixel height
+    
+    // Convert to points (72 dpi) to preserve original dimensions
+    const width = naturalWidth;
+    const height = naturalHeight;
     
     // Create page with exact image dimensions - no resizing
     const page = pdfDoc.addPage([width, height]);
@@ -60,12 +63,12 @@ export const createPdfWithCutContour = async (
     // Add the graphics state to the page resources
     addGraphicsStateToResources(page, pdfContext, gsRef);
     
-    // Define cut contour path data based on image dimensions and offset
-    // The offset is only for the path, not for resizing the image
+    // Define cut contour path data based on image dimensions
+    // We use the exact image dimensions - no offset is applied to the path
     const pathData = createCutContourPath(
       width, 
       height, 
-      settings.cutContourOffset
+      0 // No offset is applied to reduce the size
     );
     
     // Add the cut contour path to the page
