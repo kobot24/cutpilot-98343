@@ -1,7 +1,7 @@
 
 import { PDFName, PDFNumber, PDFContext } from 'pdf-lib';
 
-// Create a rectangular path with rounded corners
+// Create a rectangular path with rounded corners using explicit PostScript operators
 export const createCutContourPath = (width: number, height: number, offset: number): string => {
   // Convert mm to points (72 dpi)
   const offsetPt = offset * 2.83; 
@@ -10,8 +10,21 @@ export const createCutContourPath = (width: number, height: number, offset: numb
   const w = width - (offsetPt * 2);
   const h = height - (offsetPt * 2);
   const r = 10; // Corner radius
-
-  return `M ${x+r} ${y} L ${x+w-r} ${y} Q ${x+w} ${y} ${x+w} ${y+r} L ${x+w} ${y+h-r} Q ${x+w} ${y+h} ${x+w-r} ${y+h} L ${x+r} ${y+h} Q ${x} ${y+h} ${x} ${y+h-r} L ${x} ${y+r} Q ${x} ${y} ${x+r} ${y} Z`;
+  
+  // Format with proper PostScript path operators and spacing
+  // Using explicit moveTo, lineTo, curveTo operators with line breaks
+  return `
+    ${x+r} ${y} m
+    ${x+w-r} ${y} l
+    ${x+w} ${y} ${x+w} ${y} ${x+w} ${y+r} c
+    ${x+w} ${y+h-r} l
+    ${x+w} ${y+h} ${x+w} ${y+h} ${x+w-r} ${y+h} c
+    ${x+r} ${y+h} l
+    ${x} ${y+h} ${x} ${y+h} ${x} ${y+h-r} c
+    ${x} ${y+r} l
+    ${x} ${y} ${x} ${y} ${x+r} ${y} c
+    h
+  `.trim().replace(/\n\s+/g, '\n    ');
 };
 
 // Create spot color for cut contour

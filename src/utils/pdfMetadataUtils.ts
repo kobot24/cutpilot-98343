@@ -1,5 +1,5 @@
 
-import { PDFDocument, PDFName, PDFDict, PDFContext, PDFString } from 'pdf-lib';
+import { PDFDocument, PDFName, PDFDict, PDFContext, PDFString, PDFArray } from 'pdf-lib';
 
 // Set standard PDF metadata for print workflows
 export const setPdfMetadata = (pdfDoc: PDFDocument, fileName: string) => {
@@ -31,6 +31,17 @@ export const addPdfXCompatibility = (pdfDoc: PDFDocument, pdfContext: PDFContext
     Suspects: false
   });
   catalogDict.set(PDFName.of('MarkInfo'), markInfoDict);
+  
+  // Add Illustrator-specific metadata
+  const aiMetadata = pdfContext.obj({
+    AIMetaData: pdfContext.obj({
+      AIVersion: PDFString.of('25.0'),
+      ContainsXMP: true
+    }),
+    AIPrivateData: pdfContext.obj([1]),
+    ContainsXMP: PDFName.of('true')
+  });
+  catalogDict.set(PDFName.of('AdobeIllustratorData'), aiMetadata);
   
   // Add Trapped value
   const info = pdfContext.obj({
