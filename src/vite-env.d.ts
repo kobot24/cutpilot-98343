@@ -10,8 +10,9 @@ declare global {
 
 // Add module declarations for modules that might not have proper TypeScript definitions
 declare module 'pdfjs-dist/build/pdf.worker.entry' {
-  const workerSrc: string;
-  export default workerSrc;
+  // Remove the default export declaration since the module doesn't have one
+  const content: any;
+  export = content;
 }
 
 // Add basic types for react-pdf

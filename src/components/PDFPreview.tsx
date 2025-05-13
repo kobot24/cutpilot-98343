@@ -5,10 +5,9 @@ import { Document, Page, pdfjs } from 'react-pdf';
 import 'react-pdf/dist/esm/Page/TextLayer.css';
 import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
 
-// Set up the PDF.js worker with a local worker source instead of CDN
-// This helps avoid CORS issues and white screens from failed worker loading
-import pdfWorker from 'pdfjs-dist/build/pdf.worker.entry';
-pdfjs.GlobalWorkerOptions.workerSrc = pdfWorker;
+// Set up the PDF.js worker properly
+// The module doesn't provide a default export, so we need to import it differently
+pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
 
 type PDFPreviewProps = {
   pdfUrl: string;
