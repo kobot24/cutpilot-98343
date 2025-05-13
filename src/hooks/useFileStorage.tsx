@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 
@@ -13,7 +14,7 @@ export type UploadedFile = {
 
 // Constants for storage management
 const MAX_FILES = 10;
-const MAX_FILE_SIZE_MB = 2;
+const MAX_FILE_SIZE_MB = 200;
 const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
 
 export const useFileStorage = () => {
