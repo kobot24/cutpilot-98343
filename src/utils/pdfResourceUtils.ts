@@ -60,7 +60,7 @@ export const addCutContourToPage = (page: PDFPage, pdfContext: PDFContext, pathD
   const layerDict = pdfContext.obj({
     Type: PDFName.of('OCG'),
     Name: PDFString.of('CutContour'),
-    Intent: PDFArray.with([PDFName.of('View'), PDFName.of('Design'), PDFName.of('PrintShape')]),
+    Intent: pdfContext.obj([PDFName.of('View'), PDFName.of('Design'), PDFName.of('PrintShape')]),
     Usage: pdfContext.obj({
       CreatorInfo: pdfContext.obj({
         Creator: PDFString.of('Adobe Illustrator'),
