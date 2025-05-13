@@ -1,5 +1,5 @@
 
-import { PDFDocument, PDFName, PDFArray, PDFNumber } from 'pdf-lib';
+import { PDFDocument, PDFName, PDFArray, PDFNumber, rgb } from 'pdf-lib';
 
 // Create a rectangular path with rounded corners
 export const createCutContourPath = (width: number, height: number, offset: number): string => {
@@ -29,7 +29,7 @@ export const createPdfWithCutContour = async (
       img.onload = () => resolve();
     });
 
-    // Create PDF document with compatible options
+    // Create PDF document with compatible options for Illustrator
     const pdfDoc = await PDFDocument.create({
       updateMetadata: false // Don't add default metadata that might cause issues
     });
@@ -38,10 +38,10 @@ export const createPdfWithCutContour = async (
     const jpgImage = await pdfDoc.embedJpg(await fetch(imageUrl).then(r => r.arrayBuffer()));
     const imgDims = jpgImage.scale(1);
 
-    // Create page slightly larger than the image
+    // Create page slightly larger than the image - use precise points for better Illustrator compatibility
     const page = pdfDoc.addPage([
-      imgDims.width + 40,
-      imgDims.height + 40
+      Math.ceil(imgDims.width + 40),
+      Math.ceil(imgDims.height + 40)
     ]);
     
     // Place image centered on the page
@@ -52,11 +52,12 @@ export const createPdfWithCutContour = async (
       height: imgDims.height,
     });
     
-    // Create a spot color with better compatibility
+    // Create a spot color with better Illustrator compatibility
     const spotColorName = settings.spotColorName || 'CutContour';
     const pdfContext = pdfDoc.context;
     
-    // Create a more standard Separation color space for better compatibility
+    // Create a standard Separation color space specifically for Illustrator compatibility
+    // Using CMYK as the alternative color space for better print compatibility
     const spotColorDict = pdfContext.obj({
       FunctionType: 2,
       Domain: [0, 1],
@@ -66,6 +67,7 @@ export const createPdfWithCutContour = async (
       N: 1, // Linear interpolation
     });
     
+    // Create the separation color space with proper naming for Illustrator
     const spotColorSpace = pdfContext.obj([
       PDFName.of('Separation'),
       PDFName.of(spotColorName),
@@ -89,18 +91,17 @@ export const createPdfWithCutContour = async (
       resources.set(PDFName.of('ColorSpace'), colorSpaceDict);
     }
     
-    // Set the spot color in the ColorSpace dictionary with compatible method
+    // Set the spot color in the ColorSpace dictionary with compatible method for Illustrator
     if (colorSpaceDict) {
-      // Use type assertion to fix the TypeScript error
       (colorSpaceDict as any).set(PDFName.of('CS1'), spotColorRef);
     }
     
     // Add standard ExtGState with opacity settings
     const gsDict = pdfContext.obj({
       Type: PDFName.of('ExtGState'),
-      ca: PDFNumber.of(1),
-      CA: PDFNumber.of(1),
-      LW: PDFNumber.of(1), // Line width
+      ca: PDFNumber.of(1),  // non-stroke alpha
+      CA: PDFNumber.of(1),  // stroke alpha
+      LW: PDFNumber.of(0.5), // Line width - thinner for better Illustrator display
     });
     const gsRef = pdfContext.register(gsDict);
     
@@ -113,22 +114,21 @@ export const createPdfWithCutContour = async (
     
     // Set the graphics state in the ExtGState dictionary
     if (extGState) {
-      // Use type assertion to fix the TypeScript error
       (extGState as any).set(PDFName.of('GS1'), gsRef);
     }
     
     // Define cut contour path data
     const pathData = createCutContourPath(imgDims.width + 40, imgDims.height + 40, settings.cutContourOffset);
     
-    // Add cutContour to content stream using more compatible PDF operators
+    // Add cutContour to content stream using standard Adobe-compatible PDF operators
     const contentStream = pdfContext.stream(`
       /CS1 CS
       /CS1 cs
       1 0 0 RG
       1 0 0 rg
-      1 w
+      0.5 w
       /GS1 gs
-      ${pathData} S
+      ${pathData} s
     `);
     
     // Get current content streams
@@ -149,28 +149,37 @@ export const createPdfWithCutContour = async (
     contentArray.push(contentStreamRef);
     page.node.set(PDFName.of('Contents'), contentArray);
     
-    // Add standard PDF metadata
+    // Add PDF metadata specifically formatted for Adobe Illustrator
     pdfDoc.setTitle(`CutContour - ${new Date().toISOString()}`);
-    pdfDoc.setCreator('Web CutContour Tool');
+    pdfDoc.setCreator('Adobe Illustrator Compatible CutContour Tool');
     pdfDoc.setProducer('PDF-Lib');
     
-    // Save PDF as base64 with better compression settings
+    // Add custom metadata that helps Illustrator recognize this as a compatible file
+    const info = pdfDoc.getInfoDict();
+    info.set(PDFName.of('GTS_PDFXVersion'), pdfDoc.context.obj('PDF/X-4'));
+    info.set(PDFName.of('Trapped'), pdfDoc.context.obj('False'));
+    
+    // Save PDF using settings optimal for Illustrator
     const pdfBytes = await pdfDoc.save({ 
-      useObjectStreams: false, // Better compatibility with older PDF readers
-      addDefaultPage: false
+      useObjectStreams: false, // Better compatibility with Adobe products
+      addDefaultPage: false,
+      objectsPerTick: 50, // Process in smaller batches for better stability
+      updateFieldAppearances: false // No need for form appearances
     });
     
-    // Convert to base64 without using Buffer (which may not be available in browser)
-    const uint8Array = new Uint8Array(pdfBytes);
-    const base64String = btoa(
-      Array.from(uint8Array)
-        .map(b => String.fromCharCode(b))
-        .join('')
-    );
-    
+    // Convert to base64
+    const base64String = arrayBufferToBase64(pdfBytes);
     return `data:application/pdf;base64,${base64String}`;
   } catch (error) {
     console.error('Error creating PDF with cut contour:', error);
-    throw new Error(`PDF-Erstellung fehlgeschlagen: ${error.message || 'Unbekannter Fehler'}`);
+    throw new Error(`PDF-Erstellung fehlgeschlagen: ${error instanceof Error ? error.message : 'Unbekannter Fehler'}`);
   }
 };
+
+// Helper function to convert ArrayBuffer to Base64 without using Buffer (browser-compatible)
+function arrayBufferToBase64(buffer: ArrayBuffer): string {
+  const binary = Array.from(new Uint8Array(buffer))
+    .map(b => String.fromCharCode(b))
+    .join('');
+  return btoa(binary);
+}
