@@ -1,9 +1,8 @@
-
 import React, { useCallback, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { toast } from 'sonner';
-import { UploadedFile } from '@/hooks/useFileStorage';
+import { UploadedFile } from '@/types/fileTypes';
 
 type UploadAreaProps = {
   onFilesAdded: (files: FileList) => void;

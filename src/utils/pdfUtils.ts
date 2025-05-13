@@ -81,7 +81,8 @@ export const createPdfWithCutContour = async (
   
   // Set the spot color in the ColorSpace dictionary
   if (colorSpaceDict) {
-    colorSpaceDict.set(PDFName.of('CS1'), spotColorRef);
+    // Use type assertion to fix the TypeScript error
+    (colorSpaceDict as any).set(PDFName.of('CS1'), spotColorRef);
   }
   
   // Add custom ExtGState with opacity settings
@@ -101,7 +102,8 @@ export const createPdfWithCutContour = async (
   
   // Set the graphics state in the ExtGState dictionary
   if (extGState) {
-    extGState.set(PDFName.of('GS1'), gsRef);
+    // Use type assertion to fix the TypeScript error
+    (extGState as any).set(PDFName.of('GS1'), gsRef);
   }
   
   // Define cut contour path data

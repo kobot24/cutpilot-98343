@@ -1,5 +1,5 @@
 
-import { UploadedFile } from '@/hooks/useFileStorage';
+import { UploadedFile } from '@/types/fileTypes';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { formatDistanceToNow } from 'date-fns';
