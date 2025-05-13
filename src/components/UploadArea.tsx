@@ -2,16 +2,24 @@
 import React, { useCallback, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { toast } from '@/components/ui/sonner';
+import { toast } from 'sonner';
 import { UploadedFile } from '@/hooks/useFileStorage';
 
 type UploadAreaProps = {
   onFilesAdded: (files: FileList) => void;
   isLoading: boolean;
   files: UploadedFile[];
+  maxFiles?: number;
+  maxFileSizeMB?: number;
 };
 
-export const UploadArea = ({ onFilesAdded, isLoading, files }: UploadAreaProps) => {
+export const UploadArea = ({ 
+  onFilesAdded, 
+  isLoading, 
+  files,
+  maxFiles = 10,
+  maxFileSizeMB = 2
+}: UploadAreaProps) => {
   const [isDragging, setIsDragging] = useState(false);
   
   const handleDragOver = useCallback((e: React.DragEvent) => {
@@ -47,12 +55,14 @@ export const UploadArea = ({ onFilesAdded, isLoading, files }: UploadAreaProps) 
     }
   }, [onFilesAdded]);
 
+  const filesRemaining = maxFiles - files.length;
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-semibold">Dateien hochladen</h2>
         <span className="text-sm text-gray-500">
-          {files.length} {files.length === 1 ? 'Datei' : 'Dateien'} hochgeladen
+          {files.length} von {maxFiles} {files.length === 1 ? 'Datei' : 'Dateien'}
         </span>
       </div>
       
@@ -91,7 +101,7 @@ export const UploadArea = ({ onFilesAdded, isLoading, files }: UploadAreaProps) 
             <Button 
               variant="outline" 
               onClick={() => document.getElementById('fileInput')?.click()}
-              disabled={isLoading}
+              disabled={isLoading || filesRemaining <= 0}
             >
               Dateien auswählen
             </Button>
@@ -106,9 +116,15 @@ export const UploadArea = ({ onFilesAdded, isLoading, files }: UploadAreaProps) 
             onChange={handleFileChange}
           />
           
-          <p className="mt-4 text-xs text-gray-400">
-            Unterstützte Formate: JPG, JPEG
-          </p>
+          <div className="mt-4 space-y-1 text-xs text-gray-400">
+            <p>Unterstützte Formate: JPG, JPEG</p>
+            <p>Maximale Dateigröße: {maxFileSizeMB}MB</p>
+            <p>
+              {filesRemaining > 0 
+                ? `Sie können noch ${filesRemaining} ${filesRemaining === 1 ? 'Datei' : 'Dateien'} hochladen` 
+                : 'Maximale Anzahl von Dateien erreicht'}
+            </p>
+          </div>
         </CardContent>
       </Card>
     </div>

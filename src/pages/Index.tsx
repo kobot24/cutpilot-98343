@@ -9,6 +9,7 @@ import { PrintPlateCanvas } from '@/components/PrintPlateCanvas';
 import { useFileStorage } from '@/hooks/useFileStorage';
 import { useSettings } from '@/hooks/useSettings';
 import { Toaster } from '@/components/ui/sonner';
+import { Button } from '@/components/ui/button';
 
 const Index = () => {
   const [activeSection, setActiveSection] = useState('upload');
@@ -19,7 +20,10 @@ const Index = () => {
     addFiles, 
     removeFile, 
     selectFile, 
-    convertToPdf 
+    convertToPdf,
+    clearAllFiles,
+    MAX_FILE_SIZE_MB,
+    MAX_FILES
   } = useFileStorage();
   
   const { settings, updateSettings } = useSettings();
@@ -35,10 +39,25 @@ const Index = () => {
       case 'upload':
         return (
           <>
+            <div className="flex justify-between mb-4">
+              <div></div> {/* Empty div for spacing */}
+              {files.length > 0 && (
+                <Button 
+                  variant="outline" 
+                  onClick={clearAllFiles}
+                  size="sm"
+                  className="text-red-500 hover:bg-red-50"
+                >
+                  Alle Dateien löschen
+                </Button>
+              )}
+            </div>
             <UploadArea 
               onFilesAdded={addFiles} 
               isLoading={isLoading} 
               files={files}
+              maxFiles={MAX_FILES}
+              maxFileSizeMB={MAX_FILE_SIZE_MB}
             />
             <FilesList 
               files={files} 
