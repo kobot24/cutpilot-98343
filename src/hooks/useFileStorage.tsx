@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { UploadedFile } from '../types/fileTypes';
@@ -7,7 +8,7 @@ import { useLocalStorage } from './useLocalStorage';
 
 // Constants for storage management
 const MAX_FILES = 10;
-const MAX_FILE_SIZE_MB = 200;
+const MAX_FILE_SIZE_MB = 10; // Reduced from 200MB to 10MB for better local storage compatibility
 const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
 
 export const useFileStorage = () => {
@@ -46,6 +47,7 @@ export const useFileStorage = () => {
       // Filter by file type and size
       const filesArray = Array.from(newFiles).filter(file => {
         if (!file.type.startsWith('image/')) {
+          toast.error(`Datei "${file.name}" ist kein unterstütztes Bildformat`);
           return false;
         }
         if (file.size > MAX_FILE_SIZE_BYTES) {
@@ -66,31 +68,37 @@ export const useFileStorage = () => {
         return;
       }
 
-      // Process the files
-      const newUploadedFiles: UploadedFile[] = await Promise.all(
-        filesArray.map(async (file) => {
-          const url = await readFileAsDataURL(file);
-          return {
-            id: generateId(),
-            name: file.name,
-            url,
-            type: file.type,
-            size: file.size,
-            createdAt: new Date(),
-          };
-        })
-      );
+      // Process the files - limit to 3 at a time to avoid memory issues
+      const processedFiles = [];
+      for (let i = 0; i < filesArray.length; i += 3) {
+        const batch = filesArray.slice(i, i + 3);
+        const batchResults = await Promise.all(
+          batch.map(async (file) => {
+            const url = await readFileAsDataURL(file);
+            return {
+              id: generateId(),
+              name: file.name,
+              url,
+              type: file.type,
+              size: file.size,
+              createdAt: new Date(),
+            };
+          })
+        );
+        processedFiles.push(...batchResults);
+      }
 
+      // Update files state in batches to avoid memory issues
       setFiles(prev => {
         // If we're approaching the max files limit, show a warning
-        if (prev.length + newUploadedFiles.length >= MAX_FILES) {
+        if (prev.length + processedFiles.length >= MAX_FILES) {
           toast.warning(`Sie nähern sich dem Limit von ${MAX_FILES} Dateien.`);
         }
-        return [...prev, ...newUploadedFiles];
+        return [...prev, ...processedFiles];
       });
       
-      if (newUploadedFiles.length > 0 && !selectedFile) {
-        setSelectedFile(newUploadedFiles[0]);
+      if (processedFiles.length > 0 && !selectedFile) {
+        setSelectedFile(processedFiles[0]);
       }
     } catch (error) {
       console.error('Error adding files:', error);
@@ -134,28 +142,43 @@ export const useFileStorage = () => {
       // Create PDF with cut contour
       const pdfUrl = await createPdfWithCutContour(file.url, settings);
       
-      // Update file with converted PDF URL
-      setFiles(files.map(f => 
+      // Instead of storing the entire PDF in localStorage (which can cause quota issues),
+      // create a blob URL that can be used temporarily
+      const response = await fetch(pdfUrl);
+      const blob = await response.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      
+      // Update file with converted PDF URL (using blob URL)
+      const updatedFiles = files.map(f => 
         f.id === fileId 
-          ? { ...f, convertedPdfUrl: pdfUrl }
+          ? { ...f, convertedPdfUrl: blobUrl }
           : f
-      ));
+      );
+      
+      setFiles(updatedFiles);
       
       // Update selected file if it's the one we just converted
       if (selectedFile?.id === fileId) {
-        setSelectedFile({ ...selectedFile, convertedPdfUrl: pdfUrl });
+        setSelectedFile({ ...selectedFile, convertedPdfUrl: blobUrl });
       }
 
-      return pdfUrl;
+      return blobUrl;
     } catch (error) {
       console.error('Error converting file to PDF:', error);
-      toast.error('Fehler bei der PDF-Konvertierung');
+      toast.error(`PDF-Konvertierung fehlgeschlagen: ${error.message || 'Unbekannter Fehler'}`);
     } finally {
       setIsLoading(false);
     }
   };
 
   const clearAllFiles = () => {
+    // Release any blob URLs to avoid memory leaks
+    files.forEach(file => {
+      if (file.convertedPdfUrl && file.convertedPdfUrl.startsWith('blob:')) {
+        URL.revokeObjectURL(file.convertedPdfUrl);
+      }
+    });
+    
     setFiles([]);
     setSelectedFile(null);
     toast.success('Alle Dateien wurden gelöscht');
