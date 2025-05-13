@@ -1,6 +1,7 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
+import { Eye, EyeOff } from 'lucide-react';
 
 type PDFControlsProps = {
   showCutContour: boolean;
@@ -15,8 +16,19 @@ export const PDFControls = ({ showCutContour, toggleCutContour, handleDownload }
         variant="outline" 
         size="sm"
         onClick={toggleCutContour}
+        className={showCutContour ? "text-[#D946EF] border-[#D946EF]" : ""}
       >
-        {showCutContour ? 'CutContour ausblenden' : 'CutContour einblenden'}
+        {showCutContour ? (
+          <>
+            <EyeOff className="h-4 w-4 mr-1" />
+            CutContour ausblenden
+          </>
+        ) : (
+          <>
+            <Eye className="h-4 w-4 mr-1" />
+            CutContour einblenden
+          </>
+        )}
       </Button>
       <Button 
         variant="outline" 
