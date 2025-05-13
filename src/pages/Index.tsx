@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Sidebar } from '@/components/Sidebar';
 import { UploadArea } from '@/components/UploadArea';
 import { FilesList } from '@/components/FilesList';
@@ -10,6 +10,14 @@ import { useFileStorage } from '@/hooks/useFileStorage';
 import { useSettings } from '@/hooks/useSettings';
 import { Toaster } from '@/components/ui/sonner';
 import { Button } from '@/components/ui/button';
+
+// Add these to window for global access in the ConversionPanel
+declare global {
+  interface Window {
+    uploadedFiles: any[];
+    selectFile: (id: string) => void;
+  }
+}
 
 const Index = () => {
   const [activeSection, setActiveSection] = useState('upload');
@@ -27,6 +35,12 @@ const Index = () => {
   } = useFileStorage();
   
   const { settings, updateSettings } = useSettings();
+
+  // Make files and selectFile accessible globally for the ConversionPanel
+  useEffect(() => {
+    window.uploadedFiles = files;
+    window.selectFile = selectFile;
+  }, [files, selectFile]);
 
   // Handle navigation between sidebar sections
   const handleNavigate = (section: string) => {
