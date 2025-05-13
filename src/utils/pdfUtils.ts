@@ -149,15 +149,35 @@ export const createPdfWithCutContour = async (
     contentArray.push(contentStreamRef);
     page.node.set(PDFName.of('Contents'), contentArray);
     
-    // Add PDF metadata specifically formatted for Adobe Illustrator
+    // Add PDF metadata using public methods
     pdfDoc.setTitle(`CutContour - ${new Date().toISOString()}`);
     pdfDoc.setCreator('Adobe Illustrator Compatible CutContour Tool');
     pdfDoc.setProducer('PDF-Lib');
+    pdfDoc.setSubject('PDF/X-4');
     
-    // Add custom metadata that helps Illustrator recognize this as a compatible file
-    const info = pdfDoc.getInfoDict();
-    info.set(PDFName.of('GTS_PDFXVersion'), pdfDoc.context.obj('PDF/X-4'));
-    info.set(PDFName.of('Trapped'), pdfDoc.context.obj('False'));
+    // Add additional custom metadata using direct object setting for Illustrator compatibility
+    // Instead of using getInfoDict(), we'll add custom document catalog entries
+    const catalogDict = pdfDoc.catalog;
+    const outputIntents = pdfContext.obj([{
+      Type: PDFName.of('OutputIntent'),
+      S: PDFName.of('GTS_PDFX'),
+      OutputConditionIdentifier: 'PDF/X-4'
+    }]);
+    catalogDict.set(PDFName.of('OutputIntents'), outputIntents);
+    
+    // Add specific Illustrator metadata to the document
+    const markInfoDict = pdfContext.obj({
+      Marked: true,
+      UserProperties: false,
+      Suspects: false
+    });
+    catalogDict.set(PDFName.of('MarkInfo'), markInfoDict);
+    
+    // Add standard metadata dictionary with compatible structure for Illustrator
+    const metadataDict = pdfContext.obj({
+      Trapped: 'False'
+    });
+    catalogDict.set(PDFName.of('Metadata'), metadataDict);
     
     // Save PDF using settings optimal for Illustrator
     const pdfBytes = await pdfDoc.save({ 
