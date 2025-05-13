@@ -60,7 +60,9 @@ export const PDFDocumentView = ({
         >
           <Page 
             pageNumber={pageNumber} 
-            width={window.innerWidth * 0.9} // Made this much wider to take more screen space
+            width={undefined}
+            height={undefined}
+            scale={1}
             renderTextLayer={false}
             renderAnnotationLayer={false}
             className="flex justify-center"

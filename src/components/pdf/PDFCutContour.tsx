@@ -12,16 +12,16 @@ export const PDFCutContour = ({ fileName, show }: PDFCutContourProps) => {
   
   if (!show) return null;
   
-  // Use a fixed position that follows the exact edge instead of percentage inset
-  // This will align the CutContour with the black border in the design
-  
   return (
     <>
-      {/* Magenta solid border following the exact edge of the content */}
+      {/* Magenta solid border exactly on top of the black line in the design */}
       <div 
         className="absolute pointer-events-none border-[1.5px] border-[#D946EF] opacity-90"
         style={{ 
-          inset: '0', // Place exactly at the edge of the PDF content
+          top: '0',
+          left: '0',
+          right: '0',
+          bottom: '0',
           boxSizing: 'border-box'
         }}
       />

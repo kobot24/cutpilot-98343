@@ -4,11 +4,8 @@ import { mmToPoints } from './dimensionUtils';
 
 // Create a rectangular path with rounded corners using explicit PostScript operators
 export const createCutContourPath = (width: number, height: number, offset: number): string => {
-  // Convert mm to points using our conversion function
-  const offsetPt = mmToPoints(offset);
-  
-  // In this case we want to create a path that follows exactly the edge of the PDF
-  // Not inset from it, to match the black border in the design
+  // For exact alignment with the black line, we'll use offset of 0
+  // to create a path exactly at the edge of the PDF
   const x = 0;
   const y = 0;
   const w = width;
@@ -70,7 +67,7 @@ export const createCutContourGraphicsState = (pdfContext: PDFContext) => {
     Type: PDFName.of('ExtGState'),
     ca: PDFNumber.of(1),  // non-stroke alpha
     CA: PDFNumber.of(1),  // stroke alpha
-    LW: PDFNumber.of(0.5), // Thicker line width - 0.5pt for better visibility
+    LW: PDFNumber.of(0.5), // Line width - 0.5pt for better visibility
     OPM: 1,               // Overprint mode
     OP: true,             // Overprint
     op: true              // Overprint for fill
