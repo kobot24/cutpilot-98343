@@ -1,4 +1,3 @@
-
 import { PDFDocument, PDFArray } from 'pdf-lib';
 import { createCutContourPath, createSpotColor, createCutContourGraphicsState, cmToPoints, mmToPoints, pointsToCm } from './cutContourUtils';
 import { setPdfMetadata, addPdfXCompatibility, arrayBufferToBase64 } from './pdfMetadataUtils';
@@ -7,7 +6,11 @@ import { addColorSpaceToResources, addGraphicsStateToResources, addCutContourToP
 // Create PDF with cut contour from image URL
 export const createPdfWithCutContour = async (
   imageUrl: string, 
-  settings: { cutContourOffset: number; spotColorName: string }
+  settings: { 
+    cutContourOffset: number; 
+    spotColorName: string;
+    sourceDPI?: number; // Optional parameter for source image DPI
+  }
 ) => {
   try {
     console.log('Starting PDF creation process');
@@ -73,27 +76,11 @@ export const createPdfWithCutContour = async (
     const pixelWidth = img.naturalWidth;
     const pixelHeight = img.naturalHeight;
     
-    // Calculate the DPI from the pixel dimensions
-    // Instead of assuming 300 DPI, we'll try to detect or estimate the actual DPI
-    // and preserve the original physical dimensions
-    
-    // Function to detect DPI from EXIF data - fallback to default if not available
-    const detectImageDPI = (img: HTMLImageElement): number => {
-      // For now we're using a simple approach - read image size in pixels
-      // and estimate DPI based on reasonable physical size
-      // In a more advanced implementation, we could try to read EXIF data
-      
-      // The actual detection happens client-side - for now we'll log what we're using
-      const inferredDPI = 72; // Default DPI for PDFs and web display
-      console.log(`Using DPI: ${inferredDPI}`);
-      return inferredDPI;
-    };
-    
-    // Get the DPI of the image
-    const imageDPI = detectImageDPI(img);
+    // Use provided sourceDPI if available, otherwise detect or use default
+    const imageDPI = settings.sourceDPI || detectImageDPI(img);
     
     console.log(`Image dimensions: ${pixelWidth}x${pixelHeight} pixels`);
-    console.log(`Detected DPI: ${imageDPI}`);
+    console.log(`Using DPI: ${imageDPI}`);
     
     // Calculate physical dimensions in inches based on pixel dimensions and DPI
     const widthInInches = pixelWidth / imageDPI;
@@ -166,8 +153,8 @@ export const createPdfWithCutContour = async (
     // Get file name from URL for metadata
     const fileName = imageUrl.split('/').pop()?.split('.')[0] || 'Image';
     
-    // Add dimensions to the filename for clarity
-    const fileNameWithDimensions = `${fileName}_${widthInCm.toFixed(1)}x${heightInCm.toFixed(1)}cm`;
+    // Add dimensions and DPI to the filename for clarity
+    const fileNameWithDimensions = `${fileName}_${widthInCm.toFixed(1)}x${heightInCm.toFixed(1)}cm_${imageDPI}dpi`;
     
     console.log('Setting PDF metadata');
     // Set PDF metadata with Adobe Illustrator compatibility
@@ -198,3 +185,18 @@ export const createPdfWithCutContour = async (
     throw new Error(`PDF-Erstellung fehlgeschlagen: ${error instanceof Error ? error.message : 'Unbekannter Fehler'}`);
   }
 };
+
+// Function to detect DPI from image or estimate based on available information
+function detectImageDPI(img: HTMLImageElement): number {
+  // For now we're using a simple approach
+  // In a real implementation, we could try to read EXIF data
+  // or look for specific markers that might indicate the DPI
+  
+  // Since we can't reliably extract DPI from most web images,
+  // we'll return 100 as a reasonable default for print quality
+  const defaultDPI = 100;
+  
+  // Log what we're using
+  console.log(`No DPI specified, using default DPI: ${defaultDPI}`);
+  return defaultDPI;
+}

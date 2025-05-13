@@ -7,15 +7,24 @@ type PDFDimensionsDisplayProps = {
 };
 
 export const PDFDimensionsDisplay = ({ fileName, pdfDimensions }: PDFDimensionsDisplayProps) => {
-  // Extract dimensions from file name if available (format: filename_WxHcm.pdf)
+  // Extract dimensions and DPI from file name if available (format: filename_WxHcm_DPIdpi.pdf)
   const extractDimensionsFromFileName = () => {
-    const match = fileName.match(/(\d+\.?\d*)x(\d+\.?\d*)cm/);
-    if (match) {
-      return `${match[1]}×${match[2]} cm`;
+    const dimensionsMatch = fileName.match(/(\d+\.?\d*)x(\d+\.?\d*)cm/);
+    const dpiMatch = fileName.match(/(\d+)dpi/);
+    
+    const dimensions = dimensionsMatch ? `${dimensionsMatch[1]}×${dimensionsMatch[2]} cm` : '';
+    const dpi = dpiMatch ? `${dpiMatch[1]} DPI` : '';
+    
+    if (dimensions && dpi) {
+      return `${dimensions} (${dpi})`;
+    } else if (dimensions) {
+      return dimensions;
+    } else if (pdfDimensions) {
+      // Calculate from PDF dimensions if filename doesn't contain the information
+      return `${(pdfDimensions.width / 72 * 2.54).toFixed(1)}×${(pdfDimensions.height / 72 * 2.54).toFixed(1)} cm`;
     }
-    return pdfDimensions ? 
-      `${(pdfDimensions.width / 72 * 2.54).toFixed(1)}×${(pdfDimensions.height / 72 * 2.54).toFixed(1)} cm` : 
-      '';
+    
+    return '';
   };
 
   const dimensionsText = extractDimensionsFromFileName();
