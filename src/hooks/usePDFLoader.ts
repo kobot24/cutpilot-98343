@@ -1,9 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import { pdfjs } from 'react-pdf';
-
-// Configure PDF.js worker
-pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
+// Remove pdfjs import since we're now configuring the worker in PDFDocumentView
 
 type UsePDFLoaderProps = {
   pdfUrl: string;
@@ -20,10 +17,14 @@ export const usePDFLoader = ({ pdfUrl }: UsePDFLoaderProps) => {
   // Track when PDF URL changes
   useEffect(() => {
     console.log("PDF URL changed:", pdfUrl ? "Valid URL" : "Empty URL");
-    setIsLoading(true);
-    setError(null);
-    // Reset the load attempt counter when URL changes
-    setLoadAttempt(0);
+    if (pdfUrl) {
+      setIsLoading(true);
+      setError(null);
+      // Reset the load attempt counter when URL changes
+      setLoadAttempt(0);
+      // Reset dimensions when URL changes
+      setPdfDimensions(null);
+    }
   }, [pdfUrl]);
 
   // If loading fails, retry a few times (helpful for blob URLs that might take time)

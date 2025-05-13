@@ -1,8 +1,12 @@
 
-import React from 'react';
-import { Document, Page } from 'react-pdf';
+import React, { useMemo } from 'react';
+import { Document, Page, pdfjs } from 'react-pdf';
 import { PDFCutContour } from './PDFCutContour';
 import { PDFPageIndicator } from './PDFPageIndicator';
+
+// Ensure the worker is loaded before rendering any PDF components
+// This needs to be set only once in the application
+pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
 
 type PDFDocumentViewProps = {
   pdfUrl: string;
@@ -29,6 +33,13 @@ export const PDFDocumentView = ({
   isLoading,
   error
 }: PDFDocumentViewProps) => {
+  // Memoize options to prevent unnecessary rerenders
+  const pdfOptions = useMemo(() => ({
+    cMapUrl: 'https://unpkg.com/pdfjs-dist@3.11.174/cmaps/',
+    cMapPacked: true,
+    standardFontDataUrl: 'https://unpkg.com/pdfjs-dist@3.11.174/standard_fonts/'
+  }), []);
+
   return (
     <>
       {isLoading && (
@@ -45,11 +56,7 @@ export const PDFDocumentView = ({
           className="w-full h-full"
           loading={<div className="w-full h-full flex items-center justify-center">Lade PDF...</div>}
           error={<div className="w-full h-full flex items-center justify-center text-red-500">Fehler beim Laden des PDFs</div>}
-          options={{
-            cMapUrl: 'https://unpkg.com/pdfjs-dist@3.11.174/cmaps/',
-            cMapPacked: true,
-            standardFontDataUrl: 'https://unpkg.com/pdfjs-dist@3.11.174/standard_fonts/'
-          }}
+          options={pdfOptions}
         >
           <Page 
             pageNumber={pageNumber} 
@@ -58,6 +65,8 @@ export const PDFDocumentView = ({
             renderAnnotationLayer={false}
             className="flex justify-center"
             onLoadSuccess={handlePageLoadSuccess}
+            loading={<div className="w-full h-32 flex items-center justify-center">Lade Seite...</div>}
+            error={<div className="text-red-500">Fehler beim Laden der Seite</div>}
           />
         </Document>
       )}
