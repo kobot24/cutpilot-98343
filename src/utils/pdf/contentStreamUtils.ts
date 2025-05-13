@@ -22,8 +22,11 @@ S
 Q
   `);
   
-  // Add the content stream to the page using the PDFPage's content method
-  page.node.addContentStream(cutContourStream.ref);
+  // Register the stream with the PDF context to get a reference
+  const cutContourStreamRef = pdfContext.register(cutContourStream);
+  
+  // Add the content stream to the page using the registered reference
+  page.node.addContentStream(cutContourStreamRef);
   
   // Return the page for backward compatibility
   return page;
