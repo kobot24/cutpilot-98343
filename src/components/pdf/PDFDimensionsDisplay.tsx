@@ -7,33 +7,47 @@ type PDFDimensionsDisplayProps = {
 };
 
 export const PDFDimensionsDisplay = ({ fileName, pdfDimensions }: PDFDimensionsDisplayProps) => {
-  // Extract dimensions and DPI from file name if available (format: filename_WxHcm_DPIdpi.pdf)
+  // Extract dimensions, DPI and size from file name if available 
+  // (format: filename_WxHcm_DPIdpi.pdf or filename_WxHmm_DPIdpi.pdf)
   const extractDimensionsFromFileName = () => {
-    const dimensionsMatch = fileName.match(/(\d+\.?\d*)x(\d+\.?\d*)cm/);
-    const dpiMatch = fileName.match(/(\d+)dpi/);
+    const dimensionsCmMatch = fileName.match(/(\d+\.?\d*)x(\d+\.?\d*)cm/);
+    const dimensionsMmMatch = fileName.match(/(\d+\.?\d*)x(\d+\.?\d*)mm/);
+    const dpiMatch = fileName.match(/(\d+)dpi/i);
     
-    const dimensions = dimensionsMatch ? `${dimensionsMatch[1]}×${dimensionsMatch[2]} cm` : '';
-    const dpi = dpiMatch ? `${dpiMatch[1]} DPI` : '';
+    let dimensions = '';
+    let sizeInMm = '';
     
-    if (dimensions && dpi) {
-      return `${dimensions} (${dpi})`;
-    } else if (dimensions) {
-      return dimensions;
+    // Get dimensions either in cm or mm
+    if (dimensionsCmMatch) {
+      const width = parseFloat(dimensionsCmMatch[1]);
+      const height = parseFloat(dimensionsCmMatch[2]);
+      dimensions = `${width}×${height} cm`;
+      sizeInMm = `${(width * 10).toFixed(0)}×${(height * 10).toFixed(0)} mm`;
+    } else if (dimensionsMmMatch) {
+      const width = parseFloat(dimensionsMmMatch[1]);
+      const height = parseFloat(dimensionsMmMatch[2]);
+      dimensions = `${width}×${height} mm`;
+      sizeInMm = dimensions;
     } else if (pdfDimensions) {
       // Calculate from PDF dimensions if filename doesn't contain the information
-      return `${(pdfDimensions.width / 72 * 2.54).toFixed(1)}×${(pdfDimensions.height / 72 * 2.54).toFixed(1)} cm`;
+      const widthCm = (pdfDimensions.width / 72 * 2.54).toFixed(1);
+      const heightCm = (pdfDimensions.height / 72 * 2.54).toFixed(1);
+      dimensions = `${widthCm}×${heightCm} cm`;
+      sizeInMm = `${(parseFloat(widthCm) * 10).toFixed(0)}×${(parseFloat(heightCm) * 10).toFixed(0)} mm`;
     }
     
-    return '';
+    const dpi = dpiMatch ? `${dpiMatch[1]} DPI` : '';
+    
+    return { dimensions, dpi, sizeInMm };
   };
 
-  const dimensionsText = extractDimensionsFromFileName();
+  const { dimensions, dpi, sizeInMm } = extractDimensionsFromFileName();
   
-  if (!dimensionsText) return null;
+  if (!dimensions) return null;
   
   return (
     <span className="text-sm font-normal text-gray-500 ml-2">
-      {dimensionsText}
+      {dimensions} {dpi && `(${dpi})`}{sizeInMm && dimensions.includes('cm') ? ` | ${sizeInMm}` : ''}
     </span>
   );
 };
