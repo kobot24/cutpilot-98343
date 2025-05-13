@@ -19,6 +19,7 @@ export const PDFPreview = ({ pdfUrl, fileName }: PDFPreviewProps) => {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [showCutContour, setShowCutContour] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [pdfDimensions, setPdfDimensions] = useState<{ width: number, height: number } | null>(null);
 
   // Track when PDF URL changes
   useEffect(() => {
@@ -30,6 +31,16 @@ export const PDFPreview = ({ pdfUrl, fileName }: PDFPreviewProps) => {
     setNumPages(numPages);
     setIsLoading(false);
     setError(null);
+  };
+
+  const handlePageLoadSuccess = (page: any) => {
+    // Get PDF dimensions from the loaded page
+    if (page && page.width && page.height) {
+      setPdfDimensions({
+        width: page.width,
+        height: page.height
+      });
+    }
   };
 
   const handleLoadError = (err: Error) => {
@@ -56,10 +67,28 @@ export const PDFPreview = ({ pdfUrl, fileName }: PDFPreviewProps) => {
     setShowCutContour(!showCutContour);
   };
 
+  // Extract dimensions from file name if available (format: filename_WxHcm.pdf)
+  const extractDimensionsFromFileName = () => {
+    const match = fileName.match(/(\d+\.?\d*)x(\d+\.?\d*)cm/);
+    if (match) {
+      return `${match[1]}×${match[2]} cm`;
+    }
+    return pdfDimensions ? 
+      `${(pdfDimensions.width / 72 * 2.54).toFixed(1)}×${(pdfDimensions.height / 72 * 2.54).toFixed(1)} cm` : 
+      '';
+  };
+
   return (
     <div className="h-full flex flex-col">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-medium">PDF Vorschau</h3>
+        <h3 className="text-lg font-medium">
+          PDF Vorschau 
+          {extractDimensionsFromFileName() && (
+            <span className="text-sm font-normal text-gray-500 ml-2">
+              {extractDimensionsFromFileName()}
+            </span>
+          )}
+        </h3>
         <div className="flex gap-2">
           <Button 
             variant="outline" 
@@ -109,13 +138,14 @@ export const PDFPreview = ({ pdfUrl, fileName }: PDFPreviewProps) => {
               renderTextLayer={false}
               renderAnnotationLayer={false}
               className="flex justify-center"
+              onLoadSuccess={handlePageLoadSuccess}
             />
           </Document>
         )}
         
         {showCutContour && !error && !isLoading && (
           <>
-            <div className="absolute inset-0 pointer-events-none border-4 border-red-500 border-dashed m-8 opacity-50" />
+            <div className="absolute inset-x-[8%] inset-y-[8%] pointer-events-none border-4 border-red-500 border-dashed opacity-50" />
             <div className="absolute bottom-2 right-2 bg-white/80 text-xs px-2 py-1 rounded text-red-500 font-medium">
               {fileName.split('.').slice(0, -1).join('.')} - CutContour (Spotfarbe)
             </div>

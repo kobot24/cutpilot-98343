@@ -1,5 +1,6 @@
+
 import { PDFDocument, PDFArray } from 'pdf-lib';
-import { createCutContourPath, createSpotColor, createCutContourGraphicsState } from './cutContourUtils';
+import { createCutContourPath, createSpotColor, createCutContourGraphicsState, cmToPoints, mmToPoints, pointsToCm } from './cutContourUtils';
 import { setPdfMetadata, addPdfXCompatibility, arrayBufferToBase64 } from './pdfMetadataUtils';
 import { addColorSpaceToResources, addGraphicsStateToResources, addCutContourToPage } from './pdfResourceUtils';
 
@@ -26,19 +27,31 @@ export const createPdfWithCutContour = async (
     // Add image to PDF - preserving original dimensions
     const jpgImage = await pdfDoc.embedJpg(await fetch(imageUrl).then(r => r.arrayBuffer()));
     
-    // Use natural dimensions directly from the image - no scaling
+    // Use natural dimensions directly from the image
     const naturalWidth = img.naturalWidth;  // Get actual pixel width
     const naturalHeight = img.naturalHeight; // Get actual pixel height
     
-    // Create page with EXACT image dimensions - no extra space for offset
-    const page = pdfDoc.addPage([naturalWidth, naturalHeight]);
+    // Determine the target page size in physical dimensions (cm)
+    // Calculate based on standard 72 DPI for PDF
+    const widthInCm = pointsToCm(naturalWidth);
+    const heightInCm = pointsToCm(naturalHeight);
     
-    // Place image at exact coordinates (0,0) - no offset
+    console.log(`Image dimensions: ${naturalWidth}x${naturalHeight} pixels (${widthInCm.toFixed(2)}x${heightInCm.toFixed(2)} cm)`);
+    
+    // We want the physical size to match, so convert to points for the PDF
+    // This ensures the PDF page will be the same physical size as the image
+    const pdfPageWidth = naturalWidth;
+    const pdfPageHeight = naturalHeight;
+    
+    // Create page with dimensions that match the physical size
+    const page = pdfDoc.addPage([pdfPageWidth, pdfPageHeight]);
+    
+    // Draw image at full page size
     page.drawImage(jpgImage, {
       x: 0,
       y: 0,
-      width: naturalWidth,
-      height: naturalHeight,
+      width: pdfPageWidth,
+      height: pdfPageHeight,
     });
     
     const pdfContext = pdfDoc.context;
@@ -59,11 +72,11 @@ export const createPdfWithCutContour = async (
     addGraphicsStateToResources(page, pdfContext, gsRef);
     
     // Define cut contour path data based on image dimensions
-    // We now pass the offset to create an INSET path from the image edges
+    // The offset is the inset distance from the edge in mm
     const pathData = createCutContourPath(
-      naturalWidth, 
-      naturalHeight, 
-      settings.cutContourOffset // Pass the offset to create an inset path
+      pdfPageWidth, 
+      pdfPageHeight, 
+      settings.cutContourOffset 
     );
     
     // Add the cut contour path to the page
@@ -72,8 +85,11 @@ export const createPdfWithCutContour = async (
     // Get file name from URL for metadata
     const fileName = imageUrl.split('/').pop()?.split('.')[0] || 'Image';
     
+    // Add dimensions to the filename for clarity
+    const fileNameWithDimensions = `${fileName}_${widthInCm.toFixed(1)}x${heightInCm.toFixed(1)}cm`;
+    
     // Set PDF metadata with Adobe Illustrator compatibility
-    setPdfMetadata(pdfDoc, fileName);
+    setPdfMetadata(pdfDoc, fileNameWithDimensions);
     
     // Add PDF/X compatibility information
     addPdfXCompatibility(pdfDoc, pdfContext);
