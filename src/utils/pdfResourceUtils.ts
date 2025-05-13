@@ -78,15 +78,16 @@ export const addCutContourToPage = (page: PDFPage, pdfContext: PDFContext, pathD
   
   // Format content stream with CutContour name and proper PostScript structure
   // This format is specifically designed for Adobe Illustrator compatibility
+  // Using pure Magenta (C=0 M=100 Y=0 K=0) for cut path with 0.1pt line width
   const contentStream = pdfContext.stream(`
-    % CutContour Path
+    % CutContour Path (100% Magenta)
     /OC /oc${layerRef.objectNumber} BDC
     q
     /CS1 CS
     /CS1 cs
-    1 0 0 RG
-    1 0 0 rg
-    0.5 w
+    0 1 0 0 k     % CMYK: C=0 M=100 Y=0 K=0 (pure Magenta) fill
+    0 1 0 0 K     % CMYK: C=0 M=100 Y=0 K=0 (pure Magenta) stroke
+    0.1 w         % 0.1 point line width
     /GS1 gs
     ${pathData}
     S

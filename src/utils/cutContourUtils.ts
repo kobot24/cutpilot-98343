@@ -61,7 +61,7 @@ export const createCutContourGraphicsState = (pdfContext: PDFContext) => {
     Type: PDFName.of('ExtGState'),
     ca: PDFNumber.of(1),  // non-stroke alpha
     CA: PDFNumber.of(1),  // stroke alpha
-    LW: PDFNumber.of(0.5), // Line width - standard for cut paths
+    LW: PDFNumber.of(0.1), // Line width - 0.1pt for cut paths
   });
   
   return pdfContext.register(gsDict);
