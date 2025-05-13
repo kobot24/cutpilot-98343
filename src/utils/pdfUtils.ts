@@ -31,19 +31,20 @@ export const createPdfWithCutContour = async (
     const naturalWidth = img.naturalWidth;  // Get actual pixel width
     const naturalHeight = img.naturalHeight; // Get actual pixel height
     
-    // Convert to points (72 dpi) to preserve original dimensions
-    const width = naturalWidth;
-    const height = naturalHeight;
+    // Convert offset from mm to points (1mm ≈ 2.83 points at 72 DPI)
+    const offsetPt = settings.cutContourOffset * 2.83;
     
-    // Create page with exact image dimensions - no resizing
-    const page = pdfDoc.addPage([width, height]);
+    // Create page with dimensions that include image size PLUS the offset on all sides
+    const pageWidth = naturalWidth + (offsetPt * 2);
+    const pageHeight = naturalHeight + (offsetPt * 2);
+    const page = pdfDoc.addPage([pageWidth, pageHeight]);
     
-    // Place image at exact coordinates (0,0) - no offset
+    // Place image at offset position so there's space for the cut contour
     page.drawImage(jpgImage, {
-      x: 0,
-      y: 0,
-      width: width,
-      height: height,
+      x: offsetPt,  // Position image with offset from left edge
+      y: offsetPt,  // Position image with offset from bottom edge
+      width: naturalWidth,  // Use original image width
+      height: naturalHeight, // Use original image height
     });
     
     const pdfContext = pdfDoc.context;
@@ -63,12 +64,12 @@ export const createPdfWithCutContour = async (
     // Add the graphics state to the page resources
     addGraphicsStateToResources(page, pdfContext, gsRef);
     
-    // Define cut contour path data based on image dimensions
-    // We use the exact image dimensions - no offset is applied to the path
+    // Define cut contour path data based on entire page dimensions
+    // The offset is applied by making the path larger than the image
     const pathData = createCutContourPath(
-      width, 
-      height, 
-      0 // No offset is applied to reduce the size
+      naturalWidth, 
+      naturalHeight, 
+      settings.cutContourOffset // Pass the actual offset value
     );
     
     // Add the cut contour path to the page

@@ -3,16 +3,19 @@ import { PDFName, PDFNumber, PDFContext } from 'pdf-lib';
 
 // Create a rectangular path with rounded corners using explicit PostScript operators
 export const createCutContourPath = (width: number, height: number, offset: number): string => {
-  // We want the cut contour to follow the exact image dimensions
-  // If offset is provided, we'll apply it outward from the image edges
-  const x = 0; // Start at the image edge
-  const y = 0; // Start at the image edge
-  const w = width; // Use the full width
-  const h = height; // Use the full height
-  const r = 0; // Remove corner radius to ensure exact dimensions
+  // Convert mm to points (1mm ≈ 2.83 points at 72 DPI)
+  const offsetPt = offset * 2.83;
+  
+  // Create a path that's LARGER than the image by the offset
+  // The path starts at negative coordinates to create space around the image
+  const x = -offsetPt;
+  const y = -offsetPt;
+  const w = width + (offsetPt * 2); // Wider than the image
+  const h = height + (offsetPt * 2); // Taller than the image
+  const r = 0; // No corner radius for precise cutting
   
   // Format with proper PostScript path operators and spacing
-  // Using explicit moveTo, lineTo, curveTo operators with line breaks
+  // Using explicit moveTo, lineTo operators with line breaks
   return `
     ${x} ${y} m
     ${x+w} ${y} l
