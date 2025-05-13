@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
@@ -215,7 +216,15 @@ export const useFileStorage = () => {
 
       // Save PDF as base64
       const pdfBytes = await pdfDoc.save();
-      const pdfUrl = `data:application/pdf;base64,${Buffer.from(pdfBytes).toString('base64')}`;
+      
+      // Convert to base64 without using Buffer (which may not be available in browser)
+      const uint8Array = new Uint8Array(pdfBytes);
+      const base64String = btoa(
+        Array.from(uint8Array)
+          .map(b => String.fromCharCode(b))
+          .join('')
+      );
+      const pdfUrl = `data:application/pdf;base64,${base64String}`;
       
       // Update file with converted PDF URL
       setFiles(files.map(f => 
