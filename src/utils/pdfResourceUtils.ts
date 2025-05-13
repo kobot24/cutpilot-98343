@@ -1,8 +1,8 @@
 
-import { PDFName, PDFContext, PDFPage, PDFArray, PDFDict, PDFString } from 'pdf-lib';
+import { PDFDocument, PDFName, PDFDict, PDFContext, PDFPage, PDFArray, PDFString } from 'pdf-lib';
 
 // Add color space to page resources
-export const addColorSpaceToResources = (page: PDFPage, pdfContext: PDFContext, spotColorRef: any) => {
+export const addColorSpaceToResources = (page: PDFPage, pdfContext: PDFContext, spotColorData: any) => {
   // Add resources to the page
   const resources = page.node.Resources();
   if (!resources) {
@@ -16,9 +16,21 @@ export const addColorSpaceToResources = (page: PDFPage, pdfContext: PDFContext, 
     resources.set(PDFName.of('ColorSpace'), colorSpaceDict);
   }
   
-  // Set the spot color in the ColorSpace dictionary
+  // Set the spot color in the ColorSpace dictionary with proper name
   if (colorSpaceDict) {
-    (colorSpaceDict as any).set(PDFName.of('CS1'), spotColorRef);
+    (colorSpaceDict as any).set(PDFName.of('CutContour'), spotColorData.spotColorSpace);
+  }
+  
+  // Add Properties dictionary for Illustrator spot colors
+  let propertiesDict = resources.get(PDFName.of('Properties'));
+  if (!propertiesDict) {
+    propertiesDict = pdfContext.obj({});
+    resources.set(PDFName.of('Properties'), propertiesDict);
+  }
+  
+  // Register the color space dictionary in Properties for Illustrator compatibility
+  if (propertiesDict) {
+    (propertiesDict as any).set(PDFName.of('CutContour'), spotColorData.colorSpaceDict);
   }
 };
 
@@ -36,19 +48,19 @@ export const addGraphicsStateToResources = (page: PDFPage, pdfContext: PDFContex
     resources.set(PDFName.of('ExtGState'), extGState);
   }
   
-  // Set the graphics state
+  // Set the graphics state with specific name for cut contour
   if (extGState) {
-    (extGState as any).set(PDFName.of('GS1'), gsRef);
+    (extGState as any).set(PDFName.of('CutContourGS'), gsRef);
   }
 };
 
 // Add content stream with cut contour path to page
 export const addCutContourToPage = (page: PDFPage, pdfContext: PDFContext, pathData: string) => {
-  // Create named CutContour layer as a Property List
+  // Create named CutContour layer as a Property List for Adobe compatibility
   const layerDict = pdfContext.obj({
     Type: PDFName.of('OCG'),
     Name: PDFString.of('CutContour'),
-    Intent: PDFName.of('Design'),
+    Intent: PDFArray.with([PDFName.of('View'), PDFName.of('Design'), PDFName.of('PrintShape')]),
     Usage: pdfContext.obj({
       CreatorInfo: pdfContext.obj({
         Creator: PDFString.of('Adobe Illustrator'),
@@ -77,20 +89,18 @@ export const addCutContourToPage = (page: PDFPage, pdfContext: PDFContext, pathD
   }
   
   // Format content stream with CutContour name and proper PostScript structure
-  // This format is specifically designed for Adobe Illustrator compatibility
-  // Using pure Magenta (C=0 M=100 Y=0 K=0) for cut path with 0.1pt line width
+  // Using explicit spot color operators for Adobe compatibility
   const contentStream = pdfContext.stream(`
-    % CutContour Path (100% Magenta)
-    /OC /oc${layerRef.objectNumber} BDC
+    % CutContour Path - Adobe Illustrator Compatible Spot Color
+    /OC /CutContour BDC
     q
-    /CS1 CS
-    /CS1 cs
-    0 1 0 0 k     % CMYK: C=0 M=100 Y=0 K=0 (pure Magenta) fill
-    0 1 0 0 K     % CMYK: C=0 M=100 Y=0 K=0 (pure Magenta) stroke
-    0.1 w         % 0.1 point line width
-    /GS1 gs
+    /CutContour CS       % Set CutContour as the stroke color space
+    /CutContour cs       % Set CutContour as the fill color space
+    1 scn               % Set tint value to 100%
+    1 SCN               % Set stroke tint value to 100%
+    /CutContourGS gs    % Apply graphics state with 0.1pt line width
     ${pathData}
-    S
+    S                   % Stroke the path
     Q
     EMC
   `);

@@ -24,39 +24,35 @@ export const createPdfWithCutContour = async (
       updateMetadata: false // Don't add default metadata that might cause issues
     });
     
-    // Add image to PDF - attempting to preserve CMYK colorspace if present
+    // Add image to PDF - preserving original dimensions
     const jpgImage = await pdfDoc.embedJpg(await fetch(imageUrl).then(r => r.arrayBuffer()));
     const imgDims = jpgImage.scale(1);
 
-    // Convert dimensions to mm for printing standards
-    const mmToPt = 2.83465; // 1mm ≈ 2.83465pt at 72dpi
-    const bleedMM = settings.cutContourOffset;
-    const bleedPt = bleedMM * mmToPt;
+    // Convert dimensions to points (72 dpi)
+    const width = imgDims.width;
+    const height = imgDims.height;
     
-    // Create page with precise bleed
-    const page = pdfDoc.addPage([
-      Math.ceil(imgDims.width + (bleedPt * 2)),
-      Math.ceil(imgDims.height + (bleedPt * 2))
-    ]);
+    // Create page with exact image dimensions - no resizing
+    const page = pdfDoc.addPage([width, height]);
     
-    // Place image with bleed offset to give space for cut contour
+    // Place image at exact coordinates (0,0) - no offset
     page.drawImage(jpgImage, {
-      x: bleedPt,
-      y: bleedPt,
-      width: imgDims.width,
-      height: imgDims.height,
+      x: 0,
+      y: 0,
+      width: width,
+      height: height,
     });
     
     const pdfContext = pdfDoc.context;
     
-    // Always use "CutContour" as the name, regardless of user settings
+    // Always use "CutContour" as the spot color name
     const spotColorName = "CutContour";
     
-    // Create spot color for the cut contour
-    const spotColorRef = createSpotColor(pdfContext, spotColorName);
+    // Create true spot color for the cut contour
+    const spotColorData = createSpotColor(pdfContext, spotColorName);
     
     // Add the spot color to the page resources
-    addColorSpaceToResources(page, pdfContext, spotColorRef);
+    addColorSpaceToResources(page, pdfContext, spotColorData);
     
     // Create graphics state for the cut contour
     const gsRef = createCutContourGraphicsState(pdfContext);
@@ -64,10 +60,11 @@ export const createPdfWithCutContour = async (
     // Add the graphics state to the page resources
     addGraphicsStateToResources(page, pdfContext, gsRef);
     
-    // Define cut contour path data
+    // Define cut contour path data based on image dimensions and offset
+    // The offset is only for the path, not for resizing the image
     const pathData = createCutContourPath(
-      imgDims.width + (bleedPt * 2), 
-      imgDims.height + (bleedPt * 2), 
+      width, 
+      height, 
       settings.cutContourOffset
     );
     
@@ -77,7 +74,7 @@ export const createPdfWithCutContour = async (
     // Get file name from URL for metadata
     const fileName = imageUrl.split('/').pop()?.split('.')[0] || 'Image';
     
-    // Set PDF metadata
+    // Set PDF metadata with Adobe Illustrator compatibility
     setPdfMetadata(pdfDoc, fileName);
     
     // Add PDF/X compatibility information
