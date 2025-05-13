@@ -2,7 +2,7 @@
 import { PDFDocument } from 'pdf-lib';
 import { createCutContourPath, createSpotColor, createCutContourGraphicsState } from './cutContourUtils';
 import { setPdfMetadata, addPdfXCompatibility, arrayBufferToBase64 } from './pdfMetadataUtils';
-import { addColorSpaceToResources, addGraphicsStateToResources, addCutContourToPage } from './pdfResourceUtils';
+import { addColorSpaceToResources, addGraphicsStateToResources, addCutContourToPage } from './pdf';
 import { detectImageDPI, fetchImageData, loadImage } from './imageUtils';
 import { calculateDimensions } from './dimensionUtils';
 

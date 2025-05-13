@@ -1,60 +1,12 @@
 
-import { PDFDocument, PDFName, PDFDict, PDFContext, PDFPage, PDFArray, PDFString } from 'pdf-lib';
+import { PDFPage, PDFContext, PDFName, PDFString, PDFArray } from 'pdf-lib';
 
-// Add color space to page resources
-export const addColorSpaceToResources = (page: PDFPage, pdfContext: PDFContext, spotColorData: any) => {
-  // Add resources to the page
-  const resources = page.node.Resources();
-  if (!resources) {
-    throw new Error('Could not access page resources');
-  }
-  
-  // Get or create ColorSpace dictionary
-  let colorSpaceDict = resources.get(PDFName.of('ColorSpace'));
-  if (!colorSpaceDict) {
-    colorSpaceDict = pdfContext.obj({});
-    resources.set(PDFName.of('ColorSpace'), colorSpaceDict);
-  }
-  
-  // Set the spot color in the ColorSpace dictionary with proper name
-  if (colorSpaceDict) {
-    (colorSpaceDict as any).set(PDFName.of('CutContour'), spotColorData.spotColorSpace);
-  }
-  
-  // Add Properties dictionary for Illustrator spot colors
-  let propertiesDict = resources.get(PDFName.of('Properties'));
-  if (!propertiesDict) {
-    propertiesDict = pdfContext.obj({});
-    resources.set(PDFName.of('Properties'), propertiesDict);
-  }
-  
-  // Register the color space dictionary in Properties for Illustrator compatibility
-  if (propertiesDict) {
-    (propertiesDict as any).set(PDFName.of('CutContour'), spotColorData.colorSpaceDict);
-  }
-};
-
-// Add graphics state to page resources
-export const addGraphicsStateToResources = (page: PDFPage, pdfContext: PDFContext, gsRef: any) => {
-  // Get or create ExtGState dictionary
-  const resources = page.node.Resources();
-  if (!resources) {
-    throw new Error('Could not access page resources');
-  }
-  
-  let extGState = resources.get(PDFName.of('ExtGState'));
-  if (!extGState) {
-    extGState = pdfContext.obj({});
-    resources.set(PDFName.of('ExtGState'), extGState);
-  }
-  
-  // Set the graphics state with specific name for cut contour
-  if (extGState) {
-    (extGState as any).set(PDFName.of('CutContourGS'), gsRef);
-  }
-};
-
-// Add content stream with cut contour path to page
+/**
+ * Add content stream with cut contour path to page
+ * @param page PDF page to modify
+ * @param pdfContext PDF document context
+ * @param pathData Path data string in PostScript format
+ */
 export const addCutContourToPage = (page: PDFPage, pdfContext: PDFContext, pathData: string) => {
   // Create named CutContour layer as a Property List for Adobe compatibility
   const layerDict = pdfContext.obj({
