@@ -29,10 +29,9 @@ export const createCutContourPath = (width: number, height: number, offset: numb
 
 // Create spot color for cut contour
 export const createSpotColor = (pdfContext: PDFContext, spotColorName: string) => {
-  // Create a spot color specifically for CutContour with 100% Magenta
+  // Create a true spot color specifically for CutContour with 100% Magenta
   
-  // Create a PDF/X-compatible separation color space for CutContour
-  // Use 100% Magenta as the spot color (0,1,0,0 in CMYK)
+  // Define the separation color space for a true spot color
   const spotColorDict = pdfContext.obj({
     FunctionType: 2,
     Domain: [0, 1],
@@ -42,7 +41,7 @@ export const createSpotColor = (pdfContext: PDFContext, spotColorName: string) =
     N: 1, // Linear interpolation
   });
   
-  // Create separation color space following PDF/X standards
+  // Create separation color space as a true spot color with CMYK alternative
   const spotColorSpace = pdfContext.obj([
     PDFName.of('Separation'),
     PDFName.of(spotColorName),

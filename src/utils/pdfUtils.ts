@@ -39,7 +39,7 @@ export const createPdfWithCutContour = async (
       Math.ceil(imgDims.height + (bleedPt * 2))
     ]);
     
-    // Place image with bleed offset
+    // Place image with bleed offset to give space for cut contour
     page.drawImage(jpgImage, {
       x: bleedPt,
       y: bleedPt,
@@ -48,7 +48,9 @@ export const createPdfWithCutContour = async (
     });
     
     const pdfContext = pdfDoc.context;
-    const spotColorName = settings.spotColorName || 'CutContour';
+    
+    // Always use "CutContour" as the name, regardless of user settings
+    const spotColorName = "CutContour";
     
     // Create spot color for the cut contour
     const spotColorRef = createSpotColor(pdfContext, spotColorName);
