@@ -87,7 +87,7 @@ export const createSpotColor = (pdfContext: PDFContext, spotColorName: string) =
 };
 
 // Add graphics state for cut contour path
-export const createCutContourGraphicsState = (pdfContext: PDFContext) => {
+export const createCutContourGraphicsState = (pdfContext: PDFContext, spotColorName: string) => {
   // Create Adobe-compatible ExtGState with accurate technical parameters
   // These settings are crucial for RIP/cutting software
   const gsDict = pdfContext.obj({

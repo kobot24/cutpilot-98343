@@ -1,4 +1,3 @@
-
 import { PDFDocument } from 'pdf-lib';
 import { createCutContourPath, createSpotColor, createCutContourGraphicsState } from './cutContourUtils';
 import { setPdfMetadata, addPdfXCompatibility, arrayBufferToBase64 } from './pdfMetadataUtils';
@@ -103,8 +102,8 @@ export const createPdfWithCutContour = async (
       addColorSpaceToResources(page, pdfContext, spotColorData, spotColorName);
       
       console.log('Creating graphics state for cut contour');
-      // Create graphics state for the cut contour
-      const gsRef = createCutContourGraphicsState(pdfContext);
+      // Create graphics state for the cut contour with exact name
+      const gsRef = createCutContourGraphicsState(pdfContext, spotColorName);
       
       console.log('Adding graphics state to page resources');
       // Add the graphics state to the page resources using exact name

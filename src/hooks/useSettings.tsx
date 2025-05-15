@@ -8,7 +8,7 @@ export type UserSettings = {
 
 export const defaultSettings: UserSettings = {
   cutContourOffset: 3, // Default 3mm offset
-  spotColorName: 'CutContour', // Default name - always use CutContour
+  spotColorName: 'CutContour', // Default name - standard Adobe name
 };
 
 export const useSettings = () => {
@@ -20,8 +20,10 @@ export const useSettings = () => {
     if (storedSettings) {
       try {
         const parsedSettings = JSON.parse(storedSettings);
-        // Always ensure CutContour as spot color name
-        parsedSettings.spotColorName = 'CutContour';
+        // Ensure we have a valid spotColorName
+        if (!parsedSettings.spotColorName) {
+          parsedSettings.spotColorName = 'CutContour';
+        }
         setSettings(parsedSettings);
       } catch (error) {
         console.error('Error parsing stored settings:', error);
@@ -31,10 +33,10 @@ export const useSettings = () => {
 
   // Save settings to localStorage whenever they change
   useEffect(() => {
-    // Always ensure CutContour before saving
+    // Always ensure we have a valid spotColorName before saving
     const settingsToSave = {
       ...settings,
-      spotColorName: 'CutContour'
+      spotColorName: settings.spotColorName || 'CutContour'
     };
     localStorage.setItem('userSettings', JSON.stringify(settingsToSave));
   }, [settings]);
@@ -43,8 +45,8 @@ export const useSettings = () => {
     setSettings(prevSettings => ({
       ...prevSettings,
       ...newSettings,
-      // Always ensure CutContour
-      spotColorName: 'CutContour'
+      // Ensure we have a valid spotColorName
+      spotColorName: newSettings.spotColorName || prevSettings.spotColorName || 'CutContour'
     }));
   };
 

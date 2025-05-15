@@ -27,7 +27,7 @@ export const SettingsPanel = ({
       return;
     }
     
-    // Ensure spot color name is valid for PDF
+    // Ensure spot color name is valid for PDF and Illustrator
     const cleanedSpotColorName = spotColorName.trim() || "CutContour";
     
     onUpdateSettings({

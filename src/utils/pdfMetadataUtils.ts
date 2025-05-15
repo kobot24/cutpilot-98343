@@ -6,8 +6,8 @@ export const setPdfMetadata = (pdfDoc: PDFDocument, fileName: string, spotColorN
   // Set PDF metadata using standard methods and include explicit CutContour references
   pdfDoc.setTitle(`${fileName}_${spotColorName}`);
   pdfDoc.setCreator('Adobe Illustrator 25.0 Compatible');
-  pdfDoc.setProducer('PDF-X3 Generator with CutContour');
-  pdfDoc.setSubject('PDF/X-3:2002 with CutContour');
+  pdfDoc.setProducer('PDF-X3 Generator with ' + spotColorName);
+  pdfDoc.setSubject('PDF/X-3:2002 with ' + spotColorName);
   
   // Advanced metadata for Print Production
   const metadata = pdfDoc.context.obj({
