@@ -7,4 +7,5 @@ export type UploadedFile = {
   size: number;
   createdAt: Date;
   convertedPdfUrl?: string;
+  convertedPdfData?: string;
 };

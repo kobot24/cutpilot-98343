@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { toast } from '@/components/ui/use-toast';
 import { UploadedFile } from '../types/fileTypes';
@@ -113,7 +112,7 @@ export const useFileStorage = () => {
         toast({
           title: "Dateien-Limit erreicht",
           description: `Maximum von ${MAX_FILES} Dateien erreicht. Löschen Sie einige Dateien, um neue hinzuzufügen.`,
-          variant: "warning"
+          variant: "default"
         });
         filesArray.splice(MAX_FILES - files.length); // Keep only what we can add
       }
@@ -150,7 +149,7 @@ export const useFileStorage = () => {
           toast({
             title: "Fast am Limit",
             description: `Sie nähern sich dem Limit von ${MAX_FILES} Dateien.`,
-            variant: "warning"
+            variant: "default"
           });
         }
         return [...prev, ...processedFiles];
