@@ -1,5 +1,5 @@
 
-import { PDFPage, PDFContext, PDFName } from 'pdf-lib';
+import { PDFPage, PDFContext, PDFName, PDFDict } from 'pdf-lib';
 
 /**
  * Add graphics state to page resources
@@ -23,6 +23,6 @@ export const addGraphicsStateToResources = (page: PDFPage, pdfContext: PDFContex
   
   // Use the exact spot color name with GS suffix for consistency
   if (extGState) {
-    extGState.set(PDFName.of(`${spotColorName}GS`), gsRef);
+    (extGState as PDFDict).set(PDFName.of(`${spotColorName}GS`), gsRef);
   }
 };
