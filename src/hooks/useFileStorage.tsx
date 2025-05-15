@@ -1,35 +1,53 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
 import { UploadedFile } from '../types/fileTypes';
 import { readFileAsDataURL, generateId } from '../utils/fileUtils';
 import { createPdfWithCutContour } from '../utils/pdfUtils';
-import { useLocalStorage } from './useLocalStorage';
+import { saveFilesToDB, loadFilesFromDB } from '../utils/indexedDBUtils';
 
 // Constants for storage management
 const MAX_FILES = 10;
-const MAX_FILE_SIZE_MB = 10; // Reduced from 200MB to 10MB for better local storage compatibility
+const MAX_FILE_SIZE_MB = 50; // Increased from 10MB to 50MB
 const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
 
 export const useFileStorage = () => {
-  const [files, setFiles] = useLocalStorage<UploadedFile[]>('uploadedFiles', [], handleStorageQuotaExceeded);
+  const [files, setFiles] = useState<UploadedFile[]>([]);
   const [selectedFile, setSelectedFile] = useState<UploadedFile | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isInitialized, setIsInitialized] = useState(false);
 
-  // Handle local storage quota exceeded
-  function handleStorageQuotaExceeded() {
-    toast.error(`Speicherlimit erreicht. Bitte löschen Sie einige Dateien.`);
-    
-    // If we have files in state already, keep only the most recent ones
-    if (files.length > 1) {
-      // Keep only the most recent files to recover from this state
-      const sortedFiles = [...files].sort((a, b) => 
-        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-      );
-      const reducedFiles = sortedFiles.slice(0, Math.max(1, Math.floor(files.length / 2)));
-      setFiles(reducedFiles);
+  // Load files from IndexedDB on component mount
+  useEffect(() => {
+    const initializeFiles = async () => {
+      setIsLoading(true);
+      try {
+        const loadedFiles = await loadFilesFromDB();
+        setFiles(loadedFiles);
+        if (loadedFiles.length > 0) {
+          setSelectedFile(loadedFiles[0]);
+        }
+      } catch (error) {
+        console.error('Error loading files from IndexedDB:', error);
+        toast.error('Fehler beim Laden der Dateien');
+      } finally {
+        setIsLoading(false);
+        setIsInitialized(true);
+      }
+    };
+
+    initializeFiles();
+  }, []);
+
+  // Save files to IndexedDB whenever they change
+  useEffect(() => {
+    if (isInitialized && files.length > 0) {
+      saveFilesToDB(files).catch((error) => {
+        console.error('Error saving files to IndexedDB:', error);
+        toast.error('Fehler beim Speichern der Dateien. Möglicherweise ist der Speicherplatz voll.');
+      });
     }
-  }
+  }, [files, isInitialized]);
 
   // Initialize selected file when files change
   useEffect(() => {
@@ -142,8 +160,7 @@ export const useFileStorage = () => {
       // Create PDF with cut contour
       const pdfUrl = await createPdfWithCutContour(file.url, settings);
       
-      // Instead of storing the entire PDF in localStorage (which can cause quota issues),
-      // create a blob URL that can be used temporarily
+      // Create a blob URL for the PDF
       const response = await fetch(pdfUrl);
       const blob = await response.blob();
       const blobUrl = URL.createObjectURL(blob);
