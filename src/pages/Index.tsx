@@ -23,7 +23,8 @@ const Index = () => {
     convertToPdf,
     clearAllFiles,
     MAX_FILE_SIZE_MB,
-    MAX_FILES
+    MAX_FILES,
+    conversionProgress
   } = useFileStorage();
   
   const { settings, updateSettings } = useSettings();
@@ -74,6 +75,7 @@ const Index = () => {
             onConvertToPdf={convertToPdf}
             settings={settings}
             isLoading={isLoading}
+            conversionProgress={conversionProgress}
           />
         );
       case 'settings':
