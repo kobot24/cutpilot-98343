@@ -62,52 +62,77 @@ export const optimizeImageIfNeeded = async (imageUrl: string): Promise<string> =
   await new Promise<void>((resolve, reject) => {
     img.onload = () => resolve();
     img.onerror = () => reject(new Error('Failed to load image for optimization check'));
+    img.crossOrigin = "anonymous"; // Wichtig für CORS-Probleme mit Blob-URLs
     img.src = imageUrl;
   });
   
   const megapixels = (img.naturalWidth * img.naturalHeight) / 1000000;
+  console.log(`Bild hat ${megapixels.toFixed(1)} Megapixel (${img.naturalWidth}x${img.naturalHeight}px)`);
   
-  // If image is close to our limit, scale it down
-  if (megapixels > FILE_STORAGE_LIMITS.MAX_IMAGE_MEGAPIXELS * 0.8) {
-    console.log(`Large image detected (${megapixels.toFixed(1)}MP), optimizing...`);
+  // Wenn das Bild nahe an unserem Limit ist, skalieren wir es herunter
+  // Reduzieren wir den Schwellenwert auf 70%, um mehr Bilder zu optimieren
+  if (megapixels > FILE_STORAGE_LIMITS.MAX_IMAGE_MEGAPIXELS * 0.7) {
+    console.log(`Großes Bild erkannt (${megapixels.toFixed(1)}MP), wird optimiert...`);
     
-    // Calculate scale factor to bring it down to target size (80% of max)
-    const targetMP = FILE_STORAGE_LIMITS.MAX_IMAGE_MEGAPIXELS * 0.8;
+    // Skalierungsfaktor berechnen, um es auf 70% der maximalen Größe zu bringen
+    const targetMP = FILE_STORAGE_LIMITS.MAX_IMAGE_MEGAPIXELS * 0.7;
     const scaleFactor = Math.sqrt(targetMP / megapixels);
     
     const newWidth = Math.floor(img.naturalWidth * scaleFactor);
     const newHeight = Math.floor(img.naturalHeight * scaleFactor);
     
-    console.log(`Scaling image from ${img.naturalWidth}x${img.naturalHeight} to ${newWidth}x${newHeight}`);
+    console.log(`Skaliere Bild von ${img.naturalWidth}x${img.naturalHeight} auf ${newWidth}x${newHeight}`);
     
-    // Create canvas for scaled image
+    // Canvas für skaliertes Bild erstellen
     const canvas = document.createElement('canvas');
     canvas.width = newWidth;
     canvas.height = newHeight;
     const ctx = canvas.getContext('2d');
     
     if (!ctx) {
-      console.error('Could not get canvas context for image scaling');
-      return imageUrl; // Return original if scaling fails
+      console.error('Konnte keinen Canvas-Kontext für die Bildskalierung erhalten');
+      return imageUrl; // Original zurückgeben, wenn Skalierung fehlschlägt
     }
     
-    // Draw scaled image
-    ctx.drawImage(img, 0, 0, newWidth, newHeight);
+    // In mehreren Schritten skalieren bei sehr großen Bildern für bessere Qualität
+    if (megapixels > 30) {
+      // Bei sehr großen Bildern in zwei Schritten skalieren für bessere Qualität
+      const tempCanvas = document.createElement('canvas');
+      const midWidth = Math.floor((img.naturalWidth + newWidth) / 2);
+      const midHeight = Math.floor((img.naturalHeight + newHeight) / 2);
+      tempCanvas.width = midWidth;
+      tempCanvas.height = midHeight;
+      const tempCtx = tempCanvas.getContext('2d');
+      
+      if (tempCtx) {
+        // Erste Skalierung auf mittlere Größe
+        tempCtx.drawImage(img, 0, 0, midWidth, midHeight);
+        // Zweite Skalierung auf Zielgröße
+        ctx.drawImage(tempCanvas, 0, 0, newWidth, newHeight);
+      } else {
+        // Fallback bei Fehler: Direkt auf Zielgröße skalieren
+        ctx.drawImage(img, 0, 0, newWidth, newHeight);
+      }
+    } else {
+      // Normaler Fall: Direkt auf Zielgröße skalieren
+      ctx.drawImage(img, 0, 0, newWidth, newHeight);
+    }
     
-    // Get as blob URL
+    // Als Blob-URL erhalten
     return new Promise<string>((resolve) => {
       canvas.toBlob((blob) => {
         if (blob) {
           const scaledUrl = URL.createObjectURL(blob);
+          console.log(`Bild erfolgreich optimiert: ${(blob.size / 1024 / 1024).toFixed(2)}MB`);
           resolve(scaledUrl);
         } else {
-          resolve(imageUrl); // Return original if conversion fails
+          console.error('Blob-Konvertierung fehlgeschlagen');
+          resolve(imageUrl); // Original zurückgeben, wenn Konvertierung fehlschlägt
         }
-      }, 'image/jpeg', 0.9);
+      }, 'image/jpeg', 0.85); // Etwas niedrigere Qualität für bessere Komprimierung
     });
   }
   
-  // Return original URL if no scaling needed
+  // Original-URL zurückgeben, wenn keine Skalierung nötig ist
   return imageUrl;
 };
-

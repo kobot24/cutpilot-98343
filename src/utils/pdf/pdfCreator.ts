@@ -27,43 +27,47 @@ export const createPdfWithCutContour = async (
     
     progress.setProgress('LOADING_IMAGE', 'Lade Bild...');
     
-    // For very large images, optimize first
+    // Für sehr große Bilder zuerst optimieren
+    console.log('Optimiere Bild wenn nötig...');
     const optimizedImageUrl = await optimizeImageIfNeeded(imageUrl);
+    if (optimizedImageUrl !== imageUrl) {
+      console.log('Bild wurde für bessere Performance optimiert');
+    }
     
-    // Create image element to get dimensions
+    // Image-Element erstellen, um Dimensionen zu erhalten
     const img = document.createElement('img');
     
-    // Create a promise to wait for the image to load
+    // Promise erstellen, um auf das Laden des Bildes zu warten
     const imageLoadPromise = new Promise<HTMLImageElement>((resolve, reject) => {
       img.onload = () => resolve(img);
       img.onerror = (e) => reject(new Error(`Failed to load image: ${e}`));
       
-      // Set crossOrigin to anonymous to avoid CORS issues with data URLs
+      // crossOrigin auf anonymous setzen, um CORS-Probleme mit Daten-URLs zu vermeiden
       img.crossOrigin = "anonymous";
       img.src = optimizedImageUrl;
     });
     
     progress.incrementProgress(5, 'Bild wird geladen...');
     
-    // Wait for image to load with a timeout
+    // Auf das Laden des Bildes mit einem Timeout warten
     const loadedImg = await Promise.race([
       imageLoadPromise,
       new Promise<never>((_, reject) => 
-        setTimeout(() => reject(new Error('Image load timeout')), 20000)
+        setTimeout(() => reject(new Error('Zeitüberschreitung beim Laden des Bildes')), 30000)
       )
     ]);
     
     console.log(`Image loaded: ${img.naturalWidth}x${img.naturalHeight} pixels`);
     progress.incrementProgress(5, 'Bild geladen');
     
-    // Create PDF document with compatible options for Illustrator
+    // PDF-Dokument mit kompatiblen Optionen für Illustrator erstellen
     const pdfDoc = await PDFDocument.create({
-      updateMetadata: false // Don't add default metadata that might cause issues
+      updateMetadata: false // Keine Standardmetadaten hinzufügen, die Probleme verursachen könnten
     });
     
     progress.setProgress('PROCESSING_IMAGE', 'Verarbeite Bild...');
     
-    // Fetch image data - with improved handling for large data URLs
+    // Bilddaten abrufen - mit verbesserter Handhabung für große Daten-URLs
     const imageData = await fetchImageData(optimizedImageUrl, progress);
     
     if (!imageData) {
@@ -72,101 +76,113 @@ export const createPdfWithCutContour = async (
     
     progress.incrementProgress(10, 'PDF wird erstellt...');
     
-    // Add image to PDF - preserving original dimensions
-    console.log('Embedding image in PDF');
-    const jpgImage = await pdfDoc.embedJpg(imageData);
-    
-    progress.incrementProgress(5, 'Bild in PDF eingebettet');
-    
-    // Get image dimensions in pixels
-    const pixelWidth = img.naturalWidth;
-    const pixelHeight = img.naturalHeight;
-    
-    // Calculate the DPI from the pixel dimensions
-    const imageDPI = detectImageDPI(img);
-    
-    console.log(`Image dimensions: ${pixelWidth}x${pixelHeight} pixels`);
-    console.log(`Detected DPI: ${imageDPI}`);
-    
-    // Calculate physical dimensions in inches based on pixel dimensions and DPI
-    const widthInInches = pixelWidth / imageDPI;
-    const heightInInches = pixelHeight / imageDPI;
-    
-    // Convert physical dimensions to points (72 points = 1 inch, which is the PDF standard)
-    const pdfPageWidth = widthInInches * 72;
-    const pdfPageHeight = heightInInches * 72;
-    
-    // Convert to cm for display
-    const widthInCm = widthInInches * 2.54;
-    const heightInCm = heightInInches * 2.54;
-    
-    console.log(`Physical dimensions: ${widthInCm.toFixed(2)}x${heightInCm.toFixed(2)} cm`);
-    console.log(`PDF page size in points: ${pdfPageWidth.toFixed(2)}x${pdfPageHeight.toFixed(2)} pt`);
-    
-    // Create page with dimensions that match the physical size
-    console.log('Creating PDF page');
-    const page = pdfDoc.addPage([pdfPageWidth, pdfPageHeight]);
-    
-    progress.setProgress('CREATING_PDF', 'Erstelle PDF mit CutContour...');
-    
-    // Draw image at full page size
-    console.log('Drawing image on page');
-    page.drawImage(jpgImage, {
-      x: 0,
-      y: 0,
-      width: pdfPageWidth,
-      height: pdfPageHeight,
-    });
-    
-    const pdfContext = pdfDoc.context;
-    
-    // Always use "CutContour" as the spot color name
-    const spotColorName = "CutContour";
-    
-    // Add cut contour to the PDF
-    await createCutContour({
-      page,
-      pdfContext, 
-      pdfPageWidth,
-      pdfPageHeight,
-      spotColorName,
-      cutContourOffset: settings.cutContourOffset,
-      progress
-    });
-    
-    // Get file name from URL for metadata
-    const fileName = imageUrl.split('/').pop()?.split('.')[0] || 'Image';
-    
-    // Add dimensions to the filename for clarity
-    const fileNameWithDimensions = `${fileName}_${widthInCm.toFixed(1)}x${heightInCm.toFixed(1)}cm`;
-    
-    console.log('Setting PDF metadata');
-    // Set PDF metadata with Adobe Illustrator compatibility
-    addPdfMetadata(pdfDoc, pdfContext, fileNameWithDimensions);
-    
-    progress.incrementProgress(10, 'PDF wird finalisiert...');
-    
-    // Save PDF using optimal settings for print workflows
-    console.log('Saving PDF document');
-    const pdfBytes = await pdfDoc.save({ 
-      useObjectStreams: false,      // Better compatibility with RIP systems
-      addDefaultPage: false,        // No blank pages
-      objectsPerTick: 50,           // Process in smaller batches
-      updateFieldAppearances: false // No form fields
-    });
-    
-    console.log(`PDF created successfully: ${pdfBytes.byteLength} bytes`);
-    
-    progress.setProgress('FINALIZING', 'PDF wird fertiggestellt...');
-    
-    // For large PDFs, create a Blob URL directly instead of a data URL
-    // This is more memory efficient for large files
-    const blob = new Blob([pdfBytes], { type: 'application/pdf' });
-    const pdfUrl = URL.createObjectURL(blob);
-    
-    progress.complete('PDF fertiggestellt');
-    
-    return pdfUrl;
+    try {
+      // Bild in PDF einbetten - unter Beibehaltung der Originaldimensionen
+      console.log('Embedding image in PDF');
+      const jpgImage = await pdfDoc.embedJpg(imageData);
+      
+      progress.incrementProgress(5, 'Bild in PDF eingebettet');
+      
+      // Pixelabmessungen des Bildes erhalten
+      const pixelWidth = img.naturalWidth;
+      const pixelHeight = img.naturalHeight;
+      
+      // DPI aus den Pixelabmessungen berechnen
+      const imageDPI = detectImageDPI(img);
+      
+      console.log(`Image dimensions: ${pixelWidth}x${pixelHeight} pixels`);
+      console.log(`Detected DPI: ${imageDPI}`);
+      
+      // Physikalische Abmessungen in Zoll basierend auf Pixelabmessungen und DPI berechnen
+      const widthInInches = pixelWidth / imageDPI;
+      const heightInInches = pixelHeight / imageDPI;
+      
+      // Physikalische Abmessungen in Punkte umrechnen (72 Punkte = 1 Zoll, was der PDF-Standard ist)
+      const pdfPageWidth = widthInInches * 72;
+      const pdfPageHeight = heightInInches * 72;
+      
+      // In cm umrechnen zur Anzeige
+      const widthInCm = widthInInches * 2.54;
+      const heightInCm = heightInInches * 2.54;
+      
+      console.log(`Physical dimensions: ${widthInCm.toFixed(2)}x${heightInCm.toFixed(2)} cm`);
+      console.log(`PDF page size in points: ${pdfPageWidth.toFixed(2)}x${pdfPageHeight.toFixed(2)} pt`);
+      
+      // Seite mit Abmessungen erstellen, die der physikalischen Größe entsprechen
+      console.log('Creating PDF page');
+      const page = pdfDoc.addPage([pdfPageWidth, pdfPageHeight]);
+      
+      progress.setProgress('CREATING_PDF', 'Erstelle PDF mit CutContour...');
+      
+      // Bild in voller Seitengröße zeichnen
+      console.log('Drawing image on page');
+      page.drawImage(jpgImage, {
+        x: 0,
+        y: 0,
+        width: pdfPageWidth,
+        height: pdfPageHeight,
+      });
+      
+      const pdfContext = pdfDoc.context;
+      
+      // Immer "CutContour" als Spot-Farbnamen verwenden
+      const spotColorName = "CutContour";
+      
+      // CutContour zum PDF hinzufügen
+      await createCutContour({
+        page,
+        pdfContext, 
+        pdfPageWidth,
+        pdfPageHeight,
+        spotColorName,
+        cutContourOffset: settings.cutContourOffset,
+        progress
+      });
+      
+      // Dateinamen aus URL für Metadaten extrahieren
+      const fileName = imageUrl.split('/').pop()?.split('.')[0] || 'Image';
+      
+      // Abmessungen zum Dateinamen für Klarheit hinzufügen
+      const fileNameWithDimensions = `${fileName}_${widthInCm.toFixed(1)}x${heightInCm.toFixed(1)}cm`;
+      
+      console.log('Setting PDF metadata');
+      // PDF-Metadaten mit Adobe Illustrator-Kompatibilität festlegen
+      addPdfMetadata(pdfDoc, pdfContext, fileNameWithDimensions);
+      
+      progress.incrementProgress(10, 'PDF wird finalisiert...');
+      
+      // PDF mit optimalen Einstellungen für Print-Workflows speichern
+      console.log('Saving PDF document');
+      
+      // Verwenden Sie einen höheren Wert für objectsPerTick für große PDF-Dateien
+      // Dies verhindert Timing-Out bei der Verarbeitung
+      const pdfBytes = await pdfDoc.save({ 
+        useObjectStreams: false,      // Bessere Kompatibilität mit RIP-Systemen
+        addDefaultPage: false,        // Keine leeren Seiten
+        objectsPerTick: 100,          // In kleineren Batches verarbeiten, aber mehr pro Tick für große Dateien
+        updateFieldAppearances: false, // Keine Formularfelder
+      });
+      
+      console.log(`PDF created successfully: ${pdfBytes.byteLength} bytes`);
+      
+      progress.setProgress('FINALIZING', 'PDF wird fertiggestellt...');
+      
+      // Bei großen PDFs direkt einen Blob-URL erstellen statt einer Daten-URL
+      // Dies ist speichereffizienter für große Dateien
+      const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+      const pdfUrl = URL.createObjectURL(blob);
+      
+      progress.complete('PDF fertiggestellt');
+      
+      return pdfUrl;
+    } catch (error) {
+      console.error('Fehler beim Erstellen des PDFs:', error);
+      if (error instanceof Error && error.message.includes("allocation")) {
+        throw new Error("Nicht genügend Speicher, um das Bild zu verarbeiten. Bitte verkleinern Sie das Bild.");
+      } else {
+        throw error;
+      }
+    }
   } catch (error) {
     console.error('Error creating PDF with cut contour:', error);
     progress.complete('Fehler bei der PDF-Erstellung');
@@ -219,7 +235,7 @@ const fetchImageData = async (imageUrl: string, progress: any): Promise<ArrayBuf
             bytes[i + j] = binaryString.charCodeAt(i + j);
           }
           // Allow UI thread to breathe between chunks
-          if (i + chunk < binaryString.length) {
+          if (i + chunk < binaryString.length && (i % (chunkSize * 5) === 0)) {
             await new Promise(resolve => setTimeout(resolve, 0));
             progress.incrementProgress(1, 'Verarbeite Bilddaten...');
           }

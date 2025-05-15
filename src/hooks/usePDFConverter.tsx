@@ -29,10 +29,10 @@ export const usePDFConverter = () => {
       if (tooLarge) {
         toast({
           title: "Bild zu groß",
-          description: "Das Bild ist zu groß für die PDF-Konvertierung. Versuchen Sie, das Bild zu verkleinern.",
-          variant: "destructive"
+          description: "Das Bild ist zu groß für die PDF-Konvertierung. Das Bild wird optimiert.",
+          variant: "default"
         });
-        return undefined;
+        // Wir versuchen es trotzdem, da wir nun eine bessere Optimierung haben
       }
       
       // Get settings from localStorage
@@ -49,6 +49,7 @@ export const usePDFConverter = () => {
       
       // Track progress during PDF creation
       const handleProgress = (progress: number, status: string) => {
+        console.log(`PDF Fortschritt: ${progress}%, Status: ${status}`);
         setConversionProgress({ progress, status });
       };
       
@@ -67,9 +68,26 @@ export const usePDFConverter = () => {
       return pdfUrl;
     } catch (error) {
       console.error('Error converting file to PDF:', error);
+      
+      // Detailliertere Fehlermeldungen
+      let errorMessage = "Unbekannter Fehler bei der PDF-Konvertierung";
+      
+      if (error instanceof Error) {
+        errorMessage = error.message;
+        
+        // Spezifische Fehlermeldungen für häufige Fehler
+        if (error.message.includes("memory") || error.message.includes("speicher")) {
+          errorMessage = "Nicht genügend Speicher. Das Bild ist zu groß.";
+        } else if (error.message.includes("CORS") || error.message.includes("origin")) {
+          errorMessage = "CORS-Fehler beim Zugriff auf das Bild. Versuchen Sie, das Bild erneut hochzuladen.";
+        } else if (error.message.includes("timeout") || error.message.includes("zeit")) {
+          errorMessage = "Zeitüberschreitung bei der Verarbeitung. Das Bild ist möglicherweise zu groß.";
+        }
+      }
+      
       toast({
         title: "Konvertierungsfehler",
-        description: error instanceof Error ? error.message : "Unbekannter Fehler bei der PDF-Konvertierung",
+        description: errorMessage,
         variant: "destructive"
       });
       return undefined;
