@@ -44,11 +44,13 @@ export const createPdfWithCutContour = async (
     
     console.log(`Image loaded: ${loadedImg.naturalWidth}x${loadedImg.naturalHeight} pixels`);
     
-    // Create PDF document with compatible options for Illustrator - enforcing PDF 1.4 version
+    // Create PDF document with compatible options for Illustrator
     const pdfDoc = await PDFDocument.create({
-      updateMetadata: false, // Don't add default metadata that might cause issues
-      version: [1, 4]        // Force PDF 1.4 for PDF/X-3:2002 compatibility
+      updateMetadata: false // Don't add default metadata that might cause issues
     });
+    
+    // Force PDF header to indicate version 1.4
+    pdfDoc.context.header.toString = () => '%PDF-1.4\n%âãÏÓ';
     
     // Fetch image data
     const imageData = await fetchImageData(imageUrl);
@@ -142,9 +144,6 @@ export const createPdfWithCutContour = async (
     console.log('Adding PDF/X compatibility with forced Adobe compatibility');
     // Add PDF/X compatibility information
     addPdfXCompatibility(pdfDoc, pdfContext, spotColorName);
-    
-    // Force PDF identification before saving
-    pdfDoc.context.header.toString = () => '%PDF-1.4\n%âãÏÓ';
     
     // Save PDF using optimal settings for print workflows
     console.log('Saving PDF document with Adobe compatibility flags');

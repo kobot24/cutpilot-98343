@@ -1,5 +1,4 @@
-
-import { PDFDocument, PDFName, PDFDict, PDFContext, PDFString, PDFArray, PDFNumber, PDFHexString, PDFStream, PDFVersion } from 'pdf-lib';
+import { PDFDocument, PDFName, PDFDict, PDFContext, PDFString, PDFArray, PDFNumber, PDFHexString, PDFStream } from 'pdf-lib';
 
 // Set standard PDF metadata for print workflows
 export const setPdfMetadata = (pdfDoc: PDFDocument, fileName: string, spotColorName: string) => {
@@ -45,8 +44,9 @@ export const setPdfMetadata = (pdfDoc: PDFDocument, fileName: string, spotColorN
 export const addPdfXCompatibility = (pdfDoc: PDFDocument, pdfContext: PDFContext, spotColorName: string) => {
   const catalogDict = pdfDoc.catalog;
   
-  // Set Adobe-compatible PDF version
-  pdfDoc.setVersion(1, 4); // PDF 1.4 for PDF/X-3:2002
+  // Instead of using setVersion (which doesn't exist), we manually set the PDF version in the catalog
+  // Add PDF version directly to catalog dictionary
+  catalogDict.set(PDFName.of('Version'), PDFName.of('1.4')); // PDF 1.4 for PDF/X-3:2002
   
   // Add OutputIntents for PDF/X compatibility
   const outputIntentDict = pdfContext.obj({
