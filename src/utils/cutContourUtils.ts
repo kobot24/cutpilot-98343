@@ -68,7 +68,7 @@ export const createCutContourGraphicsState = (pdfContext: PDFContext) => {
     Type: PDFName.of('ExtGState'),
     ca: PDFNumber.of(1),  // non-stroke alpha
     CA: PDFNumber.of(1),  // stroke alpha
-    LW: PDFNumber.of(0.1), // Line width - changed from 0.5pt to 0.1pt for better visibility
+    LW: PDFNumber.of(0.1), // Line width - 0.1pt for thin cut contours
     OPM: 1,               // Overprint mode
     OP: true,             // Overprint
     op: true              // Overprint for fill

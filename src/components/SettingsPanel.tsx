@@ -17,8 +17,7 @@ export const SettingsPanel = ({
   onUpdateSettings,
 }: SettingsPanelProps) => {
   const [cutContourOffset, setCutContourOffset] = useState(settings.cutContourOffset.toString());
-  const [spotColorName, setSpotColorName] = useState(settings.spotColorName);
-
+  
   const handleSave = () => {
     const offsetValue = parseFloat(cutContourOffset);
     
@@ -27,14 +26,10 @@ export const SettingsPanel = ({
       return;
     }
     
-    if (!spotColorName || spotColorName.trim() === '') {
-      toast.error('Der Name der Spotfarbe darf nicht leer sein');
-      return;
-    }
-    
     onUpdateSettings({
       cutContourOffset: offsetValue,
-      spotColorName: spotColorName.trim(),
+      // Always use "CutContour" as spot color name to ensure compatibility
+      spotColorName: "CutContour"
     });
     
     toast.success('Einstellungen gespeichert');
@@ -74,12 +69,12 @@ export const SettingsPanel = ({
             <Input
               id="spotColorName"
               type="text"
-              value={spotColorName}
-              onChange={(e) => setSpotColorName(e.target.value)}
-              className="bg-white"
+              value="CutContour"
+              disabled
+              className="bg-gray-100"
             />
             <p className="text-xs text-gray-500">
-              Der Standard-Name für Adobe ist "CutContour"
+              Die Spotfarbe wird immer als "CutContour" definiert (Adobe Standard)
             </p>
           </div>
 
@@ -94,7 +89,7 @@ export const SettingsPanel = ({
         <CardContent>
           <p className="text-gray-600">
             Dieses Tool ermöglicht es, JPG-Dateien hochzuladen, PDFs mit CutContour zu erstellen
-            und diese auf Druckplatten anzuordnen. Die CutContour wird als Spotfarbe mit dem 
+            und diese auf Druckplatten anzuordnen. Die CutContour wird als Volltonfarbe mit dem 
             Namen "CutContour" erstellt.
           </p>
         </CardContent>

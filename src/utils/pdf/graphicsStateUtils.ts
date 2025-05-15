@@ -21,8 +21,7 @@ export const addGraphicsStateToResources = (page: PDFPage, pdfContext: PDFContex
     resources.set(PDFName.of('ExtGState'), extGState);
   }
   
-  // Set the graphics state with unmodified spot color name (without GS suffix)
-  // Just use the exact same name for consistency throughout the PDF
+  // Use the exact spot color name with GS suffix for consistency
   if (extGState) {
     (extGState as any).set(PDFName.of(`${spotColorName}GS`), gsRef);
   }

@@ -42,8 +42,8 @@ export const PDFDocumentView = ({
 
   const containerRef = useRef<HTMLDivElement>(null);
   
-  // Set fixed scale to 0.4 (40% of original size, reducing by 60%)
-  const [scale, setScale] = useState<number>(0.4);
+  // Reset scale to 1.0 (100% of original size)
+  const [scale, setScale] = useState<number>(1.0);
 
   // Update PDF dimensions when page loads successfully
   const handlePageLoad = (page: any) => {

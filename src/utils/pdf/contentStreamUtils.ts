@@ -13,9 +13,7 @@ export const addCutContourToPage = (page: PDFPage, pdfContext: PDFContext, pathD
   // Using a raw stream approach for better TypeScript compatibility
   
   // Create the content stream containing the cut contour with proper PDF operators
-  // The "cs" operator sets the color space for non-stroking operations
-  // The "k" operator sets the CMYK color for stroking operations (0,1,0,0 = 100% Magenta)
-  // Use the exact spot color name for both color space and graphics state references
+  // Make sure to use the exact spot color name for all operators
   const cutContourStream = pdfContext.stream(`
 q
 /${spotColorName} cs
