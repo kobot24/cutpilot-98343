@@ -1,3 +1,4 @@
+
 import { PDFDocument } from 'pdf-lib';
 import { createCutContourPath, createSpotColor, createCutContourGraphicsState } from './cutContourUtils';
 import { setPdfMetadata, addPdfXCompatibility, arrayBufferToBase64 } from './pdfMetadataUtils';
@@ -43,9 +44,10 @@ export const createPdfWithCutContour = async (
     
     console.log(`Image loaded: ${loadedImg.naturalWidth}x${loadedImg.naturalHeight} pixels`);
     
-    // Create PDF document with compatible options for Illustrator
+    // Create PDF document with compatible options for Illustrator - enforcing PDF 1.4 version
     const pdfDoc = await PDFDocument.create({
-      updateMetadata: false // Don't add default metadata that might cause issues
+      updateMetadata: false, // Don't add default metadata that might cause issues
+      version: [1, 4]        // Force PDF 1.4 for PDF/X-3:2002 compatibility
     });
     
     // Fetch image data
@@ -133,16 +135,19 @@ export const createPdfWithCutContour = async (
     // Add dimensions and DPI to the filename for clarity
     const fileNameWithDimensions = `${fileName}_${dimensions.cm.width.toFixed(1)}x${dimensions.cm.height.toFixed(1)}cm_${imageDPI}dpi`;
     
-    console.log('Setting PDF metadata');
-    // Set PDF metadata with Adobe Illustrator compatibility
+    console.log('Setting PDF metadata - explicit Adobe compatibility mode');
+    // Set PDF metadata with enforced Adobe Illustrator compatibility
     setPdfMetadata(pdfDoc, fileNameWithDimensions, spotColorName);
     
-    console.log('Adding PDF/X compatibility');
+    console.log('Adding PDF/X compatibility with forced Adobe compatibility');
     // Add PDF/X compatibility information
     addPdfXCompatibility(pdfDoc, pdfContext, spotColorName);
     
+    // Force PDF identification before saving
+    pdfDoc.context.header.toString = () => '%PDF-1.4\n%âãÏÓ';
+    
     // Save PDF using optimal settings for print workflows
-    console.log('Saving PDF document');
+    console.log('Saving PDF document with Adobe compatibility flags');
     const pdfBytes = await pdfDoc.save({ 
       useObjectStreams: false,      // Better compatibility with RIP systems
       addDefaultPage: false,        // No blank pages

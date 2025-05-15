@@ -1,5 +1,5 @@
 
-import { PDFDocument, PDFName, PDFDict, PDFContext, PDFString, PDFArray, PDFNumber, PDFHexString, PDFStream } from 'pdf-lib';
+import { PDFDocument, PDFName, PDFDict, PDFContext, PDFString, PDFArray, PDFNumber, PDFHexString, PDFStream, PDFVersion } from 'pdf-lib';
 
 // Set standard PDF metadata for print workflows
 export const setPdfMetadata = (pdfDoc: PDFDocument, fileName: string, spotColorName: string) => {
@@ -9,8 +9,8 @@ export const setPdfMetadata = (pdfDoc: PDFDocument, fileName: string, spotColorN
   pdfDoc.setProducer('PDF/X-3 Generator with ' + spotColorName);
   pdfDoc.setSubject('PDF/X-3:2002 with ' + spotColorName);
   
-  // Set the exact XMP metadata format required for proper Illustrator compatibility
-  const xmpMetadata = `<?xpacket begin="﻿" id="W5M0MpCehiHzreSzNTczkc9d"?>
+  // Create exact XMP metadata with namespace declarations and Adobe compatibility markers
+  const xmpMetadata = `<?xpacket begin="ï»¿" id="W5M0MpCehiHzreSzNTczkc9d"?>
 <x:xmpmeta xmlns:x="adobe:ns:meta/" x:xmptk="Adobe XMP Core 9.1-c003 1.000000, 0000/00/00-00:00:00        ">
    <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
       <rdf:Description rdf:about=""
@@ -21,28 +21,32 @@ export const setPdfMetadata = (pdfDoc: PDFDocument, fileName: string, spotColorN
 </x:xmpmeta>
 <?xpacket end="w"?>`;
   
-  // Create metadata stream
-  const metadataStream = pdfDoc.context.stream(xmpMetadata);
+  // Convert XMP metadata to bytes - bypassing any string processing issues
+  const xmpBytes = new TextEncoder().encode(xmpMetadata);
   
-  // Register metadata with proper structure
-  const metadata = pdfDoc.context.obj({
+  // Create a raw stream with byte data to prevent any XML processing/escaping
+  const metadataStream = pdfDoc.context.stream(xmpBytes, {
     Type: PDFName.of('Metadata'),
     Subtype: PDFName.of('XML'),
-    Length: PDFNumber.of(xmpMetadata.length)
+    Length: PDFNumber.of(xmpBytes.length)
   });
   
-  // Add stream to metadata object
-  (metadata as PDFDict).set(PDFName.of('Length'), PDFNumber.of(xmpMetadata.length));
-  metadata.set(PDFName.of('Stream'), metadataStream);
+  // Register metadata with forced proper structure
+  const metadataRef = pdfDoc.context.register(metadataStream);
   
-  // Register and add to catalog
-  const metadataRef = pdfDoc.context.register(metadata);
+  // Add to catalog with explicit dictionary structure
   pdfDoc.catalog.set(PDFName.of('Metadata'), metadataRef);
+  
+  // Force PDF version to 1.4 for PDF/X-3:2002 compatibility
+  pdfDoc.catalog.set(PDFName.of('Version'), PDFName.of('1.4'));
 };
 
 // Add PDF/X compatibility info to the document
 export const addPdfXCompatibility = (pdfDoc: PDFDocument, pdfContext: PDFContext, spotColorName: string) => {
   const catalogDict = pdfDoc.catalog;
+  
+  // Set Adobe-compatible PDF version
+  pdfDoc.setVersion(1, 4); // PDF 1.4 for PDF/X-3:2002
   
   // Add OutputIntents for PDF/X compatibility
   const outputIntentDict = pdfContext.obj({
@@ -95,6 +99,14 @@ export const addPdfXCompatibility = (pdfDoc: PDFDocument, pdfContext: PDFContext
   
   // Add PDF/X version identifier
   catalogDict.set(PDFName.of('GTS_PDFXVersion'), PDFString.of('PDF/X-3:2002'));
+  
+  // Add Adobe compatibility dictionary
+  const adobeDict = pdfContext.obj({
+    BaseVersion: PDFName.of('1.4'),
+    ExtensionLevel: PDFNumber.of(1),
+    SpotColorUsed: pdfContext.obj(true)
+  });
+  catalogDict.set(PDFName.of('Adobe_PDF'), adobeDict);
   
   // Set Adobe-specific trapped value
   const info = pdfContext.obj({
