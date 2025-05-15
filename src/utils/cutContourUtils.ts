@@ -1,5 +1,5 @@
 
-import { PDFName, PDFNumber, PDFContext, PDFArray, PDFDict, PDFStream, PDFHexString, PDFString, PDFBool } from 'pdf-lib';
+import { PDFName, PDFNumber, PDFContext, PDFArray, PDFDict, PDFStream, PDFHexString, PDFString } from 'pdf-lib';
 import { mmToPoints } from './dimensionUtils';
 
 // Create a rectangular path with rounded corners using explicit PostScript operators

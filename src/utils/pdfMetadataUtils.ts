@@ -9,29 +9,13 @@ export const setPdfMetadata = (pdfDoc: PDFDocument, fileName: string, spotColorN
   pdfDoc.setProducer('PDF/X-3 Generator with ' + spotColorName);
   pdfDoc.setSubject('PDF/X-3:2002 with ' + spotColorName);
   
-  // Set the exact XMP metadata required for proper Illustrator compatibility
+  // Set the simplified XMP metadata required for proper Illustrator compatibility
   const xmpMetadata = `<?xpacket begin="﻿" id="W5M0MpCehiHzreSzNTczkc9d"?>
 <x:xmpmeta xmlns:x="adobe:ns:meta/" x:xmptk="Adobe XMP Core 9.1-c003 1.000000, 0000/00/00-00:00:00        ">
    <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
       <rdf:Description rdf:about=""
             xmlns:pdf="http://ns.adobe.com/pdf/1.3/">
          <pdf:Trapped>False</pdf:Trapped>
-      </rdf:Description>
-      <rdf:Description rdf:about=""
-            xmlns:xmp="http://ns.adobe.com/xap/1.0/">
-         <xmp:CreatorTool>Adobe Illustrator 25.0 (Macintosh)</xmp:CreatorTool>
-         <xmp:CreateDate>${new Date().toISOString()}</xmp:CreateDate>
-         <xmp:ModifyDate>${new Date().toISOString()}</xmp:ModifyDate>
-         <xmp:MetadataDate>${new Date().toISOString()}</xmp:MetadataDate>
-      </rdf:Description>
-      <rdf:Description rdf:about=""
-            xmlns:xmpMM="http://ns.adobe.com/xap/1.0/mm/">
-         <xmpMM:DocumentID>urn:uuid:${generateUUID()}</xmpMM:DocumentID>
-         <xmpMM:InstanceID>urn:uuid:${generateUUID()}</xmpMM:InstanceID>
-      </rdf:Description>
-      <rdf:Description rdf:about=""
-            xmlns:pdfx="http://ns.adobe.com/pdfx/1.3/">
-         <pdfx:SpotColors>${spotColorName}</pdfx:SpotColors>
       </rdf:Description>
    </rdf:RDF>
 </x:xmpmeta>
