@@ -71,7 +71,7 @@ export const useFileStorageSync = (
 
   // Initialize selected file when files change
   useEffect(() => {
-    if (files.length > 0 && !files.some(f => f.id === (selectedFile => selectedFile?.id))) {
+    if (files.length > 0 && !files.some(file => file.id === (selectedFile?.id))) {
       setSelectedFile(files[0]);
     } else if (files.length === 0) {
       setSelectedFile(null);
