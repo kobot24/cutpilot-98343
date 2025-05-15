@@ -25,6 +25,9 @@ export const addColorSpaceToResources = (page: PDFPage, pdfContext: PDFContext, 
   // Set the spot color in the ColorSpace dictionary with exactly the spot color name
   if (colorSpaceDict) {
     (colorSpaceDict as PDFDict).set(PDFName.of(spotColorName), spotColorData.spotColorSpace);
+    
+    // Also add standard Adobe-style registration
+    (colorSpaceDict as PDFDict).set(PDFName.of('Separation_' + spotColorName), spotColorData.spotColorSpace);
   }
   
   // Add Properties dictionary for spot colors - critical for Adobe compatibility
@@ -62,5 +65,15 @@ export const addColorSpaceToResources = (page: PDFPage, pdfContext: PDFContext, 
       PDFName.of('ImageI')
     ]);
     resources.set(PDFName.of('ProcSet'), procSet);
+  }
+  
+  // Add explicit ColorUsage dictionary for Illustrator
+  let colorUsageDict = resources.get(PDFName.of('ColorUsage'));
+  if (!colorUsageDict) {
+    colorUsageDict = pdfContext.obj({
+      SpotColors: pdfContext.obj([PDFName.of(spotColorName)]),
+      UsesSpotColor: true
+    });
+    resources.set(PDFName.of('ColorUsage'), colorUsageDict);
   }
 };

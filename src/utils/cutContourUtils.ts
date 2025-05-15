@@ -13,8 +13,8 @@ export const createCutContourPath = (width: number, height: number, offset: numb
   const w = width - (offsetPoints * 2);
   const h = height - (offsetPoints * 2);
   
-  // Format as a single-line, properly spaced path with explicit stroke operator
-  // Compatible with Adobe Illustrator and RIP systems
+  // Format as explicit PostScript path commands with proper spacing
+  // This specific format is required by Adobe Illustrator to recognize as a path
   return `${x} ${y} m ${x+w} ${y} l ${x+w} ${y+h} l ${x} ${y+h} l h S`;
 };
 
@@ -51,6 +51,7 @@ export const createSpotColor = (pdfContext: PDFContext, spotColorName: string) =
   ]);
   
   // Create spot color dictionary with Adobe-specific attributes
+  // These specific tags are required by Illustrator to recognize the spot color
   const colorSpaceDict = pdfContext.obj({
     Type: PDFName.of('ColorSpace'),
     Subtype: PDFName.of('Separation'),

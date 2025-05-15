@@ -37,8 +37,9 @@ export const addGraphicsStateToResources = (page: PDFPage, pdfContext: PDFContex
       TR: PDFName.of('Identity')
     }));
     
-    // Add technical graphics state specifically for cut contours
-    (extGState as PDFDict).set(PDFName.of('CutContourState'), pdfContext.obj({
+    // Add technical graphics state specifically for spot colors
+    // Use dynamic name based on the spot color name instead of hardcoding
+    (extGState as PDFDict).set(PDFName.of(`${spotColorName}State`), pdfContext.obj({
       Type: PDFName.of('ExtGState'),
       LW: PDFNumber.of(0.1),    // Exact 0.1pt line width
       LC: PDFNumber.of(0),      // Butt cap

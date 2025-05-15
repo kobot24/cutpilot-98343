@@ -3,10 +3,10 @@ import { PDFDocument, PDFName, PDFDict, PDFContext, PDFString, PDFArray, PDFNumb
 
 // Set standard PDF metadata for print workflows
 export const setPdfMetadata = (pdfDoc: PDFDocument, fileName: string, spotColorName: string) => {
-  // Set PDF metadata using standard methods and include explicit CutContour references
+  // Set PDF metadata using standard methods and include explicit spot color references
   pdfDoc.setTitle(`${fileName}_${spotColorName}`);
   pdfDoc.setCreator('Adobe Illustrator 25.0 Compatible');
-  pdfDoc.setProducer('PDF-X3 Generator with ' + spotColorName);
+  pdfDoc.setProducer('PDF/X-3 Generator with ' + spotColorName);
   pdfDoc.setSubject('PDF/X-3:2002 with ' + spotColorName);
   
   // Advanced metadata for Print Production
@@ -47,12 +47,17 @@ export const addPdfXCompatibility = (pdfDoc: PDFDocument, pdfContext: PDFContext
   });
   catalogDict.set(PDFName.of('MarkInfo'), markInfoDict);
   
-  // Add Illustrator-specific metadata with explicit version
+  // Add Illustrator-specific metadata with exact version and spot color references
   const aiMetadata = pdfContext.obj({
     AIMetaData: pdfContext.obj({
       AIVersion: PDFString.of('25.0'),
       ContainsXMP: true,
-      SpotColors: pdfContext.obj([PDFString.of(spotColorName)])
+      SpotColors: pdfContext.obj([PDFString.of(spotColorName)]),
+      ColorUsage: pdfContext.obj({
+        UsesProcessColor: false,
+        UsesSpotColor: true,
+        SpotColorNames: pdfContext.obj([PDFString.of(spotColorName)])
+      })
     }),
     AIPrivateData: pdfContext.obj([1]),
     ContainsXMP: PDFName.of('true')
@@ -62,16 +67,30 @@ export const addPdfXCompatibility = (pdfDoc: PDFDocument, pdfContext: PDFContext
   // Add PDF/X version identifier
   catalogDict.set(PDFName.of('GTS_PDFXVersion'), PDFString.of('PDF/X-3:2002'));
   
-  // Set SpotColors dictionary
+  // Set SpotColors dictionary with the exact spot color name
   const spotDict = pdfContext.obj({
     SpotColorUsed: true,
     Names: pdfContext.obj([PDFString.of(spotColorName)]),
     ColorSpace: PDFName.of('DeviceCMYK'),
-    Separation: true
+    Separation: true,
+    SpotColorName: PDFString.of(spotColorName)
   });
   catalogDict.set(PDFName.of('SpotColors'), spotDict);
   
-  // Add Trapped value and spot color reference
+  // Add explicit SpotColorInfo dictionary - critical for Illustrator recognition
+  const spotColorInfo = pdfContext.obj({
+    Name: PDFName.of(spotColorName),
+    AlternateColorSpace: PDFName.of('DeviceCMYK'),
+    Components: pdfContext.obj([
+      PDFNumber.of(0),   // C
+      PDFNumber.of(1),   // M (100%)
+      PDFNumber.of(0),   // Y
+      PDFNumber.of(0)    // K
+    ])
+  });
+  catalogDict.set(PDFName.of('SpotColorInfo'), spotColorInfo);
+  
+  // Add Trapped value and spot color reference to Info dictionary
   const info = pdfContext.obj({
     Trapped: PDFName.of('False'),
     CreatorVersion: PDFString.of('25.0.0'),
