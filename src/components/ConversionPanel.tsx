@@ -7,19 +7,23 @@ import { UploadedFile } from '@/types/fileTypes';
 import { UserSettings } from '@/hooks/useSettings';
 import { PDFPreview } from './PDFPreview';
 import { PDFDownloadButton } from './pdf/PDFDownloadButton';
+import { ConversionProgress } from '@/hooks/usePDFConverter';
+import { PDFConversionProgress } from './pdf/PDFConversionProgress';
 
 type ConversionPanelProps = {
   selectedFile: UploadedFile | null;
   onConvertToPdf: (fileId: string) => Promise<string | undefined>;
   settings: UserSettings;
   isLoading: boolean;
+  conversionProgress?: ConversionProgress;
 };
 
 export const ConversionPanel = ({
   selectedFile,
   onConvertToPdf,
   settings,
-  isLoading
+  isLoading,
+  conversionProgress = { progress: 0, status: '' }
 }: ConversionPanelProps) => {
   const [conversionInProgress, setConversionInProgress] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
@@ -124,7 +128,7 @@ export const ConversionPanel = ({
                 <span className="text-gray-600">{settings.spotColorName}</span>
               </div>
             </div>
-            <div className="flex flex-col gap-2">
+            <div className="space-y-2">
               <Button
                 className="w-full"
                 onClick={handleConvert}
@@ -140,6 +144,11 @@ export const ConversionPanel = ({
                   </span>
                 ) : 'PDF mit CutContour erstellen'}
               </Button>
+              
+              <PDFConversionProgress 
+                progress={conversionProgress} 
+                show={conversionInProgress || conversionProgress.progress > 0} 
+              />
               
               {selectedFile.convertedPdfUrl && (
                 <PDFDownloadButton
@@ -194,3 +203,4 @@ export const ConversionPanel = ({
     </div>
   );
 };
+

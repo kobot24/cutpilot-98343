@@ -5,13 +5,24 @@ import { UploadedFile } from '../types/fileTypes';
 import { createPdfWithCutContour } from '../utils/pdfUtils';
 import { isImageTooLarge } from '../utils/fileValidationUtils';
 
+export type ConversionProgress = {
+  progress: number;
+  status: string;
+};
+
 export const usePDFConverter = () => {
   const [isConverting, setIsConverting] = useState(false);
+  const [conversionProgress, setConversionProgress] = useState<ConversionProgress>({ 
+    progress: 0, 
+    status: '' 
+  });
 
   const convertToPdf = async (file: UploadedFile): Promise<string | undefined> => {
     if (!file) return undefined;
     
     setIsConverting(true);
+    setConversionProgress({ progress: 0, status: 'Starte Konvertierung...' });
+    
     try {
       // Check if the image is too large for PDF conversion
       const tooLarge = await isImageTooLarge(file.url);
@@ -36,8 +47,13 @@ export const usePDFConverter = () => {
         description: "Bitte warten Sie, während die PDF erstellt wird..."
       });
       
+      // Track progress during PDF creation
+      const handleProgress = (progress: number, status: string) => {
+        setConversionProgress({ progress, status });
+      };
+      
       // Create PDF with cut contour
-      const pdfUrl = await createPdfWithCutContour(file.url, settings);
+      const pdfUrl = await createPdfWithCutContour(file.url, settings, handleProgress);
       
       if (!pdfUrl) {
         throw new Error("Keine PDF-URL zurückgegeben");
@@ -59,11 +75,17 @@ export const usePDFConverter = () => {
       return undefined;
     } finally {
       setIsConverting(false);
+      // Reset progress after a short delay to show completion
+      setTimeout(() => {
+        setConversionProgress({ progress: 0, status: '' });
+      }, 1000);
     }
   };
 
   return {
     convertToPdf,
-    isConverting
+    isConverting,
+    conversionProgress
   };
 };
+

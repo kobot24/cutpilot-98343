@@ -14,7 +14,7 @@ export const useFileStorage = () => {
   const [isInitialized, setIsInitialized] = useState(false);
   
   const { processFiles, isProcessing } = useFileProcessor();
-  const { convertToPdf, isConverting } = usePDFConverter();
+  const { convertToPdf, isConverting, conversionProgress } = usePDFConverter();
 
   // Load files from IndexedDB on component mount
   useEffect(() => {
@@ -193,6 +193,7 @@ export const useFileStorage = () => {
     files,
     selectedFile,
     isLoading: isLoading || isProcessing || isConverting,
+    conversionProgress,
     addFiles,
     removeFile,
     selectFile,
@@ -202,3 +203,4 @@ export const useFileStorage = () => {
     MAX_FILES: FILE_STORAGE_LIMITS.MAX_FILES
   };
 };
+
