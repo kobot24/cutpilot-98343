@@ -1,5 +1,5 @@
 
-import { PDFPage, PDFContext, PDFName, PDFDict } from 'pdf-lib';
+import { PDFPage, PDFContext, PDFName, PDFDict, PDFArray } from 'pdf-lib';
 
 /**
  * Add color space to page resources
@@ -27,16 +27,40 @@ export const addColorSpaceToResources = (page: PDFPage, pdfContext: PDFContext, 
     (colorSpaceDict as PDFDict).set(PDFName.of(spotColorName), spotColorData.spotColorSpace);
   }
   
-  // Add Properties dictionary for Illustrator spot colors - critically important for Adobe compatibility
+  // Add Properties dictionary for spot colors - critical for Adobe compatibility
   let propertiesDict = resources.get(PDFName.of('Properties'));
   if (!propertiesDict) {
     propertiesDict = pdfContext.obj({});
     resources.set(PDFName.of('Properties'), propertiesDict);
   }
   
-  // Register the color space dictionary in Properties with exactly the same spot color name
-  // This is essential for Adobe applications to recognize the spot color
+  // Register the color space dictionary in Properties with exact name
   if (propertiesDict) {
     (propertiesDict as PDFDict).set(PDFName.of(spotColorName), spotColorData.colorSpaceDict);
+  }
+  
+  // Add spot color to page attributes - crucial for RIP systems
+  const pageDict = page.node.dict;
+  let pageSpotDict = pageDict.get(PDFName.of('SpotColorUsage'));
+  if (!pageSpotDict) {
+    pageSpotDict = pdfContext.obj({});
+    pageDict.set(PDFName.of('SpotColorUsage'), pageSpotDict);
+  }
+  
+  if (pageSpotDict && spotColorData.inkList) {
+    (pageSpotDict as PDFDict).set(PDFName.of(spotColorName), spotColorData.inkList);
+  }
+  
+  // Add to ProcSet for older PDF processors
+  let procSet = resources.get(PDFName.of('ProcSet'));
+  if (!procSet) {
+    procSet = pdfContext.obj([
+      PDFName.of('PDF'),
+      PDFName.of('Text'),
+      PDFName.of('ImageB'),
+      PDFName.of('ImageC'),
+      PDFName.of('ImageI')
+    ]);
+    resources.set(PDFName.of('ProcSet'), procSet);
   }
 };

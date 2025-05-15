@@ -1,13 +1,25 @@
 
-import { PDFDocument, PDFName, PDFDict, PDFContext, PDFString, PDFArray, PDFNumber } from 'pdf-lib';
+import { PDFDocument, PDFName, PDFDict, PDFContext, PDFString, PDFArray, PDFNumber, PDFHexString } from 'pdf-lib';
 
 // Set standard PDF metadata for print workflows
 export const setPdfMetadata = (pdfDoc: PDFDocument, fileName: string) => {
   // Set PDF metadata using standard methods and include explicit CutContour references
   pdfDoc.setTitle(`${fileName}_CutContour`);
-  pdfDoc.setCreator('Adobe Illustrator Compatible CutContour Tool');
-  pdfDoc.setProducer('Adobe PDF library 17.00');
+  pdfDoc.setCreator('Adobe Illustrator 25.0 Compatible');
+  pdfDoc.setProducer('PDF-X3 Generator with CutContour');
   pdfDoc.setSubject('PDF/X-3:2002 with CutContour');
+  
+  // Advanced metadata for Print Production
+  const metadata = pdfDoc.context.obj({
+    Type: PDFName.of('Metadata'),
+    Subtype: PDFName.of('XML'),
+    CreatorTool: PDFString.of('Adobe Illustrator 25.0'),
+    PDFXVersion: PDFString.of('PDF/X-3:2002'),
+    GTS_PDFXConformance: PDFString.of('PDF/X-3:2002'),
+    ContainsSpotColors: true
+  });
+  
+  pdfDoc.catalog.set(PDFName.of('Metadata'), metadata);
 };
 
 // Add PDF/X compatibility info to the document
@@ -27,7 +39,7 @@ export const addPdfXCompatibility = (pdfDoc: PDFDocument, pdfContext: PDFContext
   const outputIntents = pdfContext.obj([outputIntentDict]);
   catalogDict.set(PDFName.of('OutputIntents'), outputIntents);
   
-  // Add MarkInfo for Illustrator compatibility - critical for spot color recognitition
+  // Add MarkInfo for Illustrator compatibility - critical for spot color recognition
   const markInfoDict = pdfContext.obj({
     Marked: true,
     UserProperties: false,
@@ -46,6 +58,18 @@ export const addPdfXCompatibility = (pdfDoc: PDFDocument, pdfContext: PDFContext
     ContainsXMP: PDFName.of('true')
   });
   catalogDict.set(PDFName.of('AdobeIllustratorData'), aiMetadata);
+  
+  // Add PDF/X version identifier
+  catalogDict.set(PDFName.of('GTS_PDFXVersion'), PDFString.of('PDF/X-3:2002'));
+  
+  // Set SpotColors dictionary
+  const spotDict = pdfContext.obj({
+    SpotColorUsed: true,
+    Names: pdfContext.obj([PDFString.of('CutContour')]),
+    ColorSpace: PDFName.of('DeviceCMYK'),
+    Separation: true
+  });
+  catalogDict.set(PDFName.of('SpotColors'), spotDict);
   
   // Add Trapped value and spot color reference
   const info = pdfContext.obj({

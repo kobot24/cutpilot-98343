@@ -1,5 +1,5 @@
 
-import { PDFPage, PDFContext, PDFName, PDFDict } from 'pdf-lib';
+import { PDFPage, PDFContext, PDFName, PDFDict, PDFNumber } from 'pdf-lib';
 
 /**
  * Add graphics state to page resources
@@ -24,5 +24,30 @@ export const addGraphicsStateToResources = (page: PDFPage, pdfContext: PDFContex
   // Use the exact spot color name with GS suffix for consistency
   if (extGState) {
     (extGState as PDFDict).set(PDFName.of(`${spotColorName}GS`), gsRef);
+    
+    // Add additional standard graphics states required for PDF/X compliance
+    (extGState as PDFDict).set(PDFName.of('DefaultCMYK'), pdfContext.obj({
+      Type: PDFName.of('ExtGState'),
+      BM: PDFName.of('Normal'),
+      SA: true,
+      SM: PDFNumber.of(0.02),
+      OP: false,
+      op: false,
+      OPM: PDFNumber.of(1),
+      TR: PDFName.of('Identity')
+    }));
+    
+    // Add technical graphics state specifically for cut contours
+    (extGState as PDFDict).set(PDFName.of('CutContourState'), pdfContext.obj({
+      Type: PDFName.of('ExtGState'),
+      LW: PDFNumber.of(0.1),    // Exact 0.1pt line width
+      LC: PDFNumber.of(0),      // Butt cap
+      LJ: PDFNumber.of(0),      // Miter join
+      ML: PDFNumber.of(10),     // Miter limit
+      D: pdfContext.obj([[PDFNumber.of(0)]]),  // Solid line
+      RI: PDFName.of('AbsoluteColorimetric'),  // Rendering intent
+      OP: true,                 // Overprint for stroke
+      op: false                 // No overprint for fill
+    }));
   }
 };
