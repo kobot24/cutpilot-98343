@@ -1,5 +1,5 @@
 
-import { PDFPage, PDFName, PDFDict, PDFContext, PDFString } from 'pdf-lib';
+import { PDFPage, PDFName, PDFDict, PDFContext, PDFString, PDFArray } from 'pdf-lib';
 
 // Add color space to page resources
 export const addColorSpaceToResources = (page: PDFPage, pdfContext: PDFContext, spotColorData: any) => {
