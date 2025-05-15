@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { Eye, EyeOff } from 'lucide-react';
+import { Eye, EyeOff, Download } from 'lucide-react';
 
 type PDFControlsProps = {
   showCutContour: boolean;
@@ -31,10 +31,12 @@ export const PDFControls = ({ showCutContour, toggleCutContour, handleDownload }
         )}
       </Button>
       <Button 
-        variant="outline" 
+        variant="primary" 
         size="sm"
         onClick={handleDownload}
+        className="bg-blue-600 hover:bg-blue-700 text-white"
       >
+        <Download className="h-4 w-4 mr-1" />
         Herunterladen
       </Button>
     </div>
