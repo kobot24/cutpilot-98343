@@ -9,7 +9,7 @@ export const setPdfMetadata = (pdfDoc: PDFDocument, fileName: string, spotColorN
   pdfDoc.setProducer('PDF/X-3 Generator with ' + spotColorName);
   pdfDoc.setSubject('PDF/X-3:2002 with ' + spotColorName);
   
-  // Set the simplified XMP metadata required for proper Illustrator compatibility
+  // Set the exact XMP metadata format required for proper Illustrator compatibility
   const xmpMetadata = `<?xpacket begin="﻿" id="W5M0MpCehiHzreSzNTczkc9d"?>
 <x:xmpmeta xmlns:x="adobe:ns:meta/" x:xmptk="Adobe XMP Core 9.1-c003 1.000000, 0000/00/00-00:00:00        ">
    <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
