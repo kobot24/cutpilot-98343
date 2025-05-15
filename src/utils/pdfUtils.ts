@@ -136,11 +136,11 @@ export const createPdfWithCutContour = async (
     
     console.log('Setting PDF metadata');
     // Set PDF metadata with Adobe Illustrator compatibility
-    setPdfMetadata(pdfDoc, fileNameWithDimensions);
+    setPdfMetadata(pdfDoc, fileNameWithDimensions, spotColorName);
     
     console.log('Adding PDF/X compatibility');
     // Add PDF/X compatibility information
-    addPdfXCompatibility(pdfDoc, pdfContext);
+    addPdfXCompatibility(pdfDoc, pdfContext, spotColorName);
     
     // Save PDF using optimal settings for print workflows
     console.log('Saving PDF document');

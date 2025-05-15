@@ -15,7 +15,7 @@ export const createCutContourPath = (width: number, height: number, offset: numb
   
   // Format as a single-line, properly spaced path with explicit stroke operator
   // Compatible with Adobe Illustrator and RIP systems
-  return `${x} ${y} m ${x+w} ${y} l ${x+w} ${y+h} l ${x} ${y+h} l h`;
+  return `${x} ${y} m ${x+w} ${y} l ${x+w} ${y+h} l ${x} ${y+h} l h S`;
 };
 
 // Create true spot color for cut contour

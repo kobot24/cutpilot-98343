@@ -19,8 +19,7 @@ export const addCutContourToPage = (page: PDFPage, pdfContext: PDFContext, pathD
     '1 0 0 1 0 0 cm',             // Identity matrix - no transformation
     '0 0 0 0 k',                  // Set fill color to none (no fill)
     '0 1 0 0 K',                  // Set stroke color to 100% magenta
-    `${pathData}`,                // Path data (without stroke operator)
-    'S',                          // Stroke path without filling
+    `${pathData}`,                // Path data (now includes the stroke operator)
     'Q'                           // Restore graphics state
   ].join('\n'));
   

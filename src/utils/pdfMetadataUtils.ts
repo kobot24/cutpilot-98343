@@ -2,9 +2,9 @@
 import { PDFDocument, PDFName, PDFDict, PDFContext, PDFString, PDFArray, PDFNumber, PDFHexString } from 'pdf-lib';
 
 // Set standard PDF metadata for print workflows
-export const setPdfMetadata = (pdfDoc: PDFDocument, fileName: string) => {
+export const setPdfMetadata = (pdfDoc: PDFDocument, fileName: string, spotColorName: string) => {
   // Set PDF metadata using standard methods and include explicit CutContour references
-  pdfDoc.setTitle(`${fileName}_CutContour`);
+  pdfDoc.setTitle(`${fileName}_${spotColorName}`);
   pdfDoc.setCreator('Adobe Illustrator 25.0 Compatible');
   pdfDoc.setProducer('PDF-X3 Generator with CutContour');
   pdfDoc.setSubject('PDF/X-3:2002 with CutContour');
@@ -23,7 +23,7 @@ export const setPdfMetadata = (pdfDoc: PDFDocument, fileName: string) => {
 };
 
 // Add PDF/X compatibility info to the document
-export const addPdfXCompatibility = (pdfDoc: PDFDocument, pdfContext: PDFContext) => {
+export const addPdfXCompatibility = (pdfDoc: PDFDocument, pdfContext: PDFContext, spotColorName: string) => {
   const catalogDict = pdfDoc.catalog;
   
   // Add OutputIntents for PDF/X compatibility with more detailed color intent
@@ -34,7 +34,7 @@ export const addPdfXCompatibility = (pdfDoc: PDFDocument, pdfContext: PDFContext
     OutputConditionIdentifier: PDFString.of('PDF/X-3:2002'),
     RegistryName: PDFString.of('http://www.color.org'),
     DestOutputProfile: null,
-    Info: PDFString.of('PDF/X-3 with CutContour spot color')
+    Info: PDFString.of(`PDF/X-3 with ${spotColorName} spot color`)
   });
   const outputIntents = pdfContext.obj([outputIntentDict]);
   catalogDict.set(PDFName.of('OutputIntents'), outputIntents);
@@ -52,7 +52,7 @@ export const addPdfXCompatibility = (pdfDoc: PDFDocument, pdfContext: PDFContext
     AIMetaData: pdfContext.obj({
       AIVersion: PDFString.of('25.0'),
       ContainsXMP: true,
-      SpotColors: pdfContext.obj([PDFString.of('CutContour')])
+      SpotColors: pdfContext.obj([PDFString.of(spotColorName)])
     }),
     AIPrivateData: pdfContext.obj([1]),
     ContainsXMP: PDFName.of('true')
@@ -65,7 +65,7 @@ export const addPdfXCompatibility = (pdfDoc: PDFDocument, pdfContext: PDFContext
   // Set SpotColors dictionary
   const spotDict = pdfContext.obj({
     SpotColorUsed: true,
-    Names: pdfContext.obj([PDFString.of('CutContour')]),
+    Names: pdfContext.obj([PDFString.of(spotColorName)]),
     ColorSpace: PDFName.of('DeviceCMYK'),
     Separation: true
   });
@@ -76,7 +76,7 @@ export const addPdfXCompatibility = (pdfDoc: PDFDocument, pdfContext: PDFContext
     Trapped: PDFName.of('False'),
     CreatorVersion: PDFString.of('25.0.0'),
     HasSpotColors: true,
-    SpotColorNames: pdfContext.obj([PDFString.of('CutContour')])
+    SpotColorNames: pdfContext.obj([PDFString.of(spotColorName)])
   }) as PDFDict;
   
   // Override info dictionary directly
