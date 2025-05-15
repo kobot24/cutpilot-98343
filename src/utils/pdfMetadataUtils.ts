@@ -49,7 +49,7 @@ export const setPdfMetadata = (pdfDoc: PDFDocument, fileName: string, spotColorN
   
   // Add stream to metadata object
   (metadata as PDFDict).set(PDFName.of('Length'), PDFNumber.of(xmpMetadata.length));
-  metadata.set(PDFName.from('Stream'), metadataStream);
+  metadata.set(PDFName.of('Stream'), metadataStream);
   
   // Register and add to catalog
   const metadataRef = pdfDoc.context.register(metadata);
@@ -75,9 +75,9 @@ export const addPdfXCompatibility = (pdfDoc: PDFDocument, pdfContext: PDFContext
   
   // Add MarkInfo for Illustrator compatibility
   const markInfoDict = pdfContext.obj({
-    Marked: PDFBool.of(true),
-    UserProperties: PDFBool.of(false),
-    Suspects: PDFBool.of(false)
+    Marked: new PDFBool(true),
+    UserProperties: new PDFBool(false),
+    Suspects: new PDFBool(false)
   });
   catalogDict.set(PDFName.of('MarkInfo'), markInfoDict);
   
@@ -95,16 +95,16 @@ export const addPdfXCompatibility = (pdfDoc: PDFDocument, pdfContext: PDFContext
     Colorants: pdfContext.obj([
       PDFString.of(spotColorName)
     ]),
-    SpotColorUsed: PDFBool.of(true)
+    SpotColorUsed: new PDFBool(true)
   });
   catalogDict.set(PDFName.of('SpotColorInfo'), spotColorInfo);
   
   // Set SpotColors dictionary with the exact spot color name
   const spotDict = pdfContext.obj({
-    SpotColorUsed: PDFBool.of(true),
+    SpotColorUsed: new PDFBool(true),
     Names: pdfContext.obj([PDFString.of(spotColorName)]),
     ColorSpace: PDFName.of('DeviceCMYK'),
-    Separation: PDFBool.of(true),
+    Separation: new PDFBool(true),
     SpotColorName: PDFString.of(spotColorName)
   });
   catalogDict.set(PDFName.of('SpotColors'), spotDict);
@@ -116,7 +116,7 @@ export const addPdfXCompatibility = (pdfDoc: PDFDocument, pdfContext: PDFContext
   const info = pdfContext.obj({
     Trapped: PDFName.of('False'),
     CreatorVersion: PDFString.of('25.0.0'),
-    HasSpotColors: PDFBool.of(true),
+    HasSpotColors: new PDFBool(true),
     SpotColorNames: pdfContext.obj([PDFString.of(spotColorName)])
   }) as PDFDict;
   

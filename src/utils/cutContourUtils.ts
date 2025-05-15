@@ -54,7 +54,7 @@ export const createSpotColor = (pdfContext: PDFContext, spotColorName: string) =
     M: PDFNumber.of(1), // 100% Magenta
     Y: PDFNumber.of(0),
     K: PDFNumber.of(0),
-    Process: PDFBool.of(false),
+    Process: new PDFBool(false),
     Colorant: PDFString.of(spotColorName),
     ColorantName: PDFString.of(spotColorName)
   });
@@ -71,7 +71,7 @@ export const createSpotColor = (pdfContext: PDFContext, spotColorName: string) =
       PDFNumber.of(0), // Y
       PDFNumber.of(0)  // K
     ]),
-    IsSpot: PDFBool.of(true)
+    IsSpot: new PDFBool(true)
   });
 
   // Return all needed references
@@ -91,12 +91,12 @@ export const createCutContourGraphicsState = (pdfContext: PDFContext, spotColorN
     CA: PDFNumber.of(1),    // stroke alpha
     LW: PDFNumber.of(0.1),  // Line width
     OPM: PDFNumber.of(1),   // Overprint mode
-    op: PDFBool.of(false),  // No fill overprint
-    OP: PDFBool.of(true),   // Stroke overprint
-    SA: PDFBool.of(true),   // Stroke adjustment
+    op: new PDFBool(false),  // No fill overprint
+    OP: new PDFBool(true),   // Stroke overprint
+    SA: new PDFBool(true),   // Stroke adjustment
     SMask: PDFName.of('None'), // No soft mask
     BM: PDFName.of('Normal'), // Normal blend mode
-    TK: PDFBool.of(true),   // Text knockout
+    TK: new PDFBool(true),   // Text knockout
     TR: PDFName.of('Identity') // Transfer function
   });
   

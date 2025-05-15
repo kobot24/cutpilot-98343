@@ -63,8 +63,8 @@ export const addColorSpaceToResources = (page: PDFPage, pdfContext: PDFContext, 
   
   // Add explicit Adobe-specific color usage marker
   resources.set(PDFName.of('ColorUsage'), pdfContext.obj({
-    SpotColor: PDFBool.of(true),
-    UsesSpotColor: PDFBool.of(true),
+    SpotColor: new PDFBool(true),
+    UsesSpotColor: new PDFBool(true),
     SpotNames: pdfContext.obj([PDFString.of(spotColorName)])
   }));
 };
