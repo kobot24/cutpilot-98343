@@ -13,16 +13,9 @@ export const createCutContourPath = (width: number, height: number, offset: numb
   const w = width - (offsetPoints * 2);
   const h = height - (offsetPoints * 2);
   
-  // Format with proper PostScript path operators for closed path
-  // Using explicit moveTo, lineTo operators with line breaks for better compatibility
-  // Ensure this creates a closed path (critical for cutting systems)
-  return `
-    ${x} ${y} m
-    ${x+w} ${y} l
-    ${x+w} ${y+h} l
-    ${x} ${y+h} l
-    h
-  `.trim().replace(/\n\s+/g, '\n    ');
+  // Format as a single-line, properly spaced path with explicit stroke operator
+  // Compatible with Adobe Illustrator and RIP systems
+  return `${x} ${y} m ${x+w} ${y} l ${x+w} ${y+h} l ${x} ${y+h} l h`;
 };
 
 // Create true spot color for cut contour
@@ -30,7 +23,6 @@ export const createSpotColor = (pdfContext: PDFContext, spotColorName: string) =
   // Create a true Adobe-compatible spot color with CMYK values 0,1,0,0 (100% Magenta)
   
   // Create separation color space with proper Adobe Illustrator compatibility
-  // Using exact format that Illustrator and RIP systems expect for spotcolors
   const separationColorSpace = pdfContext.obj([
     PDFName.of('Separation'),
     PDFName.of(spotColorName),
@@ -70,7 +62,6 @@ export const createSpotColor = (pdfContext: PDFContext, spotColorName: string) =
     M: PDFNumber.of(1), // 100% Magenta
     Y: PDFNumber.of(0),
     K: PDFNumber.of(0),
-    // Add additional fields for better Illustrator compatibility
     SpotFunction: PDFName.of('Round'),
     Process: false,
     Colorant: PDFString.of(spotColorName),
@@ -78,9 +69,7 @@ export const createSpotColor = (pdfContext: PDFContext, spotColorName: string) =
   });
 
   // Register color space stream for InkList compatibility (needed by some RIPs)
-  const inkListStream = pdfContext.stream(`
-/${spotColorName} 0 1 0 0
-  `);
+  const inkListStream = pdfContext.stream(`/${spotColorName} 0 1 0 0`);
   
   const inkList = pdfContext.obj({
     Type: PDFName.of('InkList'),

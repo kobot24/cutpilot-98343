@@ -40,7 +40,6 @@ export const addColorSpaceToResources = (page: PDFPage, pdfContext: PDFContext, 
   }
   
   // Add spot color to page attributes - crucial for RIP systems
-  // Use a public method instead of accessing the private dict property
   const pageDict = page.node;
   let pageSpotDict = pageDict.get(PDFName.of('SpotColorUsage'));
   if (!pageSpotDict) {
