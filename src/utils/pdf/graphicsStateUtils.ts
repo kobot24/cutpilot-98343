@@ -1,5 +1,5 @@
 
-import { PDFPage, PDFContext, PDFName, PDFDict, PDFNumber } from 'pdf-lib';
+import { PDFPage, PDFContext, PDFName, PDFDict, PDFNumber, PDFBool } from 'pdf-lib';
 
 /**
  * Add graphics state to page resources
@@ -25,30 +25,41 @@ export const addGraphicsStateToResources = (page: PDFPage, pdfContext: PDFContex
   if (extGState) {
     (extGState as PDFDict).set(PDFName.of(`${spotColorName}GS`), gsRef);
     
-    // Add additional standard graphics states required for PDF/X compliance
-    (extGState as PDFDict).set(PDFName.of('DefaultCMYK'), pdfContext.obj({
+    // Add Adobe-specific graphics states for optimal compatibility
+    (extGState as PDFDict).set(PDFName.of('SpotState'), pdfContext.obj({
       Type: PDFName.of('ExtGState'),
-      BM: PDFName.of('Normal'),
-      SA: true,
+      SA: PDFBool.of(true),
       SM: PDFNumber.of(0.02),
-      OP: false,
-      op: false,
+      OP: PDFBool.of(true),
+      op: PDFBool.of(false),
       OPM: PDFNumber.of(1),
-      TR: PDFName.of('Identity')
-    }));
-    
-    // Add technical graphics state specifically for spot colors
-    // Use dynamic name based on the spot color name instead of hardcoding
-    (extGState as PDFDict).set(PDFName.of(`${spotColorName}State`), pdfContext.obj({
-      Type: PDFName.of('ExtGState'),
       LW: PDFNumber.of(0.1),    // Exact 0.1pt line width
       LC: PDFNumber.of(0),      // Butt cap
       LJ: PDFNumber.of(0),      // Miter join
       ML: PDFNumber.of(10),     // Miter limit
       D: pdfContext.obj([[PDFNumber.of(0)]]),  // Solid line
-      RI: PDFName.of('AbsoluteColorimetric'),  // Rendering intent
-      OP: true,                 // Overprint for stroke
-      op: false                 // No overprint for fill
+      BM: PDFName.of('Normal')  // Blend mode
     }));
+    
+    // Add spot color specific state
+    (extGState as PDFDict).set(PDFName.of(`${spotColorName}_State`), pdfContext.obj({
+      Type: PDFName.of('ExtGState'),
+      LW: PDFNumber.of(0.1),    // Line width
+      OP: PDFBool.of(true),     // Overprint stroke
+      OPM: PDFNumber.of(1),     // Overprint mode
+      SA: PDFBool.of(true),     // Stroke adjustment
+      BM: PDFName.of('Normal')  // Blend mode
+    }));
+  }
+  
+  // Add spot color to registered graphics states in a dedicated dict
+  let spotGState = resources.get(PDFName.of('SpotStates'));
+  if (!spotGState) {
+    spotGState = pdfContext.obj({});
+    resources.set(PDFName.of('SpotStates'), spotGState);
+  }
+  
+  if (spotGState) {
+    (spotGState as PDFDict).set(PDFName.of(spotColorName), gsRef);
   }
 };

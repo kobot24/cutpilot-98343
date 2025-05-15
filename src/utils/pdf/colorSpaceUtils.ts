@@ -1,5 +1,5 @@
 
-import { PDFPage, PDFContext, PDFName, PDFDict, PDFArray } from 'pdf-lib';
+import { PDFPage, PDFContext, PDFName, PDFDict, PDFArray, PDFBool, PDFString } from 'pdf-lib';
 
 /**
  * Add color space to page resources
@@ -26,7 +26,8 @@ export const addColorSpaceToResources = (page: PDFPage, pdfContext: PDFContext, 
   if (colorSpaceDict) {
     (colorSpaceDict as PDFDict).set(PDFName.of(spotColorName), spotColorData.spotColorSpace);
     
-    // Also add standard Adobe-style registration
+    // Also add Adobe-specific name format for maximum compatibility
+    (colorSpaceDict as PDFDict).set(PDFName.of('SPOT_' + spotColorName), spotColorData.spotColorSpace);
     (colorSpaceDict as PDFDict).set(PDFName.of('Separation_' + spotColorName), spotColorData.spotColorSpace);
   }
   
@@ -40,18 +41,11 @@ export const addColorSpaceToResources = (page: PDFPage, pdfContext: PDFContext, 
   // Register the color space dictionary in Properties with exact name
   if (propertiesDict) {
     (propertiesDict as PDFDict).set(PDFName.of(spotColorName), spotColorData.colorSpaceDict);
-  }
-  
-  // Add spot color to page attributes - crucial for RIP systems
-  const pageDict = page.node;
-  let pageSpotDict = pageDict.get(PDFName.of('SpotColorUsage'));
-  if (!pageSpotDict) {
-    pageSpotDict = pdfContext.obj({});
-    pageDict.set(PDFName.of('SpotColorUsage'), pageSpotDict);
-  }
-  
-  if (pageSpotDict && spotColorData.inkList) {
-    (pageSpotDict as PDFDict).set(PDFName.of(spotColorName), spotColorData.inkList);
+    
+    // Add separation info dict specifically for Adobe compatibility
+    if (spotColorData.separationInfoDict) {
+      (propertiesDict as PDFDict).set(PDFName.of('SpotInfo_' + spotColorName), spotColorData.separationInfoDict);
+    }
   }
   
   // Add to ProcSet for older PDF processors
@@ -67,13 +61,10 @@ export const addColorSpaceToResources = (page: PDFPage, pdfContext: PDFContext, 
     resources.set(PDFName.of('ProcSet'), procSet);
   }
   
-  // Add explicit ColorUsage dictionary for Illustrator
-  let colorUsageDict = resources.get(PDFName.of('ColorUsage'));
-  if (!colorUsageDict) {
-    colorUsageDict = pdfContext.obj({
-      SpotColors: pdfContext.obj([PDFName.of(spotColorName)]),
-      UsesSpotColor: true
-    });
-    resources.set(PDFName.of('ColorUsage'), colorUsageDict);
-  }
+  // Add explicit Adobe-specific color usage marker
+  resources.set(PDFName.of('ColorUsage'), pdfContext.obj({
+    SpotColor: PDFBool.of(true),
+    UsesSpotColor: PDFBool.of(true),
+    SpotNames: pdfContext.obj([PDFString.of(spotColorName)])
+  }));
 };

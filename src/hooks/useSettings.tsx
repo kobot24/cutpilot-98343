@@ -6,47 +6,50 @@ export type UserSettings = {
   spotColorName: string;
 };
 
+// Default "CutContour" is Adobe Illustrator's standard spot color name for die cuts
 export const defaultSettings: UserSettings = {
-  cutContourOffset: 3, // Default 3mm offset
-  spotColorName: 'CutContour', // Default name - standard Adobe name
+  cutContourOffset: 3, // 3mm offset
+  spotColorName: 'CutContour', // Adobe standard name
 };
 
 export const useSettings = () => {
   const [settings, setSettings] = useState<UserSettings>(defaultSettings);
+  const [initialized, setInitialized] = useState(false);
 
   // Load settings from localStorage on initial render
   useEffect(() => {
-    const storedSettings = localStorage.getItem('userSettings');
-    if (storedSettings) {
-      try {
+    try {
+      const storedSettings = localStorage.getItem('userSettings');
+      if (storedSettings) {
         const parsedSettings = JSON.parse(storedSettings);
-        // Ensure we have a valid spotColorName
-        if (!parsedSettings.spotColorName) {
-          parsedSettings.spotColorName = 'CutContour';
-        }
-        setSettings(parsedSettings);
-      } catch (error) {
-        console.error('Error parsing stored settings:', error);
+        // Always preserve the spot color name exactly as stored
+        setSettings({
+          cutContourOffset: parsedSettings.cutContourOffset || defaultSettings.cutContourOffset,
+          spotColorName: parsedSettings.spotColorName || defaultSettings.spotColorName
+        });
       }
+      setInitialized(true);
+    } catch (error) {
+      console.error('Error parsing stored settings:', error);
+      setInitialized(true);
     }
   }, []);
 
-  // Save settings to localStorage whenever they change
+  // Save settings to localStorage whenever they change, but only after initial load
   useEffect(() => {
-    // Always ensure we have a valid spotColorName before saving
-    const settingsToSave = {
-      ...settings,
-      spotColorName: settings.spotColorName || 'CutContour'
-    };
-    localStorage.setItem('userSettings', JSON.stringify(settingsToSave));
-  }, [settings]);
+    if (initialized) {
+      localStorage.setItem('userSettings', JSON.stringify(settings));
+    }
+  }, [settings, initialized]);
 
   const updateSettings = (newSettings: Partial<UserSettings>) => {
     setSettings(prevSettings => ({
       ...prevSettings,
       ...newSettings,
-      // Ensure we have a valid spotColorName
-      spotColorName: newSettings.spotColorName || prevSettings.spotColorName || 'CutContour'
+      // Preserve the exact spot color name without modification
+      spotColorName: newSettings.spotColorName !== undefined ? 
+        newSettings.spotColorName : 
+        prevSettings.spotColorName
     }));
   };
 

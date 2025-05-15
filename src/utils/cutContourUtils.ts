@@ -1,5 +1,5 @@
 
-import { PDFName, PDFNumber, PDFContext, PDFArray, PDFDict, PDFStream, PDFHexString, PDFString } from 'pdf-lib';
+import { PDFName, PDFNumber, PDFContext, PDFArray, PDFDict, PDFStream, PDFHexString, PDFString, PDFBool } from 'pdf-lib';
 import { mmToPoints } from './dimensionUtils';
 
 // Create a rectangular path with rounded corners using explicit PostScript operators
@@ -15,7 +15,7 @@ export const createCutContourPath = (width: number, height: number, offset: numb
   
   // Format as explicit PostScript path commands with proper spacing
   // This specific format is required by Adobe Illustrator to recognize as a path
-  return `${x} ${y} m ${x+w} ${y} l ${x+w} ${y+h} l ${x} ${y+h} l h S`;
+  return `${x} ${y} m ${x+w} ${y} l ${x+w} ${y+h} l ${x} ${y+h} l ${x} ${y} l`;
 };
 
 // Create true spot color for cut contour
@@ -28,30 +28,21 @@ export const createSpotColor = (pdfContext: PDFContext, spotColorName: string) =
     PDFName.of(spotColorName),
     PDFName.of('DeviceCMYK'),
     pdfContext.obj({
-      FunctionType: 2,
-      Domain: [0, 1],
-      Range: [0, 1, 0, 1, 0, 1, 0, 1],
-      C0: [0, 0, 0, 0],
-      C1: [0, 1, 0, 0], // 100% Magenta in CMYK
-      N: 1
-    })
-  ]);
-
-  // Create RGB alternate for screen display
-  const rgbAlternateSpace = pdfContext.obj([
-    PDFName.of('DeviceRGB'),
-    pdfContext.obj({
-      FunctionType: 2,
-      Domain: [0, 1],
-      Range: [0, 1, 0, 1, 0, 1],
-      C0: [1, 1, 1],
-      C1: [1, 0, 0.56], // RGB equivalent of 100% Magenta
-      N: 1
+      FunctionType: PDFNumber.of(2),
+      Domain: [PDFNumber.of(0), PDFNumber.of(1)],
+      Range: [
+        PDFNumber.of(0), PDFNumber.of(1), 
+        PDFNumber.of(0), PDFNumber.of(1), 
+        PDFNumber.of(0), PDFNumber.of(1), 
+        PDFNumber.of(0), PDFNumber.of(1)
+      ],
+      C0: [PDFNumber.of(0), PDFNumber.of(0), PDFNumber.of(0), PDFNumber.of(0)],
+      C1: [PDFNumber.of(0), PDFNumber.of(1), PDFNumber.of(0), PDFNumber.of(0)], // 100% Magenta in CMYK
+      N: PDFNumber.of(1)
     })
   ]);
   
   // Create spot color dictionary with Adobe-specific attributes
-  // These specific tags are required by Illustrator to recognize the spot color
   const colorSpaceDict = pdfContext.obj({
     Type: PDFName.of('ColorSpace'),
     Subtype: PDFName.of('Separation'),
@@ -63,48 +54,50 @@ export const createSpotColor = (pdfContext: PDFContext, spotColorName: string) =
     M: PDFNumber.of(1), // 100% Magenta
     Y: PDFNumber.of(0),
     K: PDFNumber.of(0),
-    SpotFunction: PDFName.of('Round'),
-    Process: false,
+    Process: PDFBool.of(false),
     Colorant: PDFString.of(spotColorName),
-    ColorantType: PDFString.of('Spot')
+    ColorantName: PDFString.of(spotColorName)
   });
 
-  // Register color space stream for InkList compatibility (needed by some RIPs)
-  const inkListStream = pdfContext.stream(`/${spotColorName} 0 1 0 0`);
-  
-  const inkList = pdfContext.obj({
-    Type: PDFName.of('InkList'),
-    SpotColors: pdfContext.obj([PDFString.of(spotColorName)]),
-    Stream: inkListStream
+  // Create specialized SeparationInfo dict for Adobe compatibility
+  const separationInfoDict = pdfContext.obj({
+    SeparationColorName: PDFString.of(spotColorName),
+    SeparationType: PDFString.of('Spot'),
+    SeparationOrder: 1,
+    ProcessColorModel: PDFName.of('DeviceCMYK'),
+    Components: pdfContext.obj([
+      PDFNumber.of(0), // C
+      PDFNumber.of(1), // M
+      PDFNumber.of(0), // Y
+      PDFNumber.of(0)  // K
+    ]),
+    IsSpot: PDFBool.of(true)
   });
 
   // Return all needed references
   return {
     spotColorSpace: pdfContext.register(separationColorSpace),
-    rgbAlternateSpace: pdfContext.register(rgbAlternateSpace),
     colorSpaceDict: pdfContext.register(colorSpaceDict),
-    inkList: pdfContext.register(inkList)
+    separationInfoDict: pdfContext.register(separationInfoDict)
   };
 };
 
 // Add graphics state for cut contour path
 export const createCutContourGraphicsState = (pdfContext: PDFContext, spotColorName: string) => {
   // Create Adobe-compatible ExtGState with accurate technical parameters
-  // These settings are crucial for RIP/cutting software
   const gsDict = pdfContext.obj({
     Type: PDFName.of('ExtGState'),
-    ca: PDFNumber.of(1),    // non-stroke alpha - full opacity
-    CA: PDFNumber.of(1),    // stroke alpha - full opacity
-    LW: PDFNumber.of(0.1),  // Line width exactly 0.1pt as required for technical paths
+    ca: PDFNumber.of(1),    // non-stroke alpha
+    CA: PDFNumber.of(1),    // stroke alpha
+    LW: PDFNumber.of(0.1),  // Line width
     OPM: PDFNumber.of(1),   // Overprint mode
-    op: false,              // No fill overprint
-    OP: true,               // Stroke overprint (critical for spot color)
-    SA: true,               // Stroke adjustment for better rendering
+    op: PDFBool.of(false),  // No fill overprint
+    OP: PDFBool.of(true),   // Stroke overprint
+    SA: PDFBool.of(true),   // Stroke adjustment
     SMask: PDFName.of('None'), // No soft mask
-    AIS: false,             // Alpha source flag
-    BM: PDFName.of('Normal'), // Normal blend mode only
-    TK: true,               // Text knockout
-    TR: PDFName.of('Identity') // Transfer function - exact reproduction
+    BM: PDFName.of('Normal'), // Normal blend mode
+    TK: PDFBool.of(true),   // Text knockout
+    TR: PDFName.of('Identity') // Transfer function
   });
   
   return pdfContext.register(gsDict);
