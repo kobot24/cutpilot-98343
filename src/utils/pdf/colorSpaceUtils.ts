@@ -6,8 +6,9 @@ import { PDFPage, PDFContext, PDFName, PDFDict } from 'pdf-lib';
  * @param page PDF page to modify
  * @param pdfContext PDF document context
  * @param spotColorData Spot color data containing color space and dictionary
+ * @param spotColorName Name of the spot color
  */
-export const addColorSpaceToResources = (page: PDFPage, pdfContext: PDFContext, spotColorData: any) => {
+export const addColorSpaceToResources = (page: PDFPage, pdfContext: PDFContext, spotColorData: any, spotColorName: string) => {
   // Add resources to the page
   const resources = page.node.Resources();
   if (!resources) {
@@ -23,7 +24,7 @@ export const addColorSpaceToResources = (page: PDFPage, pdfContext: PDFContext, 
   
   // Set the spot color in the ColorSpace dictionary with proper name
   if (colorSpaceDict) {
-    (colorSpaceDict as any).set(PDFName.of('CutContour'), spotColorData.spotColorSpace);
+    (colorSpaceDict as any).set(PDFName.of(spotColorName), spotColorData.spotColorSpace);
   }
   
   // Add Properties dictionary for Illustrator spot colors
@@ -35,6 +36,6 @@ export const addColorSpaceToResources = (page: PDFPage, pdfContext: PDFContext, 
   
   // Register the color space dictionary in Properties for Illustrator compatibility
   if (propertiesDict) {
-    (propertiesDict as any).set(PDFName.of('CutContour'), spotColorData.colorSpaceDict);
+    (propertiesDict as any).set(PDFName.of(spotColorName), spotColorData.colorSpaceDict);
   }
 };

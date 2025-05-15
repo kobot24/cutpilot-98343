@@ -6,18 +6,20 @@ import { PDFPage, PDFContext } from 'pdf-lib';
  * @param page PDF page to modify
  * @param pdfContext PDF document context
  * @param pathData Path data for the cut contour
+ * @param spotColorName Name of the spot color to use
  */
-export const addCutContourToPage = (page: PDFPage, pdfContext: PDFContext, pathData: string) => {
+export const addCutContourToPage = (page: PDFPage, pdfContext: PDFContext, pathData: string, spotColorName: string) => {
   // Create a new content stream with the cut contour path
   // Using a raw stream approach for better TypeScript compatibility
   
   // Create the content stream containing the cut contour with proper PDF operators
-  // No longer using 'd' operator for dashed lines - using solid lines instead
+  // The "cs" operator sets the color space for non-stroking operations
+  // The "k" operator sets the CMYK color for stroking operations (0,1,0,0 = 100% Magenta)
   const cutContourStream = pdfContext.stream(`
 q
-/CutContour cs
-/CutContourGS gs
-0 1 0 0 k
+/${spotColorName} cs
+/${spotColorName}GS gs
+0 1 0 0 K
 ${pathData}
 S
 Q

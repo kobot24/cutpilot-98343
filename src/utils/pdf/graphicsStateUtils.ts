@@ -6,8 +6,9 @@ import { PDFPage, PDFContext, PDFName } from 'pdf-lib';
  * @param page PDF page to modify
  * @param pdfContext PDF document context
  * @param gsRef Graphics state reference to add
+ * @param spotColorName Name of the spot color for graphics state name
  */
-export const addGraphicsStateToResources = (page: PDFPage, pdfContext: PDFContext, gsRef: any) => {
+export const addGraphicsStateToResources = (page: PDFPage, pdfContext: PDFContext, gsRef: any, spotColorName: string) => {
   // Get or create ExtGState dictionary
   const resources = page.node.Resources();
   if (!resources) {
@@ -22,6 +23,6 @@ export const addGraphicsStateToResources = (page: PDFPage, pdfContext: PDFContex
   
   // Set the graphics state with specific name for cut contour
   if (extGState) {
-    (extGState as any).set(PDFName.of('CutContourGS'), gsRef);
+    (extGState as any).set(PDFName.of(`${spotColorName}GS`), gsRef);
   }
 };

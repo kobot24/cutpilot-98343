@@ -4,13 +4,14 @@ import { mmToPoints } from './dimensionUtils';
 
 // Create a rectangular path with rounded corners using explicit PostScript operators
 export const createCutContourPath = (width: number, height: number, offset: number): string => {
-  // For exact alignment with the black line, we'll use offset of 0
-  // to create a path exactly at the edge of the PDF
-  const x = 0;
-  const y = 0;
-  const w = width;
-  const h = height;
-  const r = 0; // No corner radius for precise cutting
+  // Convert offset from mm to points for proper positioning
+  const offsetPoints = mmToPoints(offset);
+  
+  // Apply offset to create a path with the specified margin
+  const x = offsetPoints;
+  const y = offsetPoints;
+  const w = width - (offsetPoints * 2);
+  const h = height - (offsetPoints * 2);
   
   // Format with proper PostScript path operators and spacing
   // Using explicit moveTo, lineTo operators with line breaks
@@ -26,9 +27,9 @@ export const createCutContourPath = (width: number, height: number, offset: numb
 
 // Create true spot color for cut contour
 export const createSpotColor = (pdfContext: PDFContext, spotColorName: string) => {
-  // Create a true spot color named "CutContour" with CMYK values 0,1,0,0 (100% Magenta)
+  // Create a true spot color with CMYK values 0,1,0,0 (100% Magenta)
   
-  // Create a color space dictionary for the CutContour spot color
+  // Create a color space dictionary for the spot color
   const colorSpaceDict = pdfContext.obj({
     ColorSpace: PDFName.of('DeviceCMYK'),
     C: 0,
@@ -41,7 +42,7 @@ export const createSpotColor = (pdfContext: PDFContext, spotColorName: string) =
   // Create true separation color space that Adobe recognizes as a spot color
   const separationColorSpace = pdfContext.obj([
     PDFName.of('Separation'),
-    PDFName.of(spotColorName),  // Actual spot color name
+    PDFName.of(spotColorName),  // Use the actual spot color name from settings
     PDFName.of('DeviceCMYK'),
     // Define tint transform function
     pdfContext.obj({
