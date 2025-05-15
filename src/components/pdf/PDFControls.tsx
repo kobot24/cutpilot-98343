@@ -34,7 +34,7 @@ export const PDFControls = ({ showCutContour, toggleCutContour, handleDownload }
         variant="default" 
         size="sm"
         onClick={handleDownload}
-        className="bg-blue-600 hover:bg-blue-700 text-white"
+        className="bg-blue-600 hover:bg-blue-700 text-white font-semibold"
       >
         <Download className="h-4 w-4 mr-1" />
         Herunterladen

@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { UploadedFile } from '../types/fileTypes';
@@ -140,27 +141,53 @@ export const useFileStorage = () => {
       // Create PDF with cut contour
       const pdfUrl = await createPdfWithCutContour(file.url, settings);
       
-      // Instead of storing the entire PDF in localStorage (which can cause quota issues),
-      // create a blob URL that can be used temporarily
-      const response = await fetch(pdfUrl);
-      const blob = await response.blob();
-      const blobUrl = URL.createObjectURL(blob);
+      // For large files, store the PDF URL directly without attempting to create a blob
+      // This avoids memory issues with very large files
+      let updatedFiles;
       
-      // Update file with converted PDF URL (using blob URL)
-      const updatedFiles = files.map(f => 
-        f.id === fileId 
-          ? { ...f, convertedPdfUrl: blobUrl }
-          : f
-      );
+      // Check if file is exceptionally large (over 15MB)
+      if (file.size > 15 * 1024 * 1024) {
+        // For very large files, store the data URL directly
+        console.log('Large file detected, using data URL directly');
+        updatedFiles = files.map(f => 
+          f.id === fileId 
+            ? { ...f, convertedPdfUrl: pdfUrl }
+            : f
+        );
+      } else {
+        // For smaller files, use blob URLs as before
+        try {
+          const response = await fetch(pdfUrl);
+          const blob = await response.blob();
+          const blobUrl = URL.createObjectURL(blob);
+          
+          updatedFiles = files.map(f => 
+            f.id === fileId 
+              ? { ...f, convertedPdfUrl: blobUrl }
+              : f
+          );
+        } catch (error) {
+          console.error('Error creating blob URL:', error);
+          // Fall back to data URL if blob creation fails
+          updatedFiles = files.map(f => 
+            f.id === fileId 
+              ? { ...f, convertedPdfUrl: pdfUrl }
+              : f
+          );
+        }
+      }
       
       setFiles(updatedFiles);
       
       // Update selected file if it's the one we just converted
       if (selectedFile?.id === fileId) {
-        setSelectedFile({ ...selectedFile, convertedPdfUrl: blobUrl });
+        const updatedFile = updatedFiles.find(f => f.id === fileId);
+        if (updatedFile) {
+          setSelectedFile(updatedFile);
+        }
       }
 
-      return blobUrl;
+      return pdfUrl;
     } catch (error) {
       console.error('Error converting file to PDF:', error);
       toast.error(`PDF-Konvertierung fehlgeschlagen: ${error.message || 'Unbekannter Fehler'}`);
