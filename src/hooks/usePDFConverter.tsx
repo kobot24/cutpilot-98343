@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { toast } from '@/components/ui/use-toast';
 import { UploadedFile } from '../types/fileTypes';
-import { createPdfWithCutContour } from '../utils/pdfUtils';
+import { createPdfWithCutContour } from '../utils/pdf/pdfCreator';
 import { isImageTooLarge } from '../utils/fileValidationUtils';
 
 export type ConversionProgress = {
@@ -88,4 +88,3 @@ export const usePDFConverter = () => {
     conversionProgress
   };
 };
-
