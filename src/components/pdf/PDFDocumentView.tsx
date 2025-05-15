@@ -1,8 +1,9 @@
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Document, Page, pdfjs } from 'react-pdf';
 import { PDFCutContour } from './PDFCutContour';
 import { PDFPageIndicator } from './PDFPageIndicator';
+import { toast } from '@/components/ui/use-toast';
 
 // Ensure the worker is loaded before rendering any PDF components
 // This needs to be set only once in the application
@@ -33,12 +34,45 @@ export const PDFDocumentView = ({
   isLoading,
   error
 }: PDFDocumentViewProps) => {
+  const [documentLoadAttempt, setDocumentLoadAttempt] = useState(0);
+
   // Memoize options to prevent unnecessary rerenders
   const pdfOptions = useMemo(() => ({
     cMapUrl: 'https://unpkg.com/pdfjs-dist@3.11.174/cmaps/',
     cMapPacked: true,
     standardFontDataUrl: 'https://unpkg.com/pdfjs-dist@3.11.174/standard_fonts/'
   }), []);
+
+  // Handle document loading error with retry
+  const handleDocumentLoadError = (err: Error) => {
+    console.error('PDF document load error:', err);
+    
+    // After 3 attempts, show the error permanently
+    if (documentLoadAttempt >= 2) {
+      toast({
+        title: "PDF konnte nicht geladen werden",
+        description: err.message || "Bitte versuchen Sie es später erneut.",
+        variant: "destructive"
+      });
+      handleLoadError(err);
+      return;
+    }
+    
+    // Retry loading
+    setDocumentLoadAttempt(prev => prev + 1);
+    
+    // Show a retry message
+    toast({
+      title: "Lade PDF...",
+      description: `Versuch ${documentLoadAttempt + 1}/3`,
+    });
+    
+    // Small delay before retry
+    setTimeout(() => {
+      // This will trigger a re-render and attempt to load the document again
+      handleLoadError(new Error("Lade erneut..."));
+    }, 1000);
+  };
 
   return (
     <>
@@ -52,11 +86,12 @@ export const PDFDocumentView = ({
         <Document
           file={pdfUrl}
           onLoadSuccess={handleDocumentLoadSuccess}
-          onError={handleLoadError}
+          onError={handleDocumentLoadError}
           className="w-full h-full"
           loading={<div className="w-full h-full flex items-center justify-center">Lade PDF...</div>}
           error={<div className="w-full h-full flex items-center justify-center text-red-500">Fehler beim Laden des PDFs</div>}
           options={pdfOptions}
+          key={`doc-${documentLoadAttempt}`} // Force re-render on retry
         >
           <Page 
             pageNumber={pageNumber} 

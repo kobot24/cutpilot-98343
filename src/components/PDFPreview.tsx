@@ -6,6 +6,7 @@ import { PDFControls } from './pdf/PDFControls';
 import { PDFDimensionsDisplay } from './pdf/PDFDimensionsDisplay';
 import { PDFDocumentView } from './pdf/PDFDocumentView';
 import { PDFErrorDisplay } from './pdf/PDFErrorDisplay';
+import { toast } from '@/components/ui/use-toast';
 import 'react-pdf/dist/esm/Page/TextLayer.css';
 import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
 
@@ -31,14 +32,35 @@ export const PDFPreview = ({ pdfUrl, fileName }: PDFPreviewProps) => {
 
   const handleDownload = () => {
     try {
+      // Check if this is a data URL or a blob URL
+      if (!pdfUrl || pdfUrl === 'data:application/pdf;base64,') {
+        toast({
+          title: "Fehler beim Herunterladen",
+          description: "Keine gültige PDF-Datei zum Herunterladen verfügbar",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Create an anchor element and trigger download
       const link = document.createElement('a');
       link.href = pdfUrl;
       link.download = fileName.endsWith('.pdf') ? fileName : `${fileName}.pdf`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
+      
+      toast({
+        title: "Download gestartet",
+        description: `${fileName} wird heruntergeladen`
+      });
     } catch (error) {
       console.error('Error downloading PDF:', error);
+      toast({
+        title: "Fehler beim Herunterladen",
+        description: error instanceof Error ? error.message : "Unbekannter Fehler",
+        variant: "destructive"
+      });
       handleLoadError(new Error('Fehler beim Herunterladen'));
     }
   };

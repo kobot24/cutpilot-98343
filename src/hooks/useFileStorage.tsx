@@ -1,6 +1,6 @@
 
 import { useState, useEffect, useCallback } from 'react';
-import { toast } from 'sonner';
+import { toast } from '@/components/ui/use-toast';
 import { UploadedFile } from '../types/fileTypes';
 import { readFileAsDataURL, generateId } from '../utils/fileUtils';
 import { createPdfWithCutContour } from '../utils/pdfUtils';
@@ -23,13 +23,26 @@ export const useFileStorage = () => {
       setIsLoading(true);
       try {
         const loadedFiles = await loadFilesFromDB();
+        // Clean up any orphaned blob URLs
+        loadedFiles.forEach(file => {
+          if (file.convertedPdfUrl && !file.convertedPdfData && file.convertedPdfUrl.startsWith('blob:')) {
+            // This is a blob URL from a previous session, it's no longer valid
+            // We'll mark it as undefined so the UI knows it needs to be regenerated
+            file.convertedPdfUrl = undefined;
+          }
+        });
+        
         setFiles(loadedFiles);
         if (loadedFiles.length > 0) {
           setSelectedFile(loadedFiles[0]);
         }
       } catch (error) {
         console.error('Error loading files from IndexedDB:', error);
-        toast.error('Fehler beim Laden der Dateien');
+        toast({
+          title: "Fehler beim Laden",
+          description: "Fehler beim Laden der Dateien",
+          variant: "destructive"
+        });
       } finally {
         setIsLoading(false);
         setIsInitialized(true);
@@ -41,12 +54,24 @@ export const useFileStorage = () => {
 
   // Save files to IndexedDB whenever they change
   useEffect(() => {
-    if (isInitialized && files.length > 0) {
-      saveFilesToDB(files).catch((error) => {
-        console.error('Error saving files to IndexedDB:', error);
-        toast.error('Fehler beim Speichern der Dateien. Möglicherweise ist der Speicherplatz voll.');
-      });
-    }
+    const saveFiles = async () => {
+      if (isInitialized && files.length > 0) {
+        try {
+          await saveFilesToDB(files);
+        } catch (error) {
+          console.error('Error saving files to IndexedDB:', error);
+          toast({
+            title: "Speicherfehler",
+            description: "Fehler beim Speichern der Dateien. Möglicherweise ist der Speicherplatz voll.",
+            variant: "destructive"
+          });
+        }
+      }
+    };
+    
+    // Use a small delay to batch multiple rapid changes
+    const timeoutId = setTimeout(saveFiles, 300);
+    return () => clearTimeout(timeoutId);
   }, [files, isInitialized]);
 
   // Initialize selected file when files change
@@ -65,11 +90,19 @@ export const useFileStorage = () => {
       // Filter by file type and size
       const filesArray = Array.from(newFiles).filter(file => {
         if (!file.type.startsWith('image/')) {
-          toast.error(`Datei "${file.name}" ist kein unterstütztes Bildformat`);
+          toast({
+            title: "Nicht unterstützt",
+            description: `Datei "${file.name}" ist kein unterstütztes Bildformat`,
+            variant: "destructive"
+          });
           return false;
         }
         if (file.size > MAX_FILE_SIZE_BYTES) {
-          toast.error(`Datei "${file.name}" überschreitet ${MAX_FILE_SIZE_MB}MB Limit`);
+          toast({
+            title: "Datei zu groß",
+            description: `Datei "${file.name}" überschreitet ${MAX_FILE_SIZE_MB}MB Limit`,
+            variant: "destructive"
+          });
           return false;
         }
         return true;
@@ -77,7 +110,11 @@ export const useFileStorage = () => {
 
       // Check if we're going to exceed the max file count
       if (files.length + filesArray.length > MAX_FILES) {
-        toast.warning(`Maximum von ${MAX_FILES} Dateien erreicht. Löschen Sie einige Dateien, um neue hinzuzufügen.`);
+        toast({
+          title: "Dateien-Limit erreicht",
+          description: `Maximum von ${MAX_FILES} Dateien erreicht. Löschen Sie einige Dateien, um neue hinzuzufügen.`,
+          variant: "warning"
+        });
         filesArray.splice(MAX_FILES - files.length); // Keep only what we can add
       }
       
@@ -110,7 +147,11 @@ export const useFileStorage = () => {
       setFiles(prev => {
         // If we're approaching the max files limit, show a warning
         if (prev.length + processedFiles.length >= MAX_FILES) {
-          toast.warning(`Sie nähern sich dem Limit von ${MAX_FILES} Dateien.`);
+          toast({
+            title: "Fast am Limit",
+            description: `Sie nähern sich dem Limit von ${MAX_FILES} Dateien.`,
+            variant: "warning"
+          });
         }
         return [...prev, ...processedFiles];
       });
@@ -118,20 +159,45 @@ export const useFileStorage = () => {
       if (processedFiles.length > 0 && !selectedFile) {
         setSelectedFile(processedFiles[0]);
       }
+      
+      toast({
+        title: "Dateien hinzugefügt",
+        description: `${processedFiles.length} Dateien erfolgreich hinzugefügt`
+      });
     } catch (error) {
       console.error('Error adding files:', error);
-      toast.error('Fehler beim Hinzufügen der Dateien');
+      toast({
+        title: "Fehler",
+        description: "Fehler beim Hinzufügen der Dateien",
+        variant: "destructive"
+      });
     } finally {
       setIsLoading(false);
     }
   };
 
   const removeFile = (id: string) => {
+    // First get the file to check if it has a blob URL
+    const fileToRemove = files.find(file => file.id === id);
+    
+    // Revoke any blob URL to prevent memory leaks
+    if (fileToRemove?.convertedPdfUrl && fileToRemove.convertedPdfUrl.startsWith('blob:')) {
+      URL.revokeObjectURL(fileToRemove.convertedPdfUrl);
+    }
+    
+    // Remove file from state
     setFiles(files.filter(file => file.id !== id));
+    
+    // Update selected file if needed
     if (selectedFile?.id === id) {
       const remainingFiles = files.filter(file => file.id !== id);
       setSelectedFile(remainingFiles.length > 0 ? remainingFiles[0] : null);
     }
+    
+    toast({
+      title: "Datei gelöscht",
+      description: fileToRemove?.name || "Datei wurde erfolgreich gelöscht"
+    });
   };
 
   const selectFile = (id: string) => {
@@ -147,7 +213,11 @@ export const useFileStorage = () => {
       // Find the file to convert
       const file = files.find(f => f.id === fileId);
       if (!file) {
-        toast.error('Datei nicht gefunden');
+        toast({
+          title: "Fehler",
+          description: "Datei nicht gefunden",
+          variant: "destructive"
+        });
         return;
       }
       
@@ -158,14 +228,16 @@ export const useFileStorage = () => {
         : { cutContourOffset: 3, spotColorName: 'CutContour' };
       
       // Create PDF with cut contour
-      const pdfUrl = await createPdfWithCutContour(file.url, settings);
+      const pdfDataUrl = await createPdfWithCutContour(file.url, settings);
+      
+      // Convert the data URL to a blob for better memory management
+      const response = await fetch(pdfDataUrl);
+      const pdfBlob = await response.blob();
       
       // Create a blob URL for the PDF
-      const response = await fetch(pdfUrl);
-      const blob = await response.blob();
-      const blobUrl = URL.createObjectURL(blob);
+      const blobUrl = URL.createObjectURL(pdfBlob);
       
-      // Update file with converted PDF URL (using blob URL)
+      // Update file with converted PDF URL and data
       const updatedFiles = files.map(f => 
         f.id === fileId 
           ? { ...f, convertedPdfUrl: blobUrl }
@@ -178,11 +250,15 @@ export const useFileStorage = () => {
       if (selectedFile?.id === fileId) {
         setSelectedFile({ ...selectedFile, convertedPdfUrl: blobUrl });
       }
-
+      
       return blobUrl;
     } catch (error) {
       console.error('Error converting file to PDF:', error);
-      toast.error(`PDF-Konvertierung fehlgeschlagen: ${error.message || 'Unbekannter Fehler'}`);
+      toast({
+        title: "Konvertierungsfehler",
+        description: error instanceof Error ? error.message : "Unbekannter Fehler bei der PDF-Konvertierung",
+        variant: "destructive"
+      });
     } finally {
       setIsLoading(false);
     }
@@ -198,7 +274,11 @@ export const useFileStorage = () => {
     
     setFiles([]);
     setSelectedFile(null);
-    toast.success('Alle Dateien wurden gelöscht');
+    
+    toast({
+      title: "Alle Dateien gelöscht",
+      description: "Alle Dateien wurden erfolgreich gelöscht"
+    });
   };
 
   return {

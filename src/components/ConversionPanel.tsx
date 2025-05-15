@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { toast } from '@/components/ui/sonner';
+import { toast } from '@/components/ui/use-toast';
 import { UploadedFile } from '@/types/fileTypes';
 import { UserSettings } from '@/hooks/useSettings';
 import { PDFPreview } from './PDFPreview';
@@ -25,18 +25,34 @@ export const ConversionPanel = ({
 
   const handleConvert = async () => {
     if (!selectedFile) {
-      toast.error('Bitte wählen Sie zuerst eine Datei aus');
+      toast({
+        title: "Fehler",
+        description: "Bitte wählen Sie zuerst eine Datei aus",
+        variant: "destructive"
+      });
       return;
     }
 
     try {
       setConversionInProgress(true);
-      await onConvertToPdf(selectedFile.id);
-      toast.success('PDF mit CutContour erstellt');
-      setShowPreview(true);
+      const pdfUrl = await onConvertToPdf(selectedFile.id);
+      
+      if (pdfUrl) {
+        toast({
+          title: "PDF erstellt",
+          description: "PDF mit CutContour wurde erfolgreich erstellt"
+        });
+        setShowPreview(true);
+      } else {
+        throw new Error("Keine PDF-URL zurückgegeben");
+      }
     } catch (error) {
-      toast.error('Fehler bei der PDF-Erstellung');
-      console.error(error);
+      console.error("PDF conversion error:", error);
+      toast({
+        title: "Fehler bei der PDF-Erstellung",
+        description: error instanceof Error ? error.message : "Unbekannter Fehler",
+        variant: "destructive"
+      });
     } finally {
       setConversionInProgress(false);
     }

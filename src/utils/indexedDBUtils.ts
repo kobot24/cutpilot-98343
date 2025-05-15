@@ -39,13 +39,24 @@ export const saveFilesToDB = async (files: UploadedFile[]): Promise<void> => {
     store.clear();
 
     // Add all files
-    files.forEach(file => {
-      store.add(file);
-    });
+    for (const file of files) {
+      // Create a clean copy of the file object to prevent cloning errors
+      // that can happen with certain complex objects
+      const cleanFile = {
+        ...file,
+        // If convertedPdfUrl is a blob URL, store it as is
+        // We'll handle the blob URL management in the useFileStorage hook
+        convertedPdfUrl: file.convertedPdfUrl || null
+      };
+      store.add(cleanFile);
+    }
 
     return new Promise((resolve, reject) => {
       transaction.oncomplete = () => resolve();
-      transaction.onerror = () => reject(new Error("Failed to save files to IndexedDB"));
+      transaction.onerror = (event) => {
+        console.error("IndexedDB transaction error:", event);
+        reject(new Error("Failed to save files to IndexedDB"));
+      };
     });
   } catch (error) {
     console.error("Error saving files to IndexedDB:", error);
