@@ -1,23 +1,20 @@
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { toast } from '@/components/ui/use-toast';
 import { UploadedFile } from '../types/fileTypes';
-import { readFileAsDataURL, generateId } from '../utils/fileUtils';
-import { createPdfWithCutContour } from '../utils/pdfUtils';
+import { FILE_STORAGE_LIMITS } from '../constants/fileStorage';
 import { saveFilesToDB, loadFilesFromDB } from '../utils/indexedDBUtils';
-
-// Constants for storage management
-const MAX_FILES = 10;
-const MAX_FILE_SIZE_MB = 50; // Increased from 10MB to 50MB
-const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
-// Maximum image size for PDF conversion in megapixels
-const MAX_IMAGE_MEGAPIXELS = 25; // ~5000x5000 pixels
+import { useFileProcessor } from './useFileProcessor';
+import { usePDFConverter } from './usePDFConverter';
 
 export const useFileStorage = () => {
   const [files, setFiles] = useState<UploadedFile[]>([]);
   const [selectedFile, setSelectedFile] = useState<UploadedFile | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
+  
+  const { processFiles, isProcessing } = useFileProcessor();
+  const { convertToPdf, isConverting } = usePDFConverter();
 
   // Load files from IndexedDB on component mount
   useEffect(() => {
@@ -89,90 +86,15 @@ export const useFileStorage = () => {
     setIsLoading(true);
     
     try {
-      // Filter by file type and size
-      const filesArray = Array.from(newFiles).filter(file => {
-        if (!file.type.startsWith('image/')) {
-          toast({
-            title: "Nicht unterstützt",
-            description: `Datei "${file.name}" ist kein unterstütztes Bildformat`,
-            variant: "destructive"
-          });
-          return false;
-        }
-        if (file.size > MAX_FILE_SIZE_BYTES) {
-          toast({
-            title: "Datei zu groß",
-            description: `Datei "${file.name}" überschreitet ${MAX_FILE_SIZE_MB}MB Limit`,
-            variant: "destructive"
-          });
-          return false;
-        }
-        return true;
-      });
-
-      // Check if we're going to exceed the max file count
-      if (files.length + filesArray.length > MAX_FILES) {
-        toast({
-          title: "Dateien-Limit erreicht",
-          description: `Maximum von ${MAX_FILES} Dateien erreicht. Löschen Sie einige Dateien, um neue hinzuzufügen.`,
-          variant: "default"
-        });
-        filesArray.splice(MAX_FILES - files.length); // Keep only what we can add
-      }
+      const processedFiles = await processFiles(newFiles, files);
       
-      if (filesArray.length === 0) {
-        setIsLoading(false);
-        return;
-      }
-
-      // Process the files - limit to 3 at a time to avoid memory issues
-      const processedFiles = [];
-      for (let i = 0; i < filesArray.length; i += 3) {
-        const batch = filesArray.slice(i, i + 3);
-        const batchResults = await Promise.all(
-          batch.map(async (file) => {
-            const url = await readFileAsDataURL(file);
-            return {
-              id: generateId(),
-              name: file.name,
-              url,
-              type: file.type,
-              size: file.size,
-              createdAt: new Date(),
-            };
-          })
-        );
-        processedFiles.push(...batchResults);
-      }
-
-      // Update files state in batches to avoid memory issues
-      setFiles(prev => {
-        // If we're approaching the max files limit, show a warning
-        if (prev.length + processedFiles.length >= MAX_FILES) {
-          toast({
-            title: "Fast am Limit",
-            description: `Sie nähern sich dem Limit von ${MAX_FILES} Dateien.`,
-            variant: "default"
-          });
+      if (processedFiles.length > 0) {
+        setFiles(prev => [...prev, ...processedFiles]);
+        
+        if (!selectedFile) {
+          setSelectedFile(processedFiles[0]);
         }
-        return [...prev, ...processedFiles];
-      });
-      
-      if (processedFiles.length > 0 && !selectedFile) {
-        setSelectedFile(processedFiles[0]);
       }
-      
-      toast({
-        title: "Dateien hinzugefügt",
-        description: `${processedFiles.length} Dateien erfolgreich hinzugefügt`
-      });
-    } catch (error) {
-      console.error('Error adding files:', error);
-      toast({
-        title: "Fehler",
-        description: "Fehler beim Hinzufügen der Dateien",
-        variant: "destructive"
-      });
     } finally {
       setIsLoading(false);
     }
@@ -209,20 +131,7 @@ export const useFileStorage = () => {
     }
   };
 
-  // Check if an image is too large for PDF processing
-  const isImageTooLarge = (url: string): Promise<boolean> => {
-    return new Promise((resolve) => {
-      const img = new Image();
-      img.onload = () => {
-        const megapixels = (img.naturalWidth * img.naturalHeight) / 1000000;
-        resolve(megapixels > MAX_IMAGE_MEGAPIXELS);
-      };
-      img.onerror = () => resolve(false);
-      img.src = url;
-    });
-  };
-
-  const convertToPdf = async (fileId: string) => {
+  const handleConvertToPdf = async (fileId: string) => {
     setIsLoading(true);
     try {
       // Find the file to convert
@@ -236,34 +145,11 @@ export const useFileStorage = () => {
         return;
       }
       
-      // Check if the image is too large for PDF conversion
-      const tooLarge = await isImageTooLarge(file.url);
-      if (tooLarge) {
-        toast({
-          title: "Bild zu groß",
-          description: "Das Bild ist zu groß für die PDF-Konvertierung. Versuchen Sie, das Bild zu verkleinern.",
-          variant: "destructive"
-        });
-        return;
-      }
-      
-      // Get settings from localStorage
-      const storedSettings = localStorage.getItem('userSettings');
-      const settings = storedSettings 
-        ? JSON.parse(storedSettings)
-        : { cutContourOffset: 3, spotColorName: 'CutContour' };
-      
-      // Show processing toast
-      toast({
-        title: "PDF wird erstellt",
-        description: "Bitte warten Sie, während die PDF erstellt wird..."
-      });
-      
-      // Create PDF with cut contour - this now returns a URL (either data URL or blob URL)
-      const pdfUrl = await createPdfWithCutContour(file.url, settings);
+      // Convert to PDF
+      const pdfUrl = await convertToPdf(file);
       
       if (!pdfUrl) {
-        throw new Error("Keine PDF-URL zurückgegeben");
+        return;
       }
       
       // Update file with converted PDF URL
@@ -280,19 +166,7 @@ export const useFileStorage = () => {
         setSelectedFile({ ...selectedFile, convertedPdfUrl: pdfUrl });
       }
       
-      toast({
-        title: "PDF erstellt",
-        description: "PDF mit CutContour wurde erfolgreich erstellt"
-      });
-      
       return pdfUrl;
-    } catch (error) {
-      console.error('Error converting file to PDF:', error);
-      toast({
-        title: "Konvertierungsfehler",
-        description: error instanceof Error ? error.message : "Unbekannter Fehler bei der PDF-Konvertierung",
-        variant: "destructive"
-      });
     } finally {
       setIsLoading(false);
     }
@@ -318,13 +192,13 @@ export const useFileStorage = () => {
   return {
     files,
     selectedFile,
-    isLoading,
+    isLoading: isLoading || isProcessing || isConverting,
     addFiles,
     removeFile,
     selectFile,
-    convertToPdf,
+    convertToPdf: handleConvertToPdf,
     clearAllFiles,
-    MAX_FILE_SIZE_MB,
-    MAX_FILES
+    MAX_FILE_SIZE_MB: FILE_STORAGE_LIMITS.MAX_FILE_SIZE_MB,
+    MAX_FILES: FILE_STORAGE_LIMITS.MAX_FILES
   };
 };
