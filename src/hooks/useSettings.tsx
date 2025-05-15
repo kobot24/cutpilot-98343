@@ -20,7 +20,7 @@ export const useSettings = () => {
     if (storedSettings) {
       try {
         const parsedSettings = JSON.parse(storedSettings);
-        // Always enforce CutContour as spot color name
+        // Always ensure CutContour as spot color name
         parsedSettings.spotColorName = 'CutContour';
         setSettings(parsedSettings);
       } catch (error) {
@@ -31,7 +31,7 @@ export const useSettings = () => {
 
   // Save settings to localStorage whenever they change
   useEffect(() => {
-    // Always enforce CutContour before saving
+    // Always ensure CutContour before saving
     const settingsToSave = {
       ...settings,
       spotColorName: 'CutContour'
@@ -43,7 +43,7 @@ export const useSettings = () => {
     setSettings(prevSettings => ({
       ...prevSettings,
       ...newSettings,
-      // Always enforce CutContour
+      // Always ensure CutContour
       spotColorName: 'CutContour'
     }));
   };

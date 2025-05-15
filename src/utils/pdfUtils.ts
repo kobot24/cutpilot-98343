@@ -89,17 +89,17 @@ export const createPdfWithCutContour = async (
     
     const pdfContext = pdfDoc.context;
     
-    // Use the spot color name from settings
+    // Use the exact spot color name from settings - don't modify it
     const spotColorName = settings.spotColorName;
     console.log(`Using spot color name: ${spotColorName}`);
     
     try {
       console.log('Creating spot color for cut contour');
-      // Create true spot color for the cut contour
+      // Create true spot color for the cut contour using exact name
       const spotColorData = createSpotColor(pdfContext, spotColorName);
       
       console.log('Adding spot color to page resources');
-      // Add the spot color to the page resources
+      // Add the spot color to the page resources using exact name
       addColorSpaceToResources(page, pdfContext, spotColorData, spotColorName);
       
       console.log('Creating graphics state for cut contour');
@@ -107,7 +107,7 @@ export const createPdfWithCutContour = async (
       const gsRef = createCutContourGraphicsState(pdfContext);
       
       console.log('Adding graphics state to page resources');
-      // Add the graphics state to the page resources
+      // Add the graphics state to the page resources using exact name
       addGraphicsStateToResources(page, pdfContext, gsRef, spotColorName);
       
       // Define cut contour path data based on image dimensions
@@ -120,7 +120,7 @@ export const createPdfWithCutContour = async (
       );
       
       console.log('Adding cut contour path to page');
-      // Add the cut contour path to the page
+      // Add the cut contour path to the page using exact name
       addCutContourToPage(page, pdfContext, pathData, spotColorName);
     } catch (error) {
       console.error('Error adding cut contour:', error);

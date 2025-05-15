@@ -42,7 +42,7 @@ export const createSpotColor = (pdfContext: PDFContext, spotColorName: string) =
   // Create true separation color space that Adobe recognizes as a spot color
   const separationColorSpace = pdfContext.obj([
     PDFName.of('Separation'),
-    PDFName.of(spotColorName),  // Use the actual spot color name from settings
+    PDFName.of(spotColorName),  // Use the exact spot color name from settings
     PDFName.of('DeviceCMYK'),
     // Define tint transform function
     pdfContext.obj({

@@ -26,7 +26,7 @@ export const PDFCutContour = ({ fileName, show }: PDFCutContourProps) => {
         }}
       />
       <div className="absolute bottom-2 right-2 bg-white/80 text-xs px-2 py-1 rounded text-[#D946EF] font-medium">
-        {fileName.split('.').slice(0, -1).join('.')} - CutContour (Spotfarbe)
+        {fileName.split('.').slice(0, -1).join('.')} - {settings.spotColorName} (Spotfarbe)
       </div>
     </>
   );
