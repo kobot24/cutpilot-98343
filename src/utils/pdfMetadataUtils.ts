@@ -1,5 +1,5 @@
 
-import { PDFDocument, PDFName, PDFDict, PDFContext, PDFString, PDFArray, PDFNumber, PDFHexString, PDFBool, PDFStream } from 'pdf-lib';
+import { PDFDocument, PDFName, PDFDict, PDFContext, PDFString, PDFArray, PDFNumber, PDFHexString, PDFStream } from 'pdf-lib';
 
 // Set standard PDF metadata for print workflows
 export const setPdfMetadata = (pdfDoc: PDFDocument, fileName: string, spotColorName: string) => {
@@ -75,9 +75,9 @@ export const addPdfXCompatibility = (pdfDoc: PDFDocument, pdfContext: PDFContext
   
   // Add MarkInfo for Illustrator compatibility
   const markInfoDict = pdfContext.obj({
-    Marked: new PDFBool(true),
-    UserProperties: new PDFBool(false),
-    Suspects: new PDFBool(false)
+    Marked: pdfContext.obj(true),
+    UserProperties: pdfContext.obj(false),
+    Suspects: pdfContext.obj(false)
   });
   catalogDict.set(PDFName.of('MarkInfo'), markInfoDict);
   
@@ -95,16 +95,16 @@ export const addPdfXCompatibility = (pdfDoc: PDFDocument, pdfContext: PDFContext
     Colorants: pdfContext.obj([
       PDFString.of(spotColorName)
     ]),
-    SpotColorUsed: new PDFBool(true)
+    SpotColorUsed: pdfContext.obj(true)
   });
   catalogDict.set(PDFName.of('SpotColorInfo'), spotColorInfo);
   
   // Set SpotColors dictionary with the exact spot color name
   const spotDict = pdfContext.obj({
-    SpotColorUsed: new PDFBool(true),
+    SpotColorUsed: pdfContext.obj(true),
     Names: pdfContext.obj([PDFString.of(spotColorName)]),
     ColorSpace: PDFName.of('DeviceCMYK'),
-    Separation: new PDFBool(true),
+    Separation: pdfContext.obj(true),
     SpotColorName: PDFString.of(spotColorName)
   });
   catalogDict.set(PDFName.of('SpotColors'), spotDict);
@@ -116,7 +116,7 @@ export const addPdfXCompatibility = (pdfDoc: PDFDocument, pdfContext: PDFContext
   const info = pdfContext.obj({
     Trapped: PDFName.of('False'),
     CreatorVersion: PDFString.of('25.0.0'),
-    HasSpotColors: new PDFBool(true),
+    HasSpotColors: pdfContext.obj(true),
     SpotColorNames: pdfContext.obj([PDFString.of(spotColorName)])
   }) as PDFDict;
   

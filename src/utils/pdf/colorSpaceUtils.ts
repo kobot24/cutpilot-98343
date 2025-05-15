@@ -1,5 +1,5 @@
 
-import { PDFPage, PDFContext, PDFName, PDFDict, PDFArray, PDFBool, PDFString } from 'pdf-lib';
+import { PDFPage, PDFContext, PDFName, PDFDict, PDFArray, PDFString } from 'pdf-lib';
 
 /**
  * Add color space to page resources
@@ -63,8 +63,8 @@ export const addColorSpaceToResources = (page: PDFPage, pdfContext: PDFContext, 
   
   // Add explicit Adobe-specific color usage marker
   resources.set(PDFName.of('ColorUsage'), pdfContext.obj({
-    SpotColor: new PDFBool(true),
-    UsesSpotColor: new PDFBool(true),
+    SpotColor: pdfContext.obj(true),
+    UsesSpotColor: pdfContext.obj(true),
     SpotNames: pdfContext.obj([PDFString.of(spotColorName)])
   }));
 };

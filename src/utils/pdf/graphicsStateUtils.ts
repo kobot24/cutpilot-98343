@@ -1,5 +1,5 @@
 
-import { PDFPage, PDFContext, PDFName, PDFDict, PDFNumber, PDFBool } from 'pdf-lib';
+import { PDFPage, PDFContext, PDFName, PDFDict, PDFNumber } from 'pdf-lib';
 
 /**
  * Add graphics state to page resources
@@ -28,10 +28,10 @@ export const addGraphicsStateToResources = (page: PDFPage, pdfContext: PDFContex
     // Add Adobe-specific graphics states for optimal compatibility
     (extGState as PDFDict).set(PDFName.of('SpotState'), pdfContext.obj({
       Type: PDFName.of('ExtGState'),
-      SA: new PDFBool(true),
+      SA: pdfContext.obj(true),
       SM: PDFNumber.of(0.02),
-      OP: new PDFBool(true),
-      op: new PDFBool(false),
+      OP: pdfContext.obj(true),
+      op: pdfContext.obj(false),
       OPM: PDFNumber.of(1),
       LW: PDFNumber.of(0.1),    // Exact 0.1pt line width
       LC: PDFNumber.of(0),      // Butt cap
@@ -45,9 +45,9 @@ export const addGraphicsStateToResources = (page: PDFPage, pdfContext: PDFContex
     (extGState as PDFDict).set(PDFName.of(`${spotColorName}_State`), pdfContext.obj({
       Type: PDFName.of('ExtGState'),
       LW: PDFNumber.of(0.1),    // Line width
-      OP: new PDFBool(true),     // Overprint stroke
+      OP: pdfContext.obj(true),     // Overprint stroke
       OPM: PDFNumber.of(1),     // Overprint mode
-      SA: new PDFBool(true),     // Stroke adjustment
+      SA: pdfContext.obj(true),     // Stroke adjustment
       BM: PDFName.of('Normal')  // Blend mode
     }));
   }
