@@ -1,103 +1,98 @@
 
-import { PDFName, PDFNumber, PDFContext, PDFArray, PDFDict, PDFStream, PDFHexString, PDFString } from 'pdf-lib';
-import { mmToPoints } from './dimensionUtils';
+import { PDFName, PDFNumber, PDFContext } from 'pdf-lib';
+
+// Constants for DPI conversion
+const POINTS_PER_INCH = 72; // PDF standard
+const CM_PER_INCH = 2.54;
+const MM_PER_INCH = 25.4;
+
+// Convert cm to points
+export const cmToPoints = (cm: number): number => {
+  return (cm * POINTS_PER_INCH) / CM_PER_INCH;
+};
+
+// Convert mm to points
+export const mmToPoints = (mm: number): number => {
+  return (mm * POINTS_PER_INCH) / MM_PER_INCH;
+};
+
+// Convert points to cm
+export const pointsToCm = (points: number): number => {
+  return (points * CM_PER_INCH) / POINTS_PER_INCH;
+};
 
 // Create a rectangular path with rounded corners using explicit PostScript operators
 export const createCutContourPath = (width: number, height: number, offset: number): string => {
-  // Convert offset from mm to points for proper positioning
-  const offsetPoints = mmToPoints(offset);
+  // Convert mm to points using our conversion function
+  const offsetPt = mmToPoints(offset);
   
-  // Apply offset to create a path with the specified margin
-  const x = offsetPoints;
-  const y = offsetPoints;
-  const w = width - (offsetPoints * 2);
-  const h = height - (offsetPoints * 2);
+  // Create a path that's INSET from the image edges by the offset
+  // This creates a cutting path inside the image boundaries
+  const x = offsetPt;
+  const y = offsetPt;
+  const w = width - (offsetPt * 2); // Narrower than the image
+  const h = height - (offsetPt * 2); // Shorter than the image
+  const r = 0; // No corner radius for precise cutting
   
-  // Format as explicit PostScript path commands with proper spacing
-  // This specific format is required by Adobe Illustrator to recognize as a path
-  return `${x} ${y} m ${x+w} ${y} l ${x+w} ${y+h} l ${x} ${y+h} l ${x} ${y} l`;
+  // Format with proper PostScript path operators and spacing
+  // Using explicit moveTo, lineTo operators with line breaks
+  return `
+    ${x} ${y} m
+    ${x+w} ${y} l
+    ${x+w} ${y+h} l
+    ${x} ${y+h} l
+    ${x} ${y} l
+    h
+  `.trim().replace(/\n\s+/g, '\n    ');
 };
 
 // Create true spot color for cut contour
 export const createSpotColor = (pdfContext: PDFContext, spotColorName: string) => {
-  // Create a true Adobe-compatible spot color with CMYK values 0,1,0,0 (100% Magenta)
+  // Create a true spot color named "CutContour" with CMYK values 0,1,0,0 (100% Magenta)
   
-  // Create separation color space with proper Adobe Illustrator compatibility
+  // Create a color space dictionary for the CutContour spot color
+  const colorSpaceDict = pdfContext.obj({
+    ColorSpace: PDFName.of('DeviceCMYK'),
+    C: 0,
+    M: 1,
+    Y: 0,
+    K: 0,
+    Name: PDFName.of(spotColorName)
+  });
+
+  // Create true separation color space that Adobe recognizes as a spot color
   const separationColorSpace = pdfContext.obj([
     PDFName.of('Separation'),
-    PDFName.of(spotColorName),
+    PDFName.of(spotColorName),  // Actual spot color name
     PDFName.of('DeviceCMYK'),
+    // Define tint transform function
     pdfContext.obj({
-      FunctionType: PDFNumber.of(2),
-      Domain: [PDFNumber.of(0), PDFNumber.of(1)],
-      Range: [
-        PDFNumber.of(0), PDFNumber.of(1), 
-        PDFNumber.of(0), PDFNumber.of(1), 
-        PDFNumber.of(0), PDFNumber.of(1), 
-        PDFNumber.of(0), PDFNumber.of(1)
-      ],
-      C0: [PDFNumber.of(0), PDFNumber.of(0), PDFNumber.of(0), PDFNumber.of(0)],
-      C1: [PDFNumber.of(0), PDFNumber.of(1), PDFNumber.of(0), PDFNumber.of(0)], // 100% Magenta in CMYK
-      N: PDFNumber.of(1)
+      FunctionType: 2,
+      Domain: [0, 1],
+      Range: [0, 1, 0, 1, 0, 1, 0, 1],  // CMYK range
+      C0: [0, 0, 0, 0],                 // CMYK min values 
+      C1: [0, 1, 0, 0],                 // CMYK max values - 100% Magenta
+      N: 1                              // Linear interpolation
     })
   ]);
   
-  // Create spot color dictionary with Adobe-specific attributes
-  const colorSpaceDict = pdfContext.obj({
-    Type: PDFName.of('ColorSpace'),
-    Subtype: PDFName.of('Separation'),
-    TintTransform: PDFName.of('Identity'),
-    AlternateSpace: PDFName.of('DeviceCMYK'),
-    Base: PDFName.of(spotColorName),
-    Name: PDFName.of(spotColorName),
-    C: PDFNumber.of(0),
-    M: PDFNumber.of(1), // 100% Magenta
-    Y: PDFNumber.of(0),
-    K: PDFNumber.of(0),
-    Process: pdfContext.obj(false),
-    Colorant: PDFString.of(spotColorName),
-    ColorantName: PDFString.of(spotColorName)
-  });
-
-  // Create specialized SeparationInfo dict for Adobe compatibility
-  const separationInfoDict = pdfContext.obj({
-    SeparationColorName: PDFString.of(spotColorName),
-    SeparationType: PDFString.of('Spot'),
-    SeparationOrder: 1,
-    ProcessColorModel: PDFName.of('DeviceCMYK'),
-    Components: pdfContext.obj([
-      PDFNumber.of(0), // C
-      PDFNumber.of(1), // M
-      PDFNumber.of(0), // Y
-      PDFNumber.of(0)  // K
-    ]),
-    IsSpot: pdfContext.obj(true)
-  });
-
-  // Return all needed references
   return {
     spotColorSpace: pdfContext.register(separationColorSpace),
-    colorSpaceDict: pdfContext.register(colorSpaceDict),
-    separationInfoDict: pdfContext.register(separationInfoDict)
+    colorSpaceDict: pdfContext.register(colorSpaceDict)
   };
 };
 
 // Add graphics state for cut contour path
-export const createCutContourGraphicsState = (pdfContext: PDFContext, spotColorName: string) => {
-  // Create Adobe-compatible ExtGState with accurate technical parameters
+export const createCutContourGraphicsState = (pdfContext: PDFContext) => {
+  // Add ExtGState with standard print settings
   const gsDict = pdfContext.obj({
     Type: PDFName.of('ExtGState'),
-    ca: PDFNumber.of(1),    // non-stroke alpha
-    CA: PDFNumber.of(1),    // stroke alpha
-    LW: PDFNumber.of(0.1),  // Line width
-    OPM: PDFNumber.of(1),   // Overprint mode
-    op: pdfContext.obj(false),  // No fill overprint
-    OP: pdfContext.obj(true),   // Stroke overprint
-    SA: pdfContext.obj(true),   // Stroke adjustment
-    SMask: PDFName.of('None'), // No soft mask
-    BM: PDFName.of('Normal'), // Normal blend mode
-    TK: pdfContext.obj(true),   // Text knockout
-    TR: PDFName.of('Identity') // Transfer function
+    ca: PDFNumber.of(1),  // non-stroke alpha
+    CA: PDFNumber.of(1),  // stroke alpha
+    LW: PDFNumber.of(0.1), // Line width - exactly 0.1pt for cut paths
+    OPM: 1,               // Overprint mode
+    OP: true,             // Overprint
+    op: true              // Overprint for fill
   });
   
   return pdfContext.register(gsDict);

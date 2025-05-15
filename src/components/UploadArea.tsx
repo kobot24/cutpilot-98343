@@ -1,4 +1,3 @@
-
 import React, { useCallback, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -18,7 +17,7 @@ export const UploadArea = ({
   isLoading, 
   files,
   maxFiles = 10,
-  maxFileSizeMB = 50  // Updated default from 2MB to 50MB to match the new limit
+  maxFileSizeMB = 2
 }: UploadAreaProps) => {
   const [isDragging, setIsDragging] = useState(false);
   
@@ -31,56 +30,29 @@ export const UploadArea = ({
     setIsDragging(false);
   }, []);
   
-  const validateFiles = useCallback((fileList: FileList): FileList | null => {
-    // Convert to array for validation
-    const filesArray = Array.from(fileList);
-    
-    // Check if any file is too large
-    const oversizedFiles = filesArray.filter(file => file.size > maxFileSizeMB * 1024 * 1024);
-    if (oversizedFiles.length > 0) {
-      const fileNames = oversizedFiles.map(f => f.name).join(', ');
-      toast.error(`Datei(en) zu groß: ${fileNames} (Maximum: ${maxFileSizeMB}MB)`);
-      return null;
-    }
-    
-    // Check if any file is not a JPG/JPEG
-    const invalidTypeFiles = filesArray.filter(
-      file => !file.type.startsWith('image/jpeg') && !file.type.startsWith('image/jpg')
-    );
-    if (invalidTypeFiles.length > 0) {
-      toast.error('Nur JPG-Dateien werden unterstützt');
-      return null;
-    }
-    
-    // Check if adding these files would exceed the maximum
-    if (files.length + filesArray.length > maxFiles) {
-      toast.warning(`Maximum ${maxFiles} Dateien erlaubt`);
-      return null;
-    }
-    
-    return fileList;
-  }, [files.length, maxFiles, maxFileSizeMB]);
-  
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
     
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      const validatedFiles = validateFiles(e.dataTransfer.files);
-      if (validatedFiles) {
-        onFilesAdded(validatedFiles);
+      const validFiles = Array.from(e.dataTransfer.files).filter(
+        file => file.type.startsWith('image/jpeg') || file.type.startsWith('image/jpg')
+      );
+      
+      if (validFiles.length === 0) {
+        toast.error('Nur JPG-Dateien werden unterstützt');
+        return;
       }
+      
+      onFilesAdded(e.dataTransfer.files);
     }
-  }, [onFilesAdded, validateFiles]);
+  }, [onFilesAdded]);
   
   const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
-      const validatedFiles = validateFiles(e.target.files);
-      if (validatedFiles) {
-        onFilesAdded(validatedFiles);
-      }
+      onFilesAdded(e.target.files);
     }
-  }, [onFilesAdded, validateFiles]);
+  }, [onFilesAdded]);
 
   const filesRemaining = maxFiles - files.length;
 

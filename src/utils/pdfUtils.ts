@@ -1,80 +1,113 @@
 
-import { PDFDocument } from 'pdf-lib';
-import { createCutContourPath, createSpotColor, createCutContourGraphicsState } from './cutContourUtils';
+import { PDFDocument, PDFArray } from 'pdf-lib';
+import { createCutContourPath, createSpotColor, createCutContourGraphicsState, cmToPoints, mmToPoints, pointsToCm } from './cutContourUtils';
 import { setPdfMetadata, addPdfXCompatibility, arrayBufferToBase64 } from './pdfMetadataUtils';
-import { addColorSpaceToResources, addGraphicsStateToResources, addCutContourToPage } from './pdf';
-import { detectImageDPI, fetchImageData, loadImage } from './imageUtils';
-import { calculateDimensions } from './dimensionUtils';
+import { addColorSpaceToResources, addGraphicsStateToResources, addCutContourToPage } from './pdfResourceUtils';
 
-/**
- * Create PDF with cut contour from image URL
- * @param imageUrl Source image URL
- * @param settings Configuration for cut contour generation
- * @returns Promise resolving to a data URL of the generated PDF
- */
+// Create PDF with cut contour from image URL
 export const createPdfWithCutContour = async (
   imageUrl: string, 
-  settings: { 
-    cutContourOffset: number; 
-    spotColorName: string;
-    sourceDPI?: number; // Optional parameter for source image DPI
-  }
+  settings: { cutContourOffset: number; spotColorName: string }
 ) => {
   try {
     console.log('Starting PDF creation process');
     console.log('Settings:', settings);
     
-    // Load image and wait for it to be ready with a timeout
-    let loadedImg;
-    try {
-      console.log('Loading image');
-      const imageLoadPromise = loadImage(imageUrl);
-      
-      // Wait for image to load with a timeout
-      loadedImg = await Promise.race([
-        imageLoadPromise,
-        new Promise<never>((_, reject) => 
-          setTimeout(() => reject(new Error('Image load timeout')), 10000)
-        )
-      ]);
-    } catch (error) {
-      console.error('Error loading image:', error);
-      throw new Error(`Fehler beim Laden des Bildes: ${error.message}`);
-    }
+    // Create image element to get dimensions
+    const img = document.createElement('img');
     
-    console.log(`Image loaded: ${loadedImg.naturalWidth}x${loadedImg.naturalHeight} pixels`);
+    // Create a promise to wait for the image to load
+    const imageLoadPromise = new Promise<HTMLImageElement>((resolve, reject) => {
+      img.onload = () => resolve(img);
+      img.onerror = (e) => reject(new Error(`Failed to load image: ${e}`));
+      
+      // Set crossOrigin to anonymous to avoid CORS issues with data URLs
+      img.crossOrigin = "anonymous";
+      img.src = imageUrl;
+    });
+    
+    // Wait for image to load with a timeout
+    const loadedImg = await Promise.race([
+      imageLoadPromise,
+      new Promise<never>((_, reject) => 
+        setTimeout(() => reject(new Error('Image load timeout')), 10000)
+      )
+    ]);
+    
+    console.log(`Image loaded: ${img.naturalWidth}x${img.naturalHeight} pixels`);
     
     // Create PDF document with compatible options for Illustrator
     const pdfDoc = await PDFDocument.create({
       updateMetadata: false // Don't add default metadata that might cause issues
     });
     
-    // Force PDF header to indicate version 1.4
-    pdfDoc.context.header.toString = () => '%PDF-1.4\n%âãÏÓ';
-    
-    // Fetch image data
-    const imageData = await fetchImageData(imageUrl);
+    // Fetch image data - wrap in try-catch for better error handling
+    let imageData;
+    try {
+      console.log('Fetching image data');
+      // For data URLs, we can directly use the image src without fetching
+      if (imageUrl.startsWith('data:')) {
+        // Extract base64 content from data URL
+        const base64Content = imageUrl.split(',')[1];
+        imageData = Uint8Array.from(atob(base64Content), c => c.charCodeAt(0)).buffer;
+        console.log('Using data URL directly');
+      } else {
+        // For regular URLs, fetch the data
+        imageData = await fetch(imageUrl)
+          .then(r => {
+            if (!r.ok) throw new Error(`Failed to fetch image: ${r.status} ${r.statusText}`);
+            return r.arrayBuffer();
+          });
+        console.log('Image fetched from URL');
+      }
+    } catch (error) {
+      console.error('Error fetching image:', error);
+      throw new Error(`Fehler beim Laden des Bildes: ${error.message}`);
+    }
     
     // Add image to PDF - preserving original dimensions
     console.log('Embedding image in PDF');
     const jpgImage = await pdfDoc.embedJpg(imageData);
     
     // Get image dimensions in pixels
-    const pixelWidth = loadedImg.naturalWidth;
-    const pixelHeight = loadedImg.naturalHeight;
+    const pixelWidth = img.naturalWidth;
+    const pixelHeight = img.naturalHeight;
     
-    // Use provided sourceDPI if available, otherwise detect or use default
-    const imageDPI = detectImageDPI(loadedImg, settings.sourceDPI);
+    // Calculate the DPI from the pixel dimensions
+    // Instead of assuming 300 DPI, we'll try to detect or estimate the actual DPI
+    // and preserve the original physical dimensions
+    
+    // Function to detect DPI from EXIF data - fallback to default if not available
+    const detectImageDPI = (img: HTMLImageElement): number => {
+      // For now we're using a simple approach - read image size in pixels
+      // and estimate DPI based on reasonable physical size
+      // In a more advanced implementation, we could try to read EXIF data
+      
+      // The actual detection happens client-side - for now we'll log what we're using
+      const inferredDPI = 72; // Default DPI for PDFs and web display
+      console.log(`Using DPI: ${inferredDPI}`);
+      return inferredDPI;
+    };
+    
+    // Get the DPI of the image
+    const imageDPI = detectImageDPI(img);
     
     console.log(`Image dimensions: ${pixelWidth}x${pixelHeight} pixels`);
-    console.log(`Using DPI: ${imageDPI}`);
+    console.log(`Detected DPI: ${imageDPI}`);
     
-    // Calculate physical dimensions based on DPI
-    const dimensions = calculateDimensions(pixelWidth, pixelHeight, imageDPI);
-    const pdfPageWidth = dimensions.points.width;
-    const pdfPageHeight = dimensions.points.height;
+    // Calculate physical dimensions in inches based on pixel dimensions and DPI
+    const widthInInches = pixelWidth / imageDPI;
+    const heightInInches = pixelHeight / imageDPI;
     
-    console.log(`Physical dimensions: ${dimensions.cm.width.toFixed(2)}x${dimensions.cm.height.toFixed(2)} cm`);
+    // Convert physical dimensions to points (72 points = 1 inch, which is the PDF standard)
+    const pdfPageWidth = widthInInches * 72;
+    const pdfPageHeight = heightInInches * 72;
+    
+    // Convert to cm for display
+    const widthInCm = widthInInches * 2.54;
+    const heightInCm = heightInInches * 2.54;
+    
+    console.log(`Physical dimensions: ${widthInCm.toFixed(2)}x${heightInCm.toFixed(2)} cm`);
     console.log(`PDF page size in points: ${pdfPageWidth.toFixed(2)}x${pdfPageHeight.toFixed(2)} pt`);
     
     // Create page with dimensions that match the physical size
@@ -92,26 +125,25 @@ export const createPdfWithCutContour = async (
     
     const pdfContext = pdfDoc.context;
     
-    // Use the exact spot color name from settings - don't modify it
-    const spotColorName = settings.spotColorName;
-    console.log(`Using spot color name: ${spotColorName}`);
+    // Always use "CutContour" as the spot color name
+    const spotColorName = "CutContour";
     
     try {
       console.log('Creating spot color for cut contour');
-      // Create true spot color for the cut contour using exact name
+      // Create true spot color for the cut contour
       const spotColorData = createSpotColor(pdfContext, spotColorName);
       
       console.log('Adding spot color to page resources');
-      // Add the spot color to the page resources using exact name
-      addColorSpaceToResources(page, pdfContext, spotColorData, spotColorName);
+      // Add the spot color to the page resources
+      addColorSpaceToResources(page, pdfContext, spotColorData);
       
       console.log('Creating graphics state for cut contour');
-      // Create graphics state for the cut contour with exact name
-      const gsRef = createCutContourGraphicsState(pdfContext, spotColorName);
+      // Create graphics state for the cut contour
+      const gsRef = createCutContourGraphicsState(pdfContext);
       
       console.log('Adding graphics state to page resources');
-      // Add the graphics state to the page resources using exact name
-      addGraphicsStateToResources(page, pdfContext, gsRef, spotColorName);
+      // Add the graphics state to the page resources
+      addGraphicsStateToResources(page, pdfContext, gsRef);
       
       // Define cut contour path data based on image dimensions
       // The offset is the inset distance from the edge in mm
@@ -123,8 +155,8 @@ export const createPdfWithCutContour = async (
       );
       
       console.log('Adding cut contour path to page');
-      // Add the cut contour path to the page using exact name
-      addCutContourToPage(page, pdfContext, pathData, spotColorName);
+      // Add the cut contour path to the page
+      addCutContourToPage(page, pdfContext, pathData);
     } catch (error) {
       console.error('Error adding cut contour:', error);
       // Continue creating the PDF without cut contour - don't fail the whole process
@@ -134,19 +166,19 @@ export const createPdfWithCutContour = async (
     // Get file name from URL for metadata
     const fileName = imageUrl.split('/').pop()?.split('.')[0] || 'Image';
     
-    // Add dimensions and DPI to the filename for clarity
-    const fileNameWithDimensions = `${fileName}_${dimensions.cm.width.toFixed(1)}x${dimensions.cm.height.toFixed(1)}cm_${imageDPI}dpi`;
+    // Add dimensions to the filename for clarity
+    const fileNameWithDimensions = `${fileName}_${widthInCm.toFixed(1)}x${heightInCm.toFixed(1)}cm`;
     
-    console.log('Setting PDF metadata - explicit Adobe compatibility mode');
-    // Set PDF metadata with enforced Adobe Illustrator compatibility
-    setPdfMetadata(pdfDoc, fileNameWithDimensions, spotColorName);
+    console.log('Setting PDF metadata');
+    // Set PDF metadata with Adobe Illustrator compatibility
+    setPdfMetadata(pdfDoc, fileNameWithDimensions);
     
-    console.log('Adding PDF/X compatibility with forced Adobe compatibility');
+    console.log('Adding PDF/X compatibility');
     // Add PDF/X compatibility information
-    addPdfXCompatibility(pdfDoc, pdfContext, spotColorName);
+    addPdfXCompatibility(pdfDoc, pdfContext);
     
     // Save PDF using optimal settings for print workflows
-    console.log('Saving PDF document with Adobe compatibility flags');
+    console.log('Saving PDF document');
     const pdfBytes = await pdfDoc.save({ 
       useObjectStreams: false,      // Better compatibility with RIP systems
       addDefaultPage: false,        // No blank pages

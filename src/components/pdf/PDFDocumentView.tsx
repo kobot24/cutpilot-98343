@@ -1,5 +1,5 @@
 
-import React, { useMemo, useRef, useEffect, useState } from 'react';
+import React, { useMemo } from 'react';
 import { Document, Page, pdfjs } from 'react-pdf';
 import { PDFCutContour } from './PDFCutContour';
 import { PDFPageIndicator } from './PDFPageIndicator';
@@ -40,18 +40,8 @@ export const PDFDocumentView = ({
     standardFontDataUrl: 'https://unpkg.com/pdfjs-dist@3.11.174/standard_fonts/'
   }), []);
 
-  const containerRef = useRef<HTMLDivElement>(null);
-  
-  // Set scale to 1.0 (100% of original size) to match the exact dimensions
-  const [scale, setScale] = useState<number>(1.0);
-
-  // Update PDF dimensions when page loads successfully
-  const handlePageLoad = (page: any) => {
-    handlePageLoadSuccess(page);
-  };
-
   return (
-    <div ref={containerRef} className="w-full h-full relative overflow-auto">
+    <>
       {isLoading && (
         <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-80 z-10">
           <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
@@ -59,34 +49,30 @@ export const PDFDocumentView = ({
       )}
       
       {!error && (
-        <div className="flex justify-center items-center w-full h-full">
-          <Document
-            file={pdfUrl}
-            onLoadSuccess={handleDocumentLoadSuccess}
-            onError={handleLoadError}
-            className="w-full h-full"
-            loading={<div className="w-full h-full flex items-center justify-center">Lade PDF...</div>}
-            error={<div className="w-full h-full flex items-center justify-center text-red-500">Fehler beim Laden des PDFs</div>}
-            options={pdfOptions}
-          >
-            <div className="flex justify-center items-center min-h-full p-4">
-              <Page 
-                pageNumber={pageNumber} 
-                scale={scale}
-                renderTextLayer={false}
-                renderAnnotationLayer={false}
-                onLoadSuccess={handlePageLoad}
-                loading={<div className="w-full h-32 flex items-center justify-center">Lade Seite...</div>}
-                error={<div className="text-red-500">Fehler beim Laden der Seite</div>}
-                className="shadow-md"
-              />
-            </div>
-          </Document>
-        </div>
+        <Document
+          file={pdfUrl}
+          onLoadSuccess={handleDocumentLoadSuccess}
+          onError={handleLoadError}
+          className="w-full h-full"
+          loading={<div className="w-full h-full flex items-center justify-center">Lade PDF...</div>}
+          error={<div className="w-full h-full flex items-center justify-center text-red-500">Fehler beim Laden des PDFs</div>}
+          options={pdfOptions}
+        >
+          <Page 
+            pageNumber={pageNumber} 
+            width={window.innerWidth * 0.4}
+            renderTextLayer={false}
+            renderAnnotationLayer={false}
+            className="flex justify-center"
+            onLoadSuccess={handlePageLoadSuccess}
+            loading={<div className="w-full h-32 flex items-center justify-center">Lade Seite...</div>}
+            error={<div className="text-red-500">Fehler beim Laden der Seite</div>}
+          />
+        </Document>
       )}
       
       <PDFCutContour fileName={fileName} show={showCutContour && !error && !isLoading} />
       <PDFPageIndicator pageNumber={pageNumber} numPages={numPages} />
-    </div>
+    </>
   );
 };

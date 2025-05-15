@@ -6,7 +6,6 @@ import { toast } from '@/components/ui/sonner';
 import { UploadedFile } from '@/types/fileTypes';
 import { UserSettings } from '@/hooks/useSettings';
 import { PDFPreview } from './PDFPreview';
-import { AspectRatio } from './ui/aspect-ratio';
 
 type ConversionPanelProps = {
   selectedFile: UploadedFile | null;
@@ -72,55 +71,22 @@ export const ConversionPanel = ({
         <h2 className="text-2xl font-semibold">Dateien & Konvertierung</h2>
       </div>
 
-      {/* Full-width preview section at the top */}
-      <Card className="overflow-hidden w-full">
-        {selectedFile.convertedPdfUrl ? (
-          <CardContent className="p-4">
-            <PDFPreview 
-              pdfUrl={selectedFile.convertedPdfUrl} 
-              fileName={selectedFile.name.replace(/\.[^/.]+$/, '.pdf')}
-            />
-          </CardContent>
-        ) : (
-          <CardContent className="p-4">
-            <AspectRatio ratio={21/9} className="bg-gray-100 rounded-md overflow-hidden">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card className="overflow-hidden">
+          <CardContent className="p-4 space-y-4">
+            <div className="aspect-square relative bg-gray-100">
               <img
                 src={selectedFile.url}
                 alt={selectedFile.name}
                 className="object-contain w-full h-full"
               />
-            </AspectRatio>
-          </CardContent>
-        )}
-      </Card>
-
-      {/* Grid with info and convert button */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card className="col-span-1">
-          <CardContent className="p-6 space-y-4">
-            <h3 className="text-lg font-medium">Dateiinformation</h3>
-            <div className="space-y-3">
-              <div className="text-sm">
-                <span className="font-medium">Dateiname:</span>{' '}
-                <span className="text-gray-600">{selectedFile.name}</span>
-              </div>
-              <div className="text-sm">
-                <span className="font-medium">Größe:</span>{' '}
-                <span className="text-gray-600">
-                  {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
-                </span>
-              </div>
-              <div className="text-sm">
-                <span className="font-medium">Typ:</span>{' '}
-                <span className="text-gray-600">{selectedFile.type}</span>
-              </div>
             </div>
-          </CardContent>
-        </Card>
-
-        <Card className="col-span-1">
-          <CardContent className="p-6 space-y-4">
-            <h3 className="text-lg font-medium">CutContour Einstellungen</h3>
+            <div>
+              <h3 className="text-lg font-medium truncate">{selectedFile.name}</h3>
+              <p className="text-sm text-gray-500">
+                {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
+              </p>
+            </div>
             <div className="space-y-3">
               <div className="text-sm">
                 <span className="font-medium">CutContour-Abstand:</span>{' '}
@@ -131,14 +97,8 @@ export const ConversionPanel = ({
                 <span className="text-gray-600">{settings.spotColorName}</span>
               </div>
             </div>
-          </CardContent>
-        </Card>
-
-        <Card className="col-span-1 bg-blue-50">
-          <CardContent className="p-6 flex flex-col justify-center items-center h-full">
             <Button
-              className="w-full text-base py-6"
-              size="lg"
+              className="w-full"
               onClick={handleConvert}
               disabled={isLoading || conversionInProgress}
             >
@@ -154,44 +114,36 @@ export const ConversionPanel = ({
             </Button>
           </CardContent>
         </Card>
-      </div>
 
-      {/* File grid at the bottom */}
-      <div>
-        <h3 className="text-lg font-medium mb-4">Alle Uploads</h3>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-          {Array.isArray(window.uploadedFiles) && window.uploadedFiles.length > 0 ? 
-            window.uploadedFiles.map((file: UploadedFile) => (
-              <Card 
-                key={file.id} 
-                className={`cursor-pointer overflow-hidden ${
-                  selectedFile.id === file.id ? 'border-blue-500 ring-2 ring-blue-200' : ''
-                }`}
-                onClick={() => window.selectFile(file.id)}
-              >
-                <AspectRatio ratio={1} className="bg-gray-100">
-                  <img 
-                    src={file.url} 
-                    alt={file.name} 
-                    className="object-contain w-full h-full"
+        <Card className={`overflow-hidden ${!selectedFile.convertedPdfUrl && !showPreview ? 'hidden lg:block' : ''}`}>
+          <CardContent className="p-4 h-full flex flex-col">
+            {selectedFile.convertedPdfUrl ? (
+              <PDFPreview 
+                pdfUrl={selectedFile.convertedPdfUrl} 
+                fileName={selectedFile.name.replace(/\.[^/.]+$/, '.pdf')}
+              />
+            ) : (
+              <div className="flex-1 flex flex-col items-center justify-center text-center text-gray-400">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-12 w-12 mb-3"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={1.5}
+                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
                   />
-                  {file.convertedPdfUrl && (
-                    <div className="absolute top-2 right-2 bg-green-500 text-white text-xs px-2 py-1 rounded">
-                      PDF
-                    </div>
-                  )}
-                </AspectRatio>
-                <CardContent className="p-2">
-                  <p className="truncate text-xs">{file.name}</p>
-                </CardContent>
-              </Card>
-            ))
-            :
-            <div className="col-span-full text-center text-gray-400 py-8">
-              Keine Dateien hochgeladen
-            </div>
-          }
-        </div>
+                </svg>
+                <h3 className="text-lg font-medium">PDF Vorschau</h3>
+                <p className="text-sm">PDF wird nach der Konvertierung hier angezeigt</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

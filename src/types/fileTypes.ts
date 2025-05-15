@@ -7,5 +7,4 @@ export type UploadedFile = {
   size: number;
   createdAt: Date;
   convertedPdfUrl?: string;
-  sourceDPI?: number; // Added source DPI field
 };

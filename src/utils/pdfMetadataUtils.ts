@@ -1,119 +1,51 @@
-import { PDFDocument, PDFName, PDFDict, PDFContext, PDFString, PDFArray, PDFNumber, PDFHexString, PDFStream } from 'pdf-lib';
+
+import { PDFDocument, PDFName, PDFDict, PDFContext, PDFString, PDFArray } from 'pdf-lib';
 
 // Set standard PDF metadata for print workflows
-export const setPdfMetadata = (pdfDoc: PDFDocument, fileName: string, spotColorName: string) => {
-  // Set PDF metadata using standard methods and include explicit spot color references
-  pdfDoc.setTitle(`${fileName}_${spotColorName}`);
-  pdfDoc.setCreator('Adobe Illustrator 25.0 Compatible');
-  pdfDoc.setProducer('PDF/X-3 Generator with ' + spotColorName);
-  pdfDoc.setSubject('PDF/X-3:2002 with ' + spotColorName);
-  
-  // Create exact XMP metadata with namespace declarations and Adobe compatibility markers
-  const xmpMetadata = `<?xpacket begin="ï»¿" id="W5M0MpCehiHzreSzNTczkc9d"?>
-<x:xmpmeta xmlns:x="adobe:ns:meta/" x:xmptk="Adobe XMP Core 9.1-c003 1.000000, 0000/00/00-00:00:00        ">
-   <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
-      <rdf:Description rdf:about=""
-            xmlns:pdf="http://ns.adobe.com/pdf/1.3/">
-         <pdf:Trapped>False</pdf:Trapped>
-      </rdf:Description>
-   </rdf:RDF>
-</x:xmpmeta>
-<?xpacket end="w"?>`;
-  
-  // Convert XMP metadata to bytes - bypassing any string processing issues
-  const xmpBytes = new TextEncoder().encode(xmpMetadata);
-  
-  // Create a raw stream with byte data to prevent any XML processing/escaping
-  const metadataStream = pdfDoc.context.stream(xmpBytes, {
-    Type: PDFName.of('Metadata'),
-    Subtype: PDFName.of('XML'),
-    Length: PDFNumber.of(xmpBytes.length)
-  });
-  
-  // Register metadata with forced proper structure
-  const metadataRef = pdfDoc.context.register(metadataStream);
-  
-  // Add to catalog with explicit dictionary structure
-  pdfDoc.catalog.set(PDFName.of('Metadata'), metadataRef);
-  
-  // Force PDF version to 1.4 for PDF/X-3:2002 compatibility
-  pdfDoc.catalog.set(PDFName.of('Version'), PDFName.of('1.4'));
+export const setPdfMetadata = (pdfDoc: PDFDocument, fileName: string) => {
+  // Set PDF metadata using standard methods
+  pdfDoc.setTitle(`${fileName}_CutContour`);
+  pdfDoc.setCreator('Adobe Illustrator Compatible CutContour Tool');
+  pdfDoc.setProducer('Adobe PDF library 17.00');
+  pdfDoc.setSubject('PDF/X-3:2002');
 };
 
 // Add PDF/X compatibility info to the document
-export const addPdfXCompatibility = (pdfDoc: PDFDocument, pdfContext: PDFContext, spotColorName: string) => {
+export const addPdfXCompatibility = (pdfDoc: PDFDocument, pdfContext: PDFContext) => {
   const catalogDict = pdfDoc.catalog;
-  
-  // Instead of using setVersion (which doesn't exist), we manually set the PDF version in the catalog
-  // Add PDF version directly to catalog dictionary
-  catalogDict.set(PDFName.of('Version'), PDFName.of('1.4')); // PDF 1.4 for PDF/X-3:2002
   
   // Add OutputIntents for PDF/X compatibility
   const outputIntentDict = pdfContext.obj({
     Type: PDFName.of('OutputIntent'),
     S: PDFName.of('GTS_PDFX'),
-    OutputCondition: PDFString.of('CGATS TR 001'),
     OutputConditionIdentifier: PDFString.of('PDF/X-3:2002'),
     RegistryName: PDFString.of('http://www.color.org'),
-    DestOutputProfile: null,
-    Info: PDFString.of(`PDF/X-3 with ${spotColorName} spot color`)
   });
   const outputIntents = pdfContext.obj([outputIntentDict]);
   catalogDict.set(PDFName.of('OutputIntents'), outputIntents);
   
   // Add MarkInfo for Illustrator compatibility
   const markInfoDict = pdfContext.obj({
-    Marked: pdfContext.obj(true),
-    UserProperties: pdfContext.obj(false),
-    Suspects: pdfContext.obj(false)
+    Marked: true,
+    UserProperties: false,
+    Suspects: false
   });
   catalogDict.set(PDFName.of('MarkInfo'), markInfoDict);
   
-  // Add Illustrator-specific spot color information
-  const spotColorInfo = pdfContext.obj({
-    Name: PDFName.of(spotColorName),
-    AlternateColorSpace: PDFName.of('DeviceCMYK'),
-    Components: pdfContext.obj([
-      PDFNumber.of(0),  // C
-      PDFNumber.of(1),  // M (100%)
-      PDFNumber.of(0),  // Y
-      PDFNumber.of(0)   // K
-    ]),
-    ColorantName: PDFString.of(spotColorName),
-    Colorants: pdfContext.obj([
-      PDFString.of(spotColorName)
-    ]),
-    SpotColorUsed: pdfContext.obj(true)
+  // Add Illustrator-specific metadata
+  const aiMetadata = pdfContext.obj({
+    AIMetaData: pdfContext.obj({
+      AIVersion: PDFString.of('25.0'),
+      ContainsXMP: true
+    }),
+    AIPrivateData: pdfContext.obj([1]),
+    ContainsXMP: PDFName.of('true')
   });
-  catalogDict.set(PDFName.of('SpotColorInfo'), spotColorInfo);
+  catalogDict.set(PDFName.of('AdobeIllustratorData'), aiMetadata);
   
-  // Set SpotColors dictionary with the exact spot color name
-  const spotDict = pdfContext.obj({
-    SpotColorUsed: pdfContext.obj(true),
-    Names: pdfContext.obj([PDFString.of(spotColorName)]),
-    ColorSpace: PDFName.of('DeviceCMYK'),
-    Separation: pdfContext.obj(true),
-    SpotColorName: PDFString.of(spotColorName)
-  });
-  catalogDict.set(PDFName.of('SpotColors'), spotDict);
-  
-  // Add PDF/X version identifier
-  catalogDict.set(PDFName.of('GTS_PDFXVersion'), PDFString.of('PDF/X-3:2002'));
-  
-  // Add Adobe compatibility dictionary
-  const adobeDict = pdfContext.obj({
-    BaseVersion: PDFName.of('1.4'),
-    ExtensionLevel: PDFNumber.of(1),
-    SpotColorUsed: pdfContext.obj(true)
-  });
-  catalogDict.set(PDFName.of('Adobe_PDF'), adobeDict);
-  
-  // Set Adobe-specific trapped value
+  // Add Trapped value
   const info = pdfContext.obj({
-    Trapped: PDFName.of('False'),
-    CreatorVersion: PDFString.of('25.0.0'),
-    HasSpotColors: pdfContext.obj(true),
-    SpotColorNames: pdfContext.obj([PDFString.of(spotColorName)])
+    Trapped: PDFName.of('False')
   }) as PDFDict;
   
   // Override info dictionary directly
@@ -127,13 +59,4 @@ export const arrayBufferToBase64 = (buffer: ArrayBuffer): string => {
     .map(b => String.fromCharCode(b))
     .join('');
   return btoa(binary);
-};
-
-// Helper function to generate UUID for PDF metadata
-const generateUUID = (): string => {
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-    const r = Math.random() * 16 | 0;
-    const v = c === 'x' ? r : (r & 0x3 | 0x8);
-    return v.toString(16);
-  });
 };
