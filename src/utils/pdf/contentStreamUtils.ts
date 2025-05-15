@@ -9,18 +9,17 @@ import { PDFPage, PDFContext } from 'pdf-lib';
  * @param spotColorName Name of the spot color to use
  */
 export const addCutContourToPage = (page: PDFPage, pdfContext: PDFContext, pathData: string, spotColorName: string) => {
-  // Create a new content stream with the cut contour path
-  // Using a raw stream approach for better TypeScript compatibility
-  
-  // Create the content stream containing the cut contour with proper PDF operators
-  // Make sure to use the exact spot color name for all operators
+  // Create the content stream containing the cut contour with explicit Adobe-compatible operators
+  // Using explicit operators with proper naming is critical for RIP systems
   const cutContourStream = pdfContext.stream(`
 q
 /${spotColorName} cs
 /${spotColorName} CS
 /${spotColorName}GS gs
+1 0 0 1 0 0 cm
 0 1 0 0 k
 0 1 0 0 K
+w
 ${pathData}
 S
 Q

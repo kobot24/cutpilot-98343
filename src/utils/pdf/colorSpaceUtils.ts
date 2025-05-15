@@ -27,7 +27,7 @@ export const addColorSpaceToResources = (page: PDFPage, pdfContext: PDFContext, 
     (colorSpaceDict as PDFDict).set(PDFName.of(spotColorName), spotColorData.spotColorSpace);
   }
   
-  // Add Properties dictionary for Illustrator spot colors
+  // Add Properties dictionary for Illustrator spot colors - critically important for Adobe compatibility
   let propertiesDict = resources.get(PDFName.of('Properties'));
   if (!propertiesDict) {
     propertiesDict = pdfContext.obj({});
@@ -35,6 +35,7 @@ export const addColorSpaceToResources = (page: PDFPage, pdfContext: PDFContext, 
   }
   
   // Register the color space dictionary in Properties with exactly the same spot color name
+  // This is essential for Adobe applications to recognize the spot color
   if (propertiesDict) {
     (propertiesDict as PDFDict).set(PDFName.of(spotColorName), spotColorData.colorSpaceDict);
   }
