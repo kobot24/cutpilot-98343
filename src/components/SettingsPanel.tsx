@@ -17,6 +17,7 @@ export const SettingsPanel = ({
   onUpdateSettings,
 }: SettingsPanelProps) => {
   const [cutContourOffset, setCutContourOffset] = useState(settings.cutContourOffset.toString());
+  const [spotColorName, setSpotColorName] = useState(settings.spotColorName);
 
   const handleSave = () => {
     const offsetValue = parseFloat(cutContourOffset);
@@ -26,10 +27,14 @@ export const SettingsPanel = ({
       return;
     }
     
+    if (!spotColorName || spotColorName.trim() === '') {
+      toast.error('Der Name der Spotfarbe darf nicht leer sein');
+      return;
+    }
+    
     onUpdateSettings({
       cutContourOffset: offsetValue,
-      // Always use "CutContour" as the spot color name
-      spotColorName: "CutContour",
+      spotColorName: spotColorName.trim(),
     });
     
     toast.success('Einstellungen gespeichert');
@@ -69,12 +74,12 @@ export const SettingsPanel = ({
             <Input
               id="spotColorName"
               type="text"
-              value="CutContour"
-              disabled
-              className="bg-gray-100"
+              value={spotColorName}
+              onChange={(e) => setSpotColorName(e.target.value)}
+              className="bg-white"
             />
             <p className="text-xs text-gray-500">
-              Die Spotfarbe wird immer als "CutContour" definiert (Adobe Standard)
+              Der Standard-Name für Adobe ist "CutContour"
             </p>
           </div>
 

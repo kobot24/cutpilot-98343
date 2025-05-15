@@ -21,7 +21,8 @@ export const addGraphicsStateToResources = (page: PDFPage, pdfContext: PDFContex
     resources.set(PDFName.of('ExtGState'), extGState);
   }
   
-  // Set the graphics state with specific name for cut contour
+  // Set the graphics state with unmodified spot color name (without GS suffix)
+  // Just use the exact same name for consistency throughout the PDF
   if (extGState) {
     (extGState as any).set(PDFName.of(`${spotColorName}GS`), gsRef);
   }

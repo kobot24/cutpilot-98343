@@ -22,7 +22,7 @@ export const addColorSpaceToResources = (page: PDFPage, pdfContext: PDFContext, 
     resources.set(PDFName.of('ColorSpace'), colorSpaceDict);
   }
   
-  // Set the spot color in the ColorSpace dictionary with proper name
+  // Set the spot color in the ColorSpace dictionary with exactly the spot color name
   if (colorSpaceDict) {
     (colorSpaceDict as any).set(PDFName.of(spotColorName), spotColorData.spotColorSpace);
   }
@@ -34,7 +34,7 @@ export const addColorSpaceToResources = (page: PDFPage, pdfContext: PDFContext, 
     resources.set(PDFName.of('Properties'), propertiesDict);
   }
   
-  // Register the color space dictionary in Properties for Illustrator compatibility
+  // Register the color space dictionary in Properties with exactly the same spot color name
   if (propertiesDict) {
     (propertiesDict as any).set(PDFName.of(spotColorName), spotColorData.colorSpaceDict);
   }

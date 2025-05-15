@@ -19,7 +19,12 @@ export const useSettings = () => {
     const storedSettings = localStorage.getItem('userSettings');
     if (storedSettings) {
       try {
-        setSettings(JSON.parse(storedSettings));
+        const parsedSettings = JSON.parse(storedSettings);
+        // Ensure spotColorName is not empty, fallback to 'CutContour'
+        if (!parsedSettings.spotColorName || parsedSettings.spotColorName.trim() === '') {
+          parsedSettings.spotColorName = defaultSettings.spotColorName;
+        }
+        setSettings(parsedSettings);
       } catch (error) {
         console.error('Error parsing stored settings:', error);
       }
