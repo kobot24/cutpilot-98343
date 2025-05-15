@@ -31,7 +31,7 @@ export const PDFControls = ({ showCutContour, toggleCutContour, handleDownload }
         )}
       </Button>
       <Button 
-        variant="primary" 
+        variant="default" 
         size="sm"
         onClick={handleDownload}
         className="bg-blue-600 hover:bg-blue-700 text-white"
