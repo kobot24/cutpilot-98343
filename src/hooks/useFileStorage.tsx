@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from 'react';
 import { toast } from '@/components/ui/use-toast';
 import { UploadedFile } from '../types/fileTypes';
@@ -9,6 +10,8 @@ import { saveFilesToDB, loadFilesFromDB } from '../utils/indexedDBUtils';
 const MAX_FILES = 10;
 const MAX_FILE_SIZE_MB = 50; // Increased from 10MB to 50MB
 const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
+// Maximum image size for PDF conversion in megapixels
+const MAX_IMAGE_MEGAPIXELS = 25; // ~5000x5000 pixels
 
 export const useFileStorage = () => {
   const [files, setFiles] = useState<UploadedFile[]>([]);
@@ -206,6 +209,19 @@ export const useFileStorage = () => {
     }
   };
 
+  // Check if an image is too large for PDF processing
+  const isImageTooLarge = (url: string): Promise<boolean> => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        const megapixels = (img.naturalWidth * img.naturalHeight) / 1000000;
+        resolve(megapixels > MAX_IMAGE_MEGAPIXELS);
+      };
+      img.onerror = () => resolve(false);
+      img.src = url;
+    });
+  };
+
   const convertToPdf = async (fileId: string) => {
     setIsLoading(true);
     try {
@@ -220,26 +236,40 @@ export const useFileStorage = () => {
         return;
       }
       
+      // Check if the image is too large for PDF conversion
+      const tooLarge = await isImageTooLarge(file.url);
+      if (tooLarge) {
+        toast({
+          title: "Bild zu groß",
+          description: "Das Bild ist zu groß für die PDF-Konvertierung. Versuchen Sie, das Bild zu verkleinern.",
+          variant: "destructive"
+        });
+        return;
+      }
+      
       // Get settings from localStorage
       const storedSettings = localStorage.getItem('userSettings');
       const settings = storedSettings 
         ? JSON.parse(storedSettings)
         : { cutContourOffset: 3, spotColorName: 'CutContour' };
       
-      // Create PDF with cut contour
-      const pdfDataUrl = await createPdfWithCutContour(file.url, settings);
+      // Show processing toast
+      toast({
+        title: "PDF wird erstellt",
+        description: "Bitte warten Sie, während die PDF erstellt wird..."
+      });
       
-      // Convert the data URL to a blob for better memory management
-      const response = await fetch(pdfDataUrl);
-      const pdfBlob = await response.blob();
+      // Create PDF with cut contour - this now returns a URL (either data URL or blob URL)
+      const pdfUrl = await createPdfWithCutContour(file.url, settings);
       
-      // Create a blob URL for the PDF
-      const blobUrl = URL.createObjectURL(pdfBlob);
+      if (!pdfUrl) {
+        throw new Error("Keine PDF-URL zurückgegeben");
+      }
       
-      // Update file with converted PDF URL and data
+      // Update file with converted PDF URL
       const updatedFiles = files.map(f => 
         f.id === fileId 
-          ? { ...f, convertedPdfUrl: blobUrl }
+          ? { ...f, convertedPdfUrl: pdfUrl }
           : f
       );
       
@@ -247,10 +277,15 @@ export const useFileStorage = () => {
       
       // Update selected file if it's the one we just converted
       if (selectedFile?.id === fileId) {
-        setSelectedFile({ ...selectedFile, convertedPdfUrl: blobUrl });
+        setSelectedFile({ ...selectedFile, convertedPdfUrl: pdfUrl });
       }
       
-      return blobUrl;
+      toast({
+        title: "PDF erstellt",
+        description: "PDF mit CutContour wurde erfolgreich erstellt"
+      });
+      
+      return pdfUrl;
     } catch (error) {
       console.error('Error converting file to PDF:', error);
       toast({

@@ -4,6 +4,9 @@ import { createCutContourPath, createSpotColor, createCutContourGraphicsState, c
 import { setPdfMetadata, addPdfXCompatibility, arrayBufferToBase64 } from './pdfMetadataUtils';
 import { addColorSpaceToResources, addGraphicsStateToResources, addCutContourToPage } from './pdfResourceUtils';
 
+// Maximum size for using fetch with data URLs (in bytes)
+const MAX_FETCH_SIZE = 50 * 1024 * 1024; // 50MB
+
 // Create PDF with cut contour from image URL
 export const createPdfWithCutContour = async (
   imageUrl: string, 
@@ -41,28 +44,44 @@ export const createPdfWithCutContour = async (
       updateMetadata: false // Don't add default metadata that might cause issues
     });
     
-    // Fetch image data - wrap in try-catch for better error handling
+    // Fetch image data - with improved handling for large data URLs
     let imageData;
     try {
-      console.log('Fetching image data');
-      // For data URLs, we can directly use the image src without fetching
+      console.log('Processing image data');
+      
+      // For data URLs, process differently based on size to avoid fetch limitations
       if (imageUrl.startsWith('data:')) {
         // Extract base64 content from data URL
         const base64Content = imageUrl.split(',')[1];
-        imageData = Uint8Array.from(atob(base64Content), c => c.charCodeAt(0)).buffer;
-        console.log('Using data URL directly');
+        
+        // Estimate size (base64 is ~4/3 the size of binary)
+        const estimatedSize = (base64Content.length * 3) / 4;
+        
+        if (estimatedSize > MAX_FETCH_SIZE) {
+          console.log('Large data URL detected, using direct conversion');
+          // For large data URLs, convert directly to binary without using fetch
+          imageData = Uint8Array.from(atob(base64Content), c => c.charCodeAt(0)).buffer;
+        } else {
+          console.log('Using fetch for data URL');
+          // For smaller data URLs, we can use fetch which is more efficient
+          const response = await fetch(imageUrl);
+          if (!response.ok) throw new Error(`Fetch failed: ${response.status} ${response.statusText}`);
+          imageData = await response.arrayBuffer();
+        }
       } else {
         // For regular URLs, fetch the data
-        imageData = await fetch(imageUrl)
-          .then(r => {
-            if (!r.ok) throw new Error(`Failed to fetch image: ${r.status} ${r.statusText}`);
-            return r.arrayBuffer();
-          });
+        const response = await fetch(imageUrl);
+        if (!response.ok) throw new Error(`Failed to fetch image: ${response.status} ${response.statusText}`);
+        imageData = await response.arrayBuffer();
         console.log('Image fetched from URL');
       }
     } catch (error) {
       console.error('Error fetching image:', error);
       throw new Error(`Fehler beim Laden des Bildes: ${error.message}`);
+    }
+    
+    if (!imageData) {
+      throw new Error("Keine Bilddaten verfügbar");
     }
     
     // Add image to PDF - preserving original dimensions
@@ -188,11 +207,18 @@ export const createPdfWithCutContour = async (
     
     console.log(`PDF created successfully: ${pdfBytes.byteLength} bytes`);
     
-    // Convert to base64 for browser display
-    const base64String = arrayBufferToBase64(pdfBytes);
-    console.log('PDF converted to base64');
-    
-    return `data:application/pdf;base64,${base64String}`;
+    // For large PDFs, create a Blob URL directly instead of a data URL
+    // This is more memory efficient for large files
+    if (pdfBytes.byteLength > 10 * 1024 * 1024) { // If PDF is larger than 10MB
+      console.log('Large PDF detected, using Blob URL');
+      const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+      return URL.createObjectURL(blob);
+    } else {
+      // For smaller PDFs, convert to base64 for browser display
+      const base64String = arrayBufferToBase64(pdfBytes);
+      console.log('PDF converted to base64');
+      return `data:application/pdf;base64,${base64String}`;
+    }
   } catch (error) {
     console.error('Error creating PDF with cut contour:', error);
     throw new Error(`PDF-Erstellung fehlgeschlagen: ${error instanceof Error ? error.message : 'Unbekannter Fehler'}`);
