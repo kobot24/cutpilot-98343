@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { UploadedFile } from '../types/fileTypes';
@@ -44,51 +43,48 @@ export const useFileStorage = () => {
     setIsLoading(true);
     
     try {
-      // Filter by file type and size
-      const filesArray = Array.from(newFiles).filter(file => {
-        if (!file.type.startsWith('image/')) {
-          toast.error(`Datei "${file.name}" ist kein unterstütztes Bildformat`);
-          return false;
+      // Process the files - limit to 3 at a time to avoid memory issues
+      const processedFiles = [];
+      for (let i = 0; i < newFiles.length; i += 2) {
+        const batch = Array.from(newFiles).slice(i, i + 2);
+        
+        // Create a timeout to give UI a chance to breathe between batches
+        if (i > 0) {
+          await new Promise(resolve => setTimeout(resolve, 100));
         }
-        if (file.size > MAX_FILE_SIZE_BYTES) {
-          toast.error(`Datei "${file.name}" überschreitet ${MAX_FILE_SIZE_MB}MB Limit`);
-          return false;
-        }
-        return true;
-      });
-
-      // Check if we're going to exceed the max file count
-      if (files.length + filesArray.length > MAX_FILES) {
-        toast.warning(`Maximum von ${MAX_FILES} Dateien erreicht. Löschen Sie einige Dateien, um neue hinzuzufügen.`);
-        filesArray.splice(MAX_FILES - files.length); // Keep only what we can add
+        
+        const batchResults = await Promise.all(
+          batch.map(async (file) => {
+            try {
+              console.log(`Processing file: ${file.name}, size: ${(file.size / (1024 * 1024)).toFixed(2)}MB`);
+              const url = await readFileAsDataURL(file);
+              return {
+                id: generateId(),
+                name: file.name,
+                url,
+                type: file.type,
+                size: file.size,
+                createdAt: new Date(),
+              };
+            } catch (error) {
+              console.error(`Error processing file ${file.name}:`, error);
+              toast.error(`Fehler beim Verarbeiten von ${file.name}`);
+              return null;
+            }
+          })
+        );
+        
+        // Filter out null results from errors
+        processedFiles.push(...batchResults.filter(Boolean));
       }
-      
-      if (filesArray.length === 0) {
+
+      if (processedFiles.length === 0) {
+        toast.error('Keine Dateien konnten verarbeitet werden');
         setIsLoading(false);
         return;
       }
 
-      // Process the files - limit to 3 at a time to avoid memory issues
-      const processedFiles = [];
-      for (let i = 0; i < filesArray.length; i += 3) {
-        const batch = filesArray.slice(i, i + 3);
-        const batchResults = await Promise.all(
-          batch.map(async (file) => {
-            const url = await readFileAsDataURL(file);
-            return {
-              id: generateId(),
-              name: file.name,
-              url,
-              type: file.type,
-              size: file.size,
-              createdAt: new Date(),
-            };
-          })
-        );
-        processedFiles.push(...batchResults);
-      }
-
-      // Update files state in batches to avoid memory issues
+      // Update files state
       setFiles(prev => {
         // If we're approaching the max files limit, show a warning
         if (prev.length + processedFiles.length >= MAX_FILES) {
@@ -100,6 +96,8 @@ export const useFileStorage = () => {
       if (processedFiles.length > 0 && !selectedFile) {
         setSelectedFile(processedFiles[0]);
       }
+      
+      toast.success(`${processedFiles.length} ${processedFiles.length === 1 ? 'Datei' : 'Dateien'} erfolgreich hochgeladen`);
     } catch (error) {
       console.error('Error adding files:', error);
       toast.error('Fehler beim Hinzufügen der Dateien');
