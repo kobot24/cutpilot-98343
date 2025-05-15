@@ -1,3 +1,4 @@
+
 import React, { useCallback, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -17,7 +18,7 @@ export const UploadArea = ({
   isLoading, 
   files,
   maxFiles = 10,
-  maxFileSizeMB = 2
+  maxFileSizeMB = 50  // Updated default from 2MB to 50MB to match the new limit
 }: UploadAreaProps) => {
   const [isDragging, setIsDragging] = useState(false);
   

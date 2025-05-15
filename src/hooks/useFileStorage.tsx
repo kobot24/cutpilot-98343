@@ -8,7 +8,7 @@ import { useLocalStorage } from './useLocalStorage';
 
 // Constants for storage management
 const MAX_FILES = 10;
-const MAX_FILE_SIZE_MB = 10; // Reduced from 200MB to 10MB for better local storage compatibility
+const MAX_FILE_SIZE_MB = 50; // Increased from 10MB to 50MB
 const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
 
 export const useFileStorage = () => {
