@@ -1,5 +1,5 @@
 
-import React, { useMemo, useRef, useEffect, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import { Document, Page, pdfjs } from 'react-pdf';
 import { PDFCutContour } from './pdf/PDFCutContour';
 import { PDFPageIndicator } from './pdf/PDFPageIndicator';
@@ -41,55 +41,12 @@ export const PDFDocumentView = ({
   }), []);
 
   const containerRef = useRef<HTMLDivElement>(null);
-  const [scale, setScale] = useState<number>(0.5); // Start with a smaller default scale
-  const [pdfSize, setPdfSize] = useState({ width: 0, height: 0 });
-
-  // Calculate the appropriate scale when the container size changes or when PDF dimensions are available
-  useEffect(() => {
-    if (!containerRef.current) return;
-
-    const updateScale = () => {
-      const containerWidth = containerRef.current?.clientWidth || 0;
-      const containerHeight = containerRef.current?.clientHeight || 0;
-      
-      if (containerWidth > 0 && pdfSize.width > 0) {
-        // Get available space with some padding
-        const availableWidth = containerWidth - 40; // 20px padding on each side
-        const availableHeight = containerHeight - 40;
-        
-        // Calculate scale factors for both dimensions
-        const scaleX = availableWidth / pdfSize.width;
-        const scaleY = availableHeight / pdfSize.height;
-        
-        // Use the smaller scale to ensure PDF fits completely
-        const newScale = Math.min(scaleX, scaleY, 1); // Cap at 1 to prevent too much enlargement
-        
-        setScale(newScale);
-      }
-    };
-
-    // Set initial scale
-    updateScale();
-
-    // Update scale on resize
-    const resizeObserver = new ResizeObserver(updateScale);
-    resizeObserver.observe(containerRef.current);
-
-    return () => {
-      if (containerRef.current) {
-        resizeObserver.unobserve(containerRef.current);
-      }
-    };
-  }, [pdfSize]);
+  
+  // Set fixed scale to 0.4 (40% of original size, reducing by 60%)
+  const [scale, setScale] = useState<number>(0.4);
 
   // Update PDF dimensions when page loads successfully
   const handlePageLoad = (page: any) => {
-    if (page && page.width && page.height) {
-      setPdfSize({
-        width: page.width,
-        height: page.height
-      });
-    }
     handlePageLoadSuccess(page);
   };
 

@@ -41,36 +41,17 @@ export const PDFDocumentView = ({
   }), []);
 
   const containerRef = useRef<HTMLDivElement>(null);
-  const [scale, setScale] = useState<number>(1);
+  
+  // Set fixed scale to 0.4 (40% of original size, reducing by 60%)
+  const [scale, setScale] = useState<number>(0.4);
 
-  // Calculate the appropriate scale when the container size changes
-  useEffect(() => {
-    if (!containerRef.current) return;
-
-    const updateScale = () => {
-      const containerWidth = containerRef.current?.clientWidth || 0;
-      if (containerWidth > 0) {
-        // Set scale to fit the container width with some padding
-        setScale(containerWidth / 800); // 800 is an approximate standard PDF width
-      }
-    };
-
-    // Set initial scale
-    updateScale();
-
-    // Update scale on resize
-    const resizeObserver = new ResizeObserver(updateScale);
-    resizeObserver.observe(containerRef.current);
-
-    return () => {
-      if (containerRef.current) {
-        resizeObserver.unobserve(containerRef.current);
-      }
-    };
-  }, []);
+  // Update PDF dimensions when page loads successfully
+  const handlePageLoad = (page: any) => {
+    handlePageLoadSuccess(page);
+  };
 
   return (
-    <div ref={containerRef} className="w-full h-full relative overflow-hidden">
+    <div ref={containerRef} className="w-full h-full relative overflow-auto">
       {isLoading && (
         <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-80 z-10">
           <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
@@ -88,16 +69,16 @@ export const PDFDocumentView = ({
             error={<div className="w-full h-full flex items-center justify-center text-red-500">Fehler beim Laden des PDFs</div>}
             options={pdfOptions}
           >
-            <div className="flex justify-center items-center w-full overflow-auto">
+            <div className="flex justify-center items-center min-h-full p-4">
               <Page 
                 pageNumber={pageNumber} 
-                width={undefined}
-                height={undefined}
                 scale={scale}
                 renderTextLayer={false}
                 renderAnnotationLayer={false}
+                onLoadSuccess={handlePageLoad}
                 loading={<div className="w-full h-32 flex items-center justify-center">Lade Seite...</div>}
                 error={<div className="text-red-500">Fehler beim Laden der Seite</div>}
+                className="shadow-md"
               />
             </div>
           </Document>
