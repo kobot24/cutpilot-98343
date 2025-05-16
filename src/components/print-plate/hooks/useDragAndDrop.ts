@@ -23,6 +23,9 @@ export const useDragAndDrop = (
     type: 'horizontal' | 'vertical' | null;
   }>({ x: null, y: null, type: null });
   
+  // Add a state to track toast display to fix the TypeScript error
+  const [lastSnapToastTime, setLastSnapToastTime] = useState(0);
+  
   const dragOffsetX = useRef(0);
   const dragOffsetY = useRef(0);
   // Increase snap threshold for more obvious snapping behavior
@@ -293,11 +296,9 @@ export const useDragAndDrop = (
     // If we found any snap points and sticky snap is enabled, display a toast notification
     if (isStickySnapEnabled && (didSnapX || didSnapY)) {
       // We only want to show this once when first snapping, not continuously
-      if (!window.snapToastShown) {
-        window.snapToastShown = true;
-        setTimeout(() => {
-          window.snapToastShown = false;
-        }, 1000); // Reset after 1 second to prevent too many toasts
+      const currentTime = Date.now();
+      if (currentTime - lastSnapToastTime > 1000) { // Only show toast every second at most
+        setLastSnapToastTime(currentTime);
         
         // Only show toast if actually snapping (not just when Alt is held)
         if (isSnapModeEnabled) {
