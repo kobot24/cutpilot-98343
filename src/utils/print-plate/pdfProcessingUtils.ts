@@ -65,15 +65,18 @@ const processItemWithRotation = async (
     const width = itemPosition.width;
     const height = itemPosition.height;
     
-    // Use the improved rotation helper that maintains center point
+    console.log(`PDF Processing - Processing item rotation ${item.rotation}°`);
+    console.log(`PDF Processing - Position (x=${x}, y=${y}) and size (w=${width}, h=${height})`);
+    
+    // Use the rotation helper that maintains the center point of the item
     applyRotationToPage(
       page,
       embeddedPage,
       item.rotation,
       width,
       height,
-      width,
-      height
+      width,  // Original width (before rotation)
+      height  // Original height (before rotation)
     );
     
   } catch (error) {

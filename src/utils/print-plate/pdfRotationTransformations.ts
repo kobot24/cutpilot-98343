@@ -1,4 +1,3 @@
-
 import { degrees } from 'pdf-lib';
 
 /**
@@ -24,98 +23,105 @@ export const applyRotationToPage = (
   console.log(`PDF Rotation - Target dimensions: w=${width}, h=${height}`);
   console.log(`PDF Rotation - Original dimensions: w=${originalWidth}, h=${originalHeight}`);
   
-  // Calculate center point for consistent placement
+  // Calculate center point of the target area
   const centerX = width / 2;
   const centerY = height / 2;
   
   // Apply rotation and transformation based on rotation angle
   switch (rotation) {
-    case 90:
-      // 90° clockwise with center-preserving position
-      const rotatedWidth90 = originalHeight;
-      const rotatedHeight90 = originalWidth;
+    case 90: {
+      // For 90° rotation, width and height are swapped
+      const rotatedWidth = originalHeight;
+      const rotatedHeight = originalWidth;
       
-      // Calculate corrected position to maintain center point
-      const correctedX90 = centerX - rotatedWidth90 / 2;
-      const correctedY90 = centerY - rotatedHeight90 / 2;
+      // Calculate position to maintain center point
+      const correctedX = centerX - rotatedWidth / 2;
+      const correctedY = centerY - rotatedHeight / 2;
       
-      console.log(`PDF Rotation - Center-preserving position for 90°: (${correctedX90}, ${correctedY90})`);
+      console.log(`PDF Rotation - 90° rotation with center at (${centerX}, ${centerY})`);
+      console.log(`PDF Rotation - Corrected position: (${correctedX}, ${correctedY})`);
       
       page.drawPage(embeddedPage, {
-        x: correctedX90,
-        y: correctedY90,
-        width: rotatedWidth90,
-        height: rotatedHeight90,
+        x: correctedX,
+        y: correctedY,
+        width: rotatedWidth,
+        height: rotatedHeight,
         rotate: degrees(90),
         xSkew: degrees(0),
         ySkew: degrees(0)
       });
       break;
+    }
       
-    case 180:
-      // 180° rotation with center-preserving position
-      const rotatedWidth180 = originalWidth;
-      const rotatedHeight180 = originalHeight;
+    case 180: {
+      // For 180° rotation, dimensions remain the same
+      const rotatedWidth = originalWidth;
+      const rotatedHeight = originalHeight;
       
-      // Calculate corrected position to maintain center point
-      const correctedX180 = centerX - rotatedWidth180 / 2;
-      const correctedY180 = centerY - rotatedHeight180 / 2;
+      // Calculate position to maintain center point
+      const correctedX = centerX - rotatedWidth / 2;
+      const correctedY = centerY - rotatedHeight / 2;
       
-      console.log(`PDF Rotation - Center-preserving position for 180°: (${correctedX180}, ${correctedY180})`);
+      console.log(`PDF Rotation - 180° rotation with center at (${centerX}, ${centerY})`);
+      console.log(`PDF Rotation - Corrected position: (${correctedX}, ${correctedY})`);
       
       page.drawPage(embeddedPage, {
-        x: correctedX180,
-        y: correctedY180,
-        width: rotatedWidth180,
-        height: rotatedHeight180,
+        x: correctedX,
+        y: correctedY,
+        width: rotatedWidth,
+        height: rotatedHeight,
         rotate: degrees(180),
         xSkew: degrees(0),
         ySkew: degrees(0)
       });
       break;
+    }
       
-    case 270:
-      // 270° rotation with center-preserving position
-      const rotatedWidth270 = originalHeight;
-      const rotatedHeight270 = originalWidth;
+    case 270: {
+      // For 270° rotation, width and height are swapped
+      const rotatedWidth = originalHeight;
+      const rotatedHeight = originalWidth;
       
-      // Calculate corrected position to maintain center point
-      const correctedX270 = centerX - rotatedWidth270 / 2;
-      const correctedY270 = centerY - rotatedHeight270 / 2;
+      // Calculate position to maintain center point
+      const correctedX = centerX - rotatedWidth / 2;
+      const correctedY = centerY - rotatedHeight / 2;
       
-      console.log(`PDF Rotation - Center-preserving position for 270°: (${correctedX270}, ${correctedY270})`);
+      console.log(`PDF Rotation - 270° rotation with center at (${centerX}, ${centerY})`);
+      console.log(`PDF Rotation - Corrected position: (${correctedX}, ${correctedY})`);
       
       page.drawPage(embeddedPage, {
-        x: correctedX270,
-        y: correctedY270,
-        width: rotatedWidth270,
-        height: rotatedHeight270,
+        x: correctedX,
+        y: correctedY,
+        width: rotatedWidth,
+        height: rotatedHeight,
         rotate: degrees(270),
         xSkew: degrees(0),
         ySkew: degrees(0)
       });
       break;
+    }
       
-    default:
-      // No rotation (0°) with center-preserving position
-      const rotatedWidth0 = originalWidth;
-      const rotatedHeight0 = originalHeight;
+    default: {
+      // No rotation (0°)
+      const rotatedWidth = originalWidth;
+      const rotatedHeight = originalHeight;
       
-      // Calculate corrected position to maintain center point
-      const correctedX0 = centerX - rotatedWidth0 / 2;
-      const correctedY0 = centerY - rotatedHeight0 / 2;
+      // Calculate position to maintain center point
+      const correctedX = centerX - rotatedWidth / 2;
+      const correctedY = centerY - rotatedHeight / 2;
       
-      console.log(`PDF Rotation - Center-preserving position for 0°: (${correctedX0}, ${correctedY0})`);
+      console.log(`PDF Rotation - No rotation (0°), center at (${centerX}, ${centerY})`);
+      console.log(`PDF Rotation - Corrected position: (${correctedX}, ${correctedY})`);
       
       page.drawPage(embeddedPage, {
-        x: correctedX0,
-        y: correctedY0,
-        width: rotatedWidth0,
-        height: rotatedHeight0
+        x: correctedX,
+        y: correctedY,
+        width: rotatedWidth,
+        height: rotatedHeight
       });
       break;
+    }
   }
   
   console.log(`PDF Rotation - Applied ${rotation}° rotation successfully`);
 };
-
