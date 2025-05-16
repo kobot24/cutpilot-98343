@@ -129,25 +129,15 @@ export const PlateCanvas = ({ items, onItemsChange, plateSize }: PlateCanvasProp
 
   return (
     <div className="print-plate-container">
-      {/* Horizontal ruler */}
-      <div className="ruler ruler-horizontal flex h-6 ml-6 mb-1 overflow-hidden select-none">
-        {[...Array(Math.ceil(plateSize.width))].map((_, i) => (
-          <div key={`h-${i}`} className="ruler-tick flex flex-col items-center" style={{ width: `${cmToPixels(1)}px` }}>
-            <span className="text-xs">{i}</span>
-            <div className="h-2 w-px bg-gray-300"></div>
-          </div>
-        ))}
+      {/* Width dimension at top */}
+      <div className="flex justify-center h-6 mb-1 text-sm text-gray-500 font-medium">
+        {plateSize.width} cm
       </div>
 
       <div className="flex">
-        {/* Vertical ruler */}
-        <div className="ruler ruler-vertical flex flex-col w-6 mr-1 overflow-hidden select-none">
-          {[...Array(Math.ceil(plateSize.height))].map((_, i) => (
-            <div key={`v-${i}`} className="ruler-tick flex items-center justify-end" style={{ height: `${cmToPixels(1)}px` }}>
-              <span className="text-xs mr-1">{i}</span>
-              <div className="w-2 h-px bg-gray-300"></div>
-            </div>
-          ))}
+        {/* Height dimension on left */}
+        <div className="flex flex-col items-center justify-center w-6 mr-1 text-sm text-gray-500 font-medium" style={{ height: `${getCanvasHeight()}px` }}>
+          <div className="rotate-[-90deg] whitespace-nowrap">{plateSize.height} cm</div>
         </div>
 
         {/* Canvas */}

@@ -55,13 +55,13 @@ export const exportPrintPlateToPDF = async (
         const height = (item.height / 100) * pageHeight;
         
         // Draw the embedded PDF page onto the main page
-        // Use degrees() to convert rotation degrees to the proper Rotation type
+        // Use degrees() to convert rotation degrees to the proper format
         page.drawPage(embeddedPage, {
           x,
           y,
           width,
           height,
-          rotate: degrees(item.rotation), // Fix: Use degrees() function for rotation
+          rotate: degrees(item.rotation), // Fixed: Using degrees() function correctly
         });
       } catch (error) {
         console.error(`Error embedding PDF for item ${item.id}:`, error);

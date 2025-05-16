@@ -26,7 +26,7 @@ export const PDFList = ({ pdfFiles, onAddPDF }: PDFListProps) => {
               key={file.id} 
               className="flex items-center space-x-2 p-2 border rounded-md hover:bg-gray-50"
             >
-              <div className="w-12 h-16 bg-gray-50 rounded flex items-center justify-center overflow-hidden">
+              <div className="w-12 h-16 flex items-center justify-center overflow-hidden">
                 {file.convertedPdfUrl ? (
                   <Document file={file.convertedPdfUrl}>
                     <Page 

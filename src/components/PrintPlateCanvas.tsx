@@ -24,35 +24,58 @@ export const PrintPlateCanvas = ({ files }: PrintPlateCanvasProps) => {
   // Filter files that have been converted to PDFs
   const pdfFiles = files.filter(file => file.convertedPdfUrl);
   
-  // Estimate a good initial size for PDF items
-  const getInitialItemSize = (file: UploadedFile) => {
-    // Default size if we can't determine or have no aspect ratio
-    const defaultWidth = 20; // 20% of canvas width
-    const defaultHeight = 20; // 20% of canvas height
-    
-    return { width: defaultWidth, height: defaultHeight };
-  };
-  
-  const handleAddPDF = (file: UploadedFile) => {
+  const handleAddPDF = async (file: UploadedFile) => {
     if (!file.convertedPdfUrl) return;
     
-    // Start with default sizes
-    const { width: initialWidth, height: initialHeight } = getInitialItemSize(file);
-    
-    // Create a new PDF item
-    const newItem: PDFItemType = {
-      id: file.id,
-      pdfUrl: file.convertedPdfUrl,
-      x: 10,
-      y: 10,
-      width: initialWidth,
-      height: initialHeight,
-      rotation: 0,
-      thumbnail: file.convertedPdfUrl,
-    };
-    
-    setItems([...items, newItem]);
-    toast.success(`${file.name} zur Druckplatte hinzugefügt`);
+    try {
+      // Create a temporary PDF loader to get dimensions
+      const { pdfUrl } = file;
+      const pdfLoader = new Promise<{ width: number, height: number }>((resolve) => {
+        // Load the PDF to get its dimensions
+        const img = new Image();
+        img.onload = () => {
+          const aspectRatio = img.height / img.width;
+          
+          // Default size based on plate size
+          const defaultWidth = 20; // 20% of canvas width
+          resolve({
+            width: defaultWidth,
+            height: defaultWidth * aspectRatio
+          });
+        };
+        
+        img.onerror = () => {
+          // If we can't get dimensions, use defaults
+          resolve({
+            width: 20,
+            height: 15
+          });
+        };
+        
+        img.src = pdfUrl;
+      });
+      
+      const { width, height } = await pdfLoader;
+      
+      // Create a new PDF item
+      const newItem: PDFItemType = {
+        id: file.id,
+        pdfUrl: file.convertedPdfUrl,
+        x: 10,
+        y: 10,
+        width,
+        height,
+        rotation: 0,
+        aspectRatio: height / width,
+        thumbnail: file.convertedPdfUrl,
+      };
+      
+      setItems([...items, newItem]);
+      toast.success(`${file.name} zur Druckplatte hinzugefügt`);
+    } catch (error) {
+      console.error("Error adding PDF to plate:", error);
+      toast.error("Fehler beim Hinzufügen der Datei");
+    }
   };
   
   const handleExportPlate = async () => {
