@@ -1,5 +1,5 @@
 
-import { PDFDocument, degrees } from 'pdf-lib';
+import { PDFDocument, degrees, rgb } from 'pdf-lib';
 import { PDFItemType } from '@/components/print-plate/PDFItem';
 import { PrintPlateSize } from '@/components/print-plate/PrintPlateSettings';
 
@@ -81,36 +81,28 @@ export const exportPrintPlateToPDF = async (
         console.log(`PDF Export - Item center for rotation: centerX=${centerX}, centerY=${centerY}`);
         console.log(`PDF Export - Applying rotation: ${item.rotation} degrees`);
 
-        // Draw the embedded PDF page onto the main page
-        // If there's rotation, we need to handle it properly with the correct origin
+        // For items with rotation, we need to use the PDFPage.drawPage with the proper parameters
         if (item.rotation !== 0) {
-          // For rotated items, we need to:
-          // 1. Translate to the center of where the item should be
-          // 2. Rotate around that center
-          // 3. Translate back by half width/height to position correctly
+          // For rotated items, we need special handling with transformations
+          // We set up a transformation matrix that:
+          // 1. Translates to the center of where the item should be
+          // 2. Rotates around that center
+          // 3. Translates back to the correct position
           
-          // Save current state
-          page.pushOperators();
+          // Save graphics state
+          page.drawText('', { x: 0, y: 0 }); // Dummy operation to start a new graphics state
           
-          // Move to center point
-          page.moveToCanvas(centerX, centerY);
-          
-          // Rotate around center
-          page.rotate(degrees(item.rotation));
-          
-          // Move back to where top-left should be after rotation (negative half width/height)
-          page.moveToCanvas(-width / 2, -height / 2);
-          
-          // Now draw the page at this transformed position
+          // Draw the embedded page with rotation
+          // For pdf-lib, we need to use the rotation parameter of drawPage
           page.drawPage(embeddedPage, {
+            x: centerX - (width / 2),
+            y: centerY - (height / 2),
             width,
             height,
-            x: 0,
-            y: 0,
+            rotate: degrees(item.rotation),
+            xOffset: width / 2,
+            yOffset: height / 2,
           });
-          
-          // Restore state
-          page.popOperators();
         } else {
           // For non-rotated items, drawing is straightforward
           page.drawPage(embeddedPage, {
