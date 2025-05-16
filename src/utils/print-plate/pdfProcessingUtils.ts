@@ -2,7 +2,7 @@
 import { PDFDocument } from 'pdf-lib';
 import { getPDFDataFromItem } from './pdfDataUtils';
 import { calculateItemPositionInPoints } from './pdfCoordinateUtils';
-import { createRotatedPDF } from './pdfRotationUtils';
+import { createRotatedPDF, isPDF } from './pdfRotationUtils';
 import { getRotatedTransform, getEffectiveDimensions } from './pdfTransformUtils';
 
 /**
@@ -21,12 +21,16 @@ export const processPDFItem = async (pdfDoc: any, page: any, item: any, pageHeig
     // Get the PDF bytes - preferring cached data if available
     const pdfBytes = await getPDFDataFromItem(item);
     
+    // Check if source is an actual PDF file or an image
+    const isSourcePDF = isPDF(item.pdfUrl || pdfBytes);
+    console.log(`PDF Processing - Source file is a ${isSourcePDF ? 'PDF' : 'image'}`);
+    
     // Calculate position and dimensions in PDF points
     const itemPosition = calculateItemPositionInPoints(item, pageHeight);
     console.log(`PDF Processing - Item position in points: x=${itemPosition.x}, y=${itemPosition.y}, width=${itemPosition.width}, height=${itemPosition.height}`);
     
     // Process based on rotation
-    await processItemWithRotation(pdfDoc, page, pdfBytes, item, itemPosition);
+    await processItemWithRotation(pdfDoc, page, pdfBytes, item, itemPosition, isSourcePDF);
     
   } catch (error) {
     console.error(`PDF Processing - Error processing item ${item.id}:`, error);
@@ -40,13 +44,15 @@ export const processPDFItem = async (pdfDoc: any, page: any, item: any, pageHeig
  * @param pdfBytes The PDF data bytes
  * @param item The PDF item
  * @param itemPosition The calculated item position
+ * @param isSourcePDF Whether the source is an actual PDF file
  */
 const processItemWithRotation = async (
   pdfDoc: any, 
   page: any, 
   pdfBytes: Uint8Array, 
   item: any, 
-  itemPosition: any
+  itemPosition: any,
+  isSourcePDF: boolean = true
 ) => {
   try {
     // If rotation is needed
@@ -68,7 +74,8 @@ const processItemWithRotation = async (
           pdfBytes, 
           item.rotation, 
           itemPosition.width, 
-          itemPosition.height
+          itemPosition.height,
+          !isSourcePDF // Pass the flag indicating if this is an image source
         );
         
         // Embed the rotated PDF back into our main document
