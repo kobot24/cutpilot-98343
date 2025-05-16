@@ -15,9 +15,10 @@ type PlateCanvasProps = {
   items: PDFItemType[];
   onItemsChange: (items: PDFItemType[]) => void;
   plateSize: PrintPlateSize;
+  onFitToPlate?: (index: number) => void;
 };
 
-export const PlateCanvas = ({ items, onItemsChange, plateSize }: PlateCanvasProps) => {
+export const PlateCanvas = ({ items, onItemsChange, plateSize, onFitToPlate }: PlateCanvasProps) => {
   const canvasRef = useRef<HTMLDivElement>(null);
 
   // Calculate dimensions in pixels based on the fixed scale factor
@@ -85,6 +86,7 @@ export const PlateCanvas = ({ items, onItemsChange, plateSize }: PlateCanvasProp
                 onDragStart={handleDragStart}
                 onRotate={handleRotateItem}
                 onRemove={handleRemoveItem}
+                onFitToPlate={onFitToPlate}
               />
             ))}
             
@@ -95,3 +97,4 @@ export const PlateCanvas = ({ items, onItemsChange, plateSize }: PlateCanvasProp
     </div>
   );
 };
+
