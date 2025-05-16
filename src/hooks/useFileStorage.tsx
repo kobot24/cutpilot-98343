@@ -27,6 +27,7 @@ export const useFileStorage = () => {
   // Use the PDF operations hook
   const {
     convertToPdf,
+    batchConvertToPdf, // Added new batch function
     isConverting,
     conversionProgress,
     batchProgress,
@@ -55,6 +56,7 @@ export const useFileStorage = () => {
     removeFile,
     selectFile,
     convertToPdf,
+    batchConvertToPdf, // Expose the batch function
     clearAllFiles,
     startBatchConversion,
     updateBatchProgress,

@@ -19,9 +19,7 @@ type ConversionPanelProps = {
   onRemoveFile: (id: string) => void;
   conversionProgress?: ConversionProgress;
   batchProgress?: BatchConversionProgress;
-  startBatchConversion?: (totalFiles: number, firstFileName: string) => void;
-  updateBatchProgress?: (currentFileIndex: number, fileName: string, success: boolean) => void;
-  endBatchConversion?: () => void;
+  onBatchConvert: (fileIds: string[]) => Promise<void>;
 };
 
 export const ConversionPanel = ({
@@ -34,9 +32,7 @@ export const ConversionPanel = ({
   onRemoveFile,
   conversionProgress = { progress: 0, status: '' },
   batchProgress,
-  startBatchConversion,
-  updateBatchProgress,
-  endBatchConversion
+  onBatchConvert
 }: ConversionPanelProps) => {
   const [conversionInProgress, setConversionInProgress] = useState(false);
   const [conversionError, setConversionError] = useState<string | null>(null);
@@ -85,19 +81,12 @@ export const ConversionPanel = ({
     }
   };
   
+  // Simplify the batch conversion handler - now just delegates to the hook implementation
   const handleBatchConvert = async (fileIds: string[]) => {
     if (fileIds.length === 0) return;
     
     console.log(`ConversionPanel: Starting batch conversion of ${fileIds.length} files`);
     setBatchConversionInProgress(true);
-    let successCount = 0;
-    let failCount = 0;
-    
-    // Initialize batch progress
-    if (startBatchConversion && fileIds.length > 0) {
-      const firstFile = files.find(f => f.id === fileIds[0]);
-      startBatchConversion(fileIds.length, firstFile?.name || 'Unbekannte Datei');
-    }
     
     toast({
       title: "Batch-Konvertierung gestartet",
@@ -105,53 +94,11 @@ export const ConversionPanel = ({
     });
     
     try {
-      // Convert files sequentially to avoid memory issues
-      for (let i = 0; i < fileIds.length; i++) {
-        const fileId = fileIds[i];
-        const file = files.find(f => f.id === fileId);
-        
-        if (!file) {
-          console.log(`ConversionPanel: File with ID ${fileId} not found`);
-          failCount++;
-          continue;
-        }
-        
-        console.log(`ConversionPanel: Converting file ${i + 1}/${fileIds.length}: ${file.name}`);
-        
-        // Update batch progress
-        if (updateBatchProgress) {
-          updateBatchProgress(i + 1, file.name, false);
-        }
-        
-        try {
-          // Important: Wait for each conversion to complete
-          const result = await onConvertToPdf(fileId);
-          if (result) {
-            successCount++;
-            console.log(`ConversionPanel: Successfully converted ${file.name} to PDF`);
-            if (updateBatchProgress) {
-              updateBatchProgress(i + 1, file.name, true);
-            }
-          } else {
-            failCount++;
-            console.log(`ConversionPanel: Failed to convert ${file.name} to PDF`);
-          }
-        } catch (error) {
-          console.error(`ConversionPanel: Error converting file ${fileId}:`, error);
-          failCount++;
-        }
-      }
+      // Delegate to the parent handler
+      await onBatchConvert(fileIds);
       
-      console.log(`ConversionPanel: Batch conversion completed: ${successCount} successful, ${failCount} failed`);
-      
-      toast({
-        title: "Batch-Konvertierung abgeschlossen",
-        description: `${successCount} von ${fileIds.length} Dateien erfolgreich konvertiert${failCount > 0 ? `, ${failCount} fehlgeschlagen` : ''}`
-      });
+      // Toast will be shown by the hook
     } finally {
-      if (endBatchConversion) {
-        endBatchConversion();
-      }
       setBatchConversionInProgress(false);
     }
   };
