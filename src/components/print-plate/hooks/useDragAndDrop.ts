@@ -1,55 +1,62 @@
 
-import { useState, useRef, MutableRefObject } from 'react';
+import { useRef, useState } from 'react';
 import { PDFItemType } from '../PDFItem';
 
 export const useDragAndDrop = (
   items: PDFItemType[],
   onItemsChange: (items: PDFItemType[]) => void,
-  canvasRef: MutableRefObject<HTMLDivElement | null>
+  canvasRef: React.RefObject<HTMLDivElement>,
+  getScale: () => number
 ) => {
-  const [draggedItem, setDraggedItem] = useState<number | null>(null);
-  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
-  
+  const [isDragging, setIsDragging] = useState(false);
+  const [draggedItemIndex, setDraggedItemIndex] = useState<number | null>(null);
+  const dragOffsetX = useRef(0);
+  const dragOffsetY = useRef(0);
+
   const handleDragStart = (index: number, e: React.MouseEvent) => {
-    if (canvasRef.current) {
-      const rect = canvasRef.current.getBoundingClientRect();
-      const item = items[index];
-      
-      setDraggedItem(index);
-      setDragOffset({
-        x: e.clientX - (rect.left + item.x),
-        y: e.clientY - (rect.top + item.y)
-      });
-    }
+    e.preventDefault();
+    if (!canvasRef.current) return;
+    
+    const scale = getScale();
+    const canvasRect = canvasRef.current.getBoundingClientRect();
+    const item = items[index];
+    
+    // Calculate offsets in pixels
+    dragOffsetX.current = (e.clientX - canvasRect.left) - (item.x * scale);
+    dragOffsetY.current = (e.clientY - canvasRect.top) - (item.y * scale);
+    
+    setDraggedItemIndex(index);
+    setIsDragging(true);
   };
-  
+
   const handleMouseMove = (e: React.MouseEvent) => {
-    if (draggedItem !== null && canvasRef.current) {
-      const rect = canvasRef.current.getBoundingClientRect();
-      const newX = e.clientX - rect.left - dragOffset.x;
-      const newY = e.clientY - rect.top - dragOffset.y;
-      
-      // Make sure item stays within canvas bounds
-      const item = items[draggedItem];
-      const boundedX = Math.max(0, Math.min(newX, rect.width - item.width));
-      const boundedY = Math.max(0, Math.min(newY, rect.height - item.height));
-      
-      const updatedItems = items.map((item, index) => 
-        index === draggedItem 
-          ? { ...item, x: boundedX, y: boundedY } 
-          : item
-      );
-      
-      onItemsChange(updatedItems);
+    if (!isDragging || draggedItemIndex === null || !canvasRef.current) return;
+
+    const scale = getScale();
+    const canvasRect = canvasRef.current.getBoundingClientRect();
+    
+    // Calculate new position in cm (dividing by scale)
+    const newX = (e.clientX - canvasRect.left - dragOffsetX.current) / scale;
+    const newY = (e.clientY - canvasRect.top - dragOffsetY.current) / scale;
+    
+    // Update the item's position
+    const updatedItems = items.map((item, index) =>
+      index === draggedItemIndex
+        ? { ...item, x: newX, y: newY }
+        : item
+    );
+    
+    onItemsChange(updatedItems);
+  };
+
+  const handleMouseUp = () => {
+    if (isDragging) {
+      setIsDragging(false);
+      setDraggedItemIndex(null);
     }
   };
-  
-  const handleMouseUp = () => {
-    setDraggedItem(null);
-  };
-  
+
   return {
-    draggedItem,
     handleDragStart,
     handleMouseMove,
     handleMouseUp

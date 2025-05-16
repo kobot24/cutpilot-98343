@@ -1,5 +1,5 @@
 
-import { useRef } from 'react';
+import { useRef, useMemo } from 'react';
 import { PDFItem, PDFItemType } from './PDFItem';
 import { EmptyPlate } from './EmptyPlate';
 import { PrintPlateSize } from './PrintPlateSettings';
@@ -7,6 +7,9 @@ import { PlateGrid } from './components/PlateGrid';
 import { PlateDimensions } from './components/PlateDimensions';
 import { useDragAndDrop } from './hooks/useDragAndDrop';
 import { usePlateItems } from './hooks/usePlateItems';
+
+// Define a fixed scale factor (pixels per cm)
+const PIXELS_PER_CM = 3.7; // Based on 1120px ÷ 300cm example
 
 type PlateCanvasProps = {
   items: PDFItemType[];
@@ -17,25 +20,13 @@ type PlateCanvasProps = {
 export const PlateCanvas = ({ items, onItemsChange, plateSize }: PlateCanvasProps) => {
   const canvasRef = useRef<HTMLDivElement>(null);
 
-  // Calculate the scale factor based on the canvas size and the plate dimensions
+  // Calculate dimensions in pixels based on the fixed scale factor
+  const canvasWidth = useMemo(() => plateSize.width * PIXELS_PER_CM, [plateSize.width]);
+  const canvasHeight = useMemo(() => plateSize.height * PIXELS_PER_CM, [plateSize.height]);
+  
+  // Calculate scale (pixels per cm) for child components
   const getScale = (): number => {
-    if (!canvasRef.current) return 1;
-    
-    const rect = canvasRef.current.getBoundingClientRect();
-    const canvasWidth = rect.width;
-    const scaleX = canvasWidth / plateSize.width;
-    
-    return scaleX; // Use the width scale as the common scale factor
-  };
-
-  // Calculate canvas height in pixels based on the aspect ratio of the plate
-  const getCanvasHeight = (): number => {
-    if (!canvasRef.current) return 0;
-    
-    const rect = canvasRef.current.getBoundingClientRect();
-    const aspectRatio = plateSize.height / plateSize.width;
-    
-    return rect.width * aspectRatio;
+    return PIXELS_PER_CM;
   };
   
   // Use the custom hooks for drag-and-drop and item management
@@ -43,55 +34,61 @@ export const PlateCanvas = ({ items, onItemsChange, plateSize }: PlateCanvasProp
     handleDragStart,
     handleMouseMove,
     handleMouseUp 
-  } = useDragAndDrop(items, onItemsChange, canvasRef);
+  } = useDragAndDrop(items, onItemsChange, canvasRef, getScale);
   
   const {
     handleRotateItem,
     handleRemoveItem
-  } = usePlateItems(items, onItemsChange, plateSize, getCanvasHeight);
+  } = usePlateItems(items, onItemsChange, plateSize, () => canvasHeight);
+
+  // Calculate approximate scale ratio for display (1:X)
+  const scaleRatio = Math.round(100 / PIXELS_PER_CM);
 
   return (
     <div className="print-plate-container">
-      <PlateDimensions 
-        plateSize={plateSize} 
-        canvasHeight={getCanvasHeight()} 
-      />
-
-      <div className="flex">
-        {/* Height dimension on left - Part of PlateDimensions but rendered separately for layout */}
-        <div className="flex flex-col items-center justify-center w-6 mr-1 text-sm text-gray-500 font-medium" style={{ height: `${getCanvasHeight()}px` }}>
-          <div className="rotate-[-90deg] whitespace-nowrap">{plateSize.height} cm</div>
+      <div className="flex flex-col">
+        {/* Scale indicator */}
+        <div className="text-xs text-gray-500 mb-1 self-end">
+          Maßstab ca. 1:{scaleRatio}
         </div>
+        
+        <PlateDimensions 
+          plateSize={plateSize} 
+          canvasHeight={canvasHeight} 
+        />
 
-        {/* Canvas */}
-        <div 
-          ref={canvasRef}
-          className="w-full bg-white print-plate relative border border-gray-200 rounded"
-          style={{ height: `${getCanvasHeight()}px` }}
-          onMouseMove={handleMouseMove}
-          onMouseUp={handleMouseUp}
-          onMouseLeave={handleMouseUp}
-        >
-          {/* Grid */}
-          <PlateGrid plateSize={plateSize} scale={getScale()} />
+        <div className="flex">
+          {/* Canvas */}
+          <div 
+            ref={canvasRef}
+            className="bg-white print-plate relative border border-gray-200 rounded overflow-auto"
+            style={{ 
+              width: `${canvasWidth}px`, 
+              height: `${canvasHeight}px`,
+              maxWidth: '100%',
+              maxHeight: '70vh'
+            }}
+            onMouseMove={handleMouseMove}
+            onMouseUp={handleMouseUp}
+            onMouseLeave={handleMouseUp}
+          >
+            {/* Grid */}
+            <PlateGrid plateSize={plateSize} scale={getScale()} />
 
-          {/* PDF Items */}
-          {items.map((item, index) => (
-            <PDFItem
-              key={index}
-              item={item}
-              index={index}
-              onDragStart={handleDragStart}
-              onRotate={handleRotateItem}
-              onRemove={handleRemoveItem}
-            />
-          ))}
-          
-          {items.length === 0 && <EmptyPlate />}
-          
-          {/* Size indicator in bottom right */}
-          <div className="absolute bottom-2 right-2 bg-white/80 text-xs px-2 py-1 rounded text-gray-500">
-            {plateSize.width} × {plateSize.height} cm
+            {/* PDF Items */}
+            {items.map((item, index) => (
+              <PDFItem
+                key={index}
+                item={item}
+                index={index}
+                scale={PIXELS_PER_CM}
+                onDragStart={handleDragStart}
+                onRotate={handleRotateItem}
+                onRemove={handleRemoveItem}
+              />
+            ))}
+            
+            {items.length === 0 && <EmptyPlate />}
           </div>
         </div>
       </div>

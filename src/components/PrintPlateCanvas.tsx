@@ -12,6 +12,9 @@ import { usePrintPlateState } from '@/hooks/usePrintPlateState';
 import { exportPrintPlateToPDF, downloadPDF } from '@/utils/print-plate/printPlateExporter';
 import { usePDFLoader } from '@/hooks/usePDFLoader';
 
+// Fixed scale factor (pixels per cm)
+const PIXELS_PER_CM = 3.7;
+
 type PrintPlateCanvasProps = {
   files: UploadedFile[];
 };
@@ -35,11 +38,11 @@ export const PrintPlateCanvas = ({ files }: PrintPlateCanvasProps) => {
         img.onload = () => {
           const aspectRatio = img.height / img.width;
           
-          // Default size based on plate size
-          const defaultWidth = 20; // 20% of canvas width
+          // Default size in cm (20cm width)
+          const defaultWidthCm = 20;
           resolve({
-            width: defaultWidth,
-            height: defaultWidth * aspectRatio
+            width: defaultWidthCm,
+            height: defaultWidthCm * aspectRatio
           });
         };
         
@@ -57,14 +60,14 @@ export const PrintPlateCanvas = ({ files }: PrintPlateCanvasProps) => {
       
       const { width, height } = await pdfLoader;
       
-      // Create a new PDF item
+      // Create a new PDF item with dimensions in cm
       const newItem: PDFItemType = {
         id: file.id,
         pdfUrl: file.convertedPdfUrl,
-        x: 10,
-        y: 10,
-        width,
-        height,
+        x: 10, // Position in cm
+        y: 10, // Position in cm
+        width, // Width in cm
+        height, // Height in cm
         rotation: 0,
         aspectRatio: height / width,
         thumbnail: file.convertedPdfUrl,

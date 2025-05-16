@@ -12,30 +12,36 @@ export const PlateGrid = ({ plateSize, scale }: PlateGridProps) => {
     return cm * scale;
   };
 
+  // Draw grid lines every 10cm for better readability
+  const gridStep = 10;
+
   return (
     <svg className="absolute inset-0 w-full h-full pointer-events-none z-0">
-      {/* Vertical grid lines */}
-      {[...Array(Math.ceil(plateSize.width))].map((_, i) => (
+      {/* Vertical grid lines every 10cm */}
+      {[...Array(Math.ceil(plateSize.width / gridStep) + 1)].map((_, i) => (
         <line 
           key={`v-grid-${i}`} 
-          x1={cmToPixels(i)} 
+          x1={cmToPixels(i * gridStep)} 
           y1="0" 
-          x2={cmToPixels(i)} 
+          x2={cmToPixels(i * gridStep)} 
           y2="100%" 
-          stroke="#f0f0f0" 
-          strokeWidth="1" 
+          stroke={i === 0 ? "#cccccc" : "#f0f0f0"} 
+          strokeWidth={i === 0 ? "1" : "0.5"} 
+          strokeDasharray={i === 0 ? "" : "2,2"}
         />
       ))}
-      {/* Horizontal grid lines */}
-      {[...Array(Math.ceil(plateSize.height))].map((_, i) => (
+      
+      {/* Horizontal grid lines every 10cm */}
+      {[...Array(Math.ceil(plateSize.height / gridStep) + 1)].map((_, i) => (
         <line 
           key={`h-grid-${i}`} 
           x1="0" 
-          y1={cmToPixels(i)} 
+          y1={cmToPixels(i * gridStep)} 
           x2="100%" 
-          y2={cmToPixels(i)} 
-          stroke="#f0f0f0" 
-          strokeWidth="1" 
+          y2={cmToPixels(i * gridStep)} 
+          stroke={i === 0 ? "#cccccc" : "#f0f0f0"} 
+          strokeWidth={i === 0 ? "1" : "0.5"}
+          strokeDasharray={i === 0 ? "" : "2,2"}
         />
       ))}
     </svg>

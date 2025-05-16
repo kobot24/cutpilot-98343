@@ -49,19 +49,19 @@ export const exportPrintPlateToPDF = async (
         const embeddedPage = embedPdf[0];
         
         // Calculate position and dimensions in PDF points
-        const x = (item.x / 100) * pageWidth;
-        const y = pageHeight - ((item.y / 100) * pageHeight) - ((item.height / 100) * pageHeight); // Flip Y coordinate for PDF
-        const width = (item.width / 100) * pageWidth;
-        const height = (item.height / 100) * pageHeight;
+        // Item position and dimensions are now in cm, convert to points
+        const x = item.x * CM_TO_POINTS;
+        const y = pageHeight - (item.y * CM_TO_POINTS) - (item.height * CM_TO_POINTS); // Flip Y coordinate for PDF
+        const width = item.width * CM_TO_POINTS;
+        const height = item.height * CM_TO_POINTS;
         
         // Draw the embedded PDF page onto the main page
-        // Use degrees() to convert rotation degrees to the proper format
         page.drawPage(embeddedPage, {
           x,
           y,
           width,
           height,
-          rotate: degrees(item.rotation), // Fixed: Using degrees() function correctly
+          rotate: degrees(item.rotation),
         });
       } catch (error) {
         console.error(`Error embedding PDF for item ${item.id}:`, error);

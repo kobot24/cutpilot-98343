@@ -1,4 +1,4 @@
-import { useRef, useEffect } from 'react';
+import { useEffect } from 'react';
 import { PDFItemType } from '../PDFItem';
 import { PrintPlateSize } from '../PrintPlateSettings';
 
@@ -11,39 +11,52 @@ export const usePlateItems = (
   // Adjust item size and position when the plate size changes
   useEffect(() => {
     if (items.length > 0) {
-      const canvasWidth = window.innerWidth; // Approximation, will be refined in the calculation
-      const canvasHeight = getCanvasHeight();
-      
-      if (canvasHeight > 0) {
-        // Adjust items to fit the new canvas size
-        const updatedItems = items.map(item => {
-          // Keep the same relative position and size
-          const relX = item.x / canvasWidth;
-          const relY = item.y / canvasHeight;
-          const relWidth = item.width / canvasWidth;
-          const relHeight = item.height / canvasHeight;
-          
-          return {
-            ...item,
-            x: relX * canvasWidth,
-            y: relY * canvasHeight,
-            width: relWidth * canvasWidth,
-            height: relHeight * canvasHeight
-          };
-        });
+      // Make sure items stay within plate boundaries after resizing
+      const updatedItems = items.map(item => {
+        // Keep same positions relative to plate dimensions
+        const newItem = { ...item };
         
-        onItemsChange(updatedItems);
-      }
+        // Ensure item is within plate boundaries
+        if (newItem.x + newItem.width > plateSize.width) {
+          newItem.x = Math.max(0, plateSize.width - newItem.width);
+        }
+        
+        if (newItem.y + newItem.height > plateSize.height) {
+          newItem.y = Math.max(0, plateSize.height - newItem.height);
+        }
+        
+        return newItem;
+      });
+      
+      onItemsChange(updatedItems);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [plateSize]);
 
   const handleRotateItem = (index: number) => {
-    const updatedItems = items.map((item, i) => 
-      i === index 
-        ? { ...item, rotation: (item.rotation + 90) % 360 } 
-        : item
-    );
+    const updatedItems = items.map((item, i) => {
+      if (i === index) {
+        // When rotating, we need to swap width and height to maintain aspect ratio
+        const newRotation = (item.rotation + 90) % 360;
+        let newItem = { ...item, rotation: newRotation };
+        
+        // If rotation is 90 or 270 degrees, swap width and height
+        if ((newRotation % 180) === 90) {
+          if (item.aspectRatio) {
+            // Calculate new dimensions based on aspect ratio
+            const aspectRatio = 1 / item.aspectRatio; // Invert for rotation
+            newItem = {
+              ...newItem,
+              width: item.height,
+              height: item.width
+            };
+          }
+        }
+        
+        return newItem;
+      }
+      return item;
+    });
     onItemsChange(updatedItems);
   };
   

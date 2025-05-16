@@ -8,6 +8,7 @@ import { usePDFLoader } from '@/hooks/usePDFLoader';
 type PDFItemProps = {
   item: PDFItemType;
   index: number;
+  scale: number;
   onDragStart: (index: number, e: React.MouseEvent) => void;
   onRotate: (index: number) => void;
   onRemove: (index: number) => void;
@@ -25,20 +26,26 @@ export type PDFItemType = {
   thumbnail?: string;
 };
 
-export const PDFItem = ({ item, index, onDragStart, onRotate, onRemove }: PDFItemProps) => {
+export const PDFItem = ({ item, index, scale, onDragStart, onRotate, onRemove }: PDFItemProps) => {
   const [isHovered, setIsHovered] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const { handleDocumentLoadSuccess } = usePDFLoader({ pdfUrl: item.pdfUrl });
   
+  // Convert item dimensions from percentages to pixels using the scale
+  const pixelWidth = item.width * scale;
+  const pixelHeight = item.height * scale;
+  const pixelX = item.x * scale;
+  const pixelY = item.y * scale;
+  
   return (
     <div
       ref={containerRef}
-      className="pdf-item absolute flex flex-col"
+      className="pdf-item absolute flex flex-col cursor-move"
       style={{
-        left: `${item.x}px`,
-        top: `${item.y}px`,
-        width: `${item.width}px`,
-        height: `${item.height}px`,
+        left: `${pixelX}px`,
+        top: `${pixelY}px`,
+        width: `${pixelWidth}px`,
+        height: `${pixelHeight}px`,
         transform: `rotate(${item.rotation}deg)`,
       }}
       onMouseDown={(e) => onDragStart(index, e)}
@@ -63,8 +70,8 @@ export const PDFItem = ({ item, index, onDragStart, onRotate, onRemove }: PDFIte
         >
           <Page
             pageNumber={1}
-            width={item.width}
-            height={item.height}
+            width={pixelWidth}
+            height={pixelHeight}
             renderTextLayer={false}
             renderAnnotationLayer={false}
             className="pdf-page"

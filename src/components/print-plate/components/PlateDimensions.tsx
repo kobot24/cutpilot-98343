@@ -8,7 +8,7 @@ type PlateDimensionsProps = {
 
 export const PlateDimensions = ({ plateSize, canvasHeight }: PlateDimensionsProps) => {
   return (
-    <>
+    <div className="relative">
       {/* Width dimension at top */}
       <div className="flex justify-center h-6 mb-1 text-sm text-gray-500 font-medium">
         {plateSize.width} cm
@@ -16,16 +16,18 @@ export const PlateDimensions = ({ plateSize, canvasHeight }: PlateDimensionsProp
 
       {/* Height dimension on left */}
       <div 
-        className="flex flex-col items-center justify-center w-6 mr-1 text-sm text-gray-500 font-medium" 
-        style={{ height: `${canvasHeight}px` }}
+        className="absolute left-0 top-0 transform -translate-x-6 flex items-center justify-center h-full"
+        style={{ width: '24px' }}
       >
-        <div className="rotate-[-90deg] whitespace-nowrap">{plateSize.height} cm</div>
+        <div className="rotate-[-90deg] whitespace-nowrap text-sm text-gray-500 font-medium">
+          {plateSize.height} cm
+        </div>
       </div>
       
       {/* Size indicator in bottom right */}
-      <div className="absolute bottom-2 right-2 bg-white/80 text-xs px-2 py-1 rounded text-gray-500">
+      <div className="absolute bottom-2 right-2 bg-white/80 text-xs px-2 py-1 rounded text-gray-500 z-10">
         {plateSize.width} × {plateSize.height} cm
       </div>
-    </>
+    </div>
   );
 };
