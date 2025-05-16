@@ -1,11 +1,16 @@
 
 import { useState, useEffect, useRef } from 'react';
-import { Document, Page, pdfjs } from 'react-pdf';
+import { pdfjs } from 'react-pdf';
 import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
 import 'react-pdf/dist/esm/Page/TextLayer.css';
-import { usePDFLoader } from '@/hooks/usePDFLoader';
-import { PrintPlateSize } from './PrintPlateSettings';
 import { getEffectiveDimensions } from '@/utils/print-plate/pdfTransformUtils';
+import { PrintPlateSize } from './PrintPlateSettings';
+import { PDFItemType } from './pdf-item/PDFItemType';
+import { PDFDocumentRenderer } from './pdf-item/PDFDocumentRenderer';
+import { PDFBoundaryOverlay } from './pdf-item/PDFBoundaryOverlay';
+import { PDFItemControls } from './pdf-item/PDFItemControls';
+import { PDFItemInfo } from './pdf-item/PDFItemInfo';
+import { PDFDebugMarker } from './pdf-item/PDFDebugMarker';
 
 // Initialize PDF.js worker
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
@@ -20,19 +25,7 @@ type PDFItemProps = {
   onRemove: (index: number) => void;
 };
 
-export type PDFItemType = {
-  id: string;
-  pdfUrl: string;
-  pdfData?: Uint8Array; // Added field to store actual PDF binary data
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-  rotation: number;
-  aspectRatio?: number;
-  thumbnail?: string;
-  dpi?: number;
-};
+export type { PDFItemType } from './pdf-item/PDFItemType';
 
 export const PDFItem = ({ item, index, scale, plateSize, onDragStart, onRotate, onRemove }: PDFItemProps) => {
   const [isHovered, setIsHovered] = useState(false);
@@ -87,6 +80,16 @@ export const PDFItem = ({ item, index, scale, plateSize, onDragStart, onRotate, 
     setErrorLoading(true);
   };
 
+  const handleRotateClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onRotate(index);
+  };
+  
+  const handleRemoveClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onRemove(index);
+  };
+
   return (
     <div
       ref={containerRef}
@@ -104,175 +107,50 @@ export const PDFItem = ({ item, index, scale, plateSize, onDragStart, onRotate, 
       onMouseLeave={() => setIsHovered(false)}
     >
       <div className="relative flex-1 overflow-hidden">
-        {item.pdfUrl ? (
-          <Document
-            file={item.pdfUrl}
-            onLoadSuccess={handleDocumentLoadSuccess}
-            onError={handleDocumentLoadError}
-            loading={
-              <div className="flex items-center justify-center w-full h-full">
-                <div className="animate-pulse text-xs text-gray-400">Lädt...</div>
-              </div>
-            }
-            error={
-              <div className="flex items-center justify-center w-full h-full">
-                <div className="text-xs text-red-400">Fehler</div>
-              </div>
-            }
-            className="w-full h-full"
-          >
-            <Page
-              pageNumber={1}
-              width={pixelWidth}
-              height={pixelHeight}
-              renderTextLayer={false}
-              renderAnnotationLayer={false}
-              className="pdf-page"
-            />
-          </Document>
-        ) : item.thumbnail ? (
-          // Fallback to thumbnail if PDF URL is not available
-          <img 
-            src={item.thumbnail} 
-            alt="PDF preview" 
-            className="w-full h-full object-contain"
-          />
-        ) : (
-          // No preview available
-          <div className="flex items-center justify-center w-full h-full bg-gray-100">
-            <div className="text-xs text-gray-400">Keine Vorschau</div>
-          </div>
-        )}
+        <PDFDocumentRenderer
+          pdfUrl={item.pdfUrl}
+          thumbnail={item.thumbnail}
+          pixelWidth={pixelWidth}
+          pixelHeight={pixelHeight}
+          onLoadSuccess={handleDocumentLoadSuccess}
+          onLoadError={handleDocumentLoadError}
+        />
         
-        {/* Darkened overlay areas for parts that extend beyond plate boundaries */}
-        {exceedsBoundaries && (
-          <>
-            {/* Left overflow */}
-            {exceedsLeft && (
-              <div 
-                className="absolute top-0 left-0 bg-black/40 pointer-events-none z-10"
-                style={{ 
-                  width: `${clipLeft}px`,
-                  height: '100%',
-                }}
-              />
-            )}
-            
-            {/* Top overflow */}
-            {exceedsTop && (
-              <div 
-                className="absolute top-0 left-0 bg-black/40 pointer-events-none z-10"
-                style={{ 
-                  width: '100%',
-                  height: `${clipTop}px`,
-                }}
-              />
-            )}
-            
-            {/* Right overflow */}
-            {exceedsRight && (
-              <div 
-                className="absolute top-0 right-0 bg-black/40 pointer-events-none z-10"
-                style={{ 
-                  width: `${clipRight}px`,
-                  height: '100%',
-                }}
-              />
-            )}
-            
-            {/* Bottom overflow */}
-            {exceedsBottom && (
-              <div 
-                className="absolute bottom-0 left-0 bg-black/40 pointer-events-none z-10"
-                style={{ 
-                  width: '100%',
-                  height: `${clipBottom}px`,
-                }}
-              />
-            )}
-          </>
-        )}
+        {/* Boundary overlay areas */}
+        <PDFBoundaryOverlay
+          exceedsBoundaries={exceedsBoundaries}
+          exceedsLeft={exceedsLeft}
+          exceedsTop={exceedsTop}
+          exceedsRight={exceedsRight}
+          exceedsBottom={exceedsBottom}
+          clipLeft={clipLeft}
+          clipTop={clipTop}
+          clipRight={clipRight}
+          clipBottom={clipBottom}
+        />
         
-        {/* Item center marker for debugging */}
-        {showDebug && (
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-            <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-            <div className="absolute top-0 bottom-0 w-0.5 bg-red-300 opacity-50"></div>
-            <div className="absolute left-0 right-0 h-0.5 bg-red-300 opacity-50"></div>
-          </div>
-        )}
+        {/* Debug center marker */}
+        <PDFDebugMarker showDebug={showDebug} />
         
-        {/* Physical size indicator when hovered */}
-        {(isHovered || showDebug) && (
-          <div className="absolute top-1 left-1 bg-white/80 text-xs px-2 py-1 rounded shadow-sm z-10">
-            {item.width.toFixed(1)} × {item.height.toFixed(1)} cm
-            {item.rotation !== 0 && <span className="ml-1 text-orange-500">({item.rotation}°)</span>}
-            {item.dpi && <span className="ml-1 text-gray-500">({item.dpi} DPI)</span>}
-            {showDebug && (
-              <div className="text-[10px] text-gray-600 mt-1">
-                x: {item.x.toFixed(2)}, y: {item.y.toFixed(2)}
-              </div>
-            )}
-            
-            {/* Add indicator if item exceeds plate boundaries */}
-            {exceedsBoundaries && (
-              <div className="text-[10px] text-red-600 mt-0.5 font-medium">
-                Außerhalb der Druckplatte
-              </div>
-            )}
-          </div>
-        )}
+        {/* Item info display */}
+        <PDFItemInfo
+          isHovered={isHovered}
+          showDebug={showDebug}
+          width={item.width}
+          height={item.height}
+          rotation={item.rotation}
+          dpi={item.dpi}
+          x={item.x}
+          y={item.y}
+          exceedsBoundaries={exceedsBoundaries}
+        />
         
-        {isHovered && (
-          <div className="absolute bottom-1 right-1 flex space-x-1 z-10">
-            <button 
-              className="bg-white/80 rounded p-1 shadow-sm"
-              onClick={(e) => {
-                e.stopPropagation();
-                onRotate(index);
-              }}
-              title="Um 90° drehen"
-            >
-              <svg 
-                xmlns="http://www.w3.org/2000/svg" 
-                className="h-3 w-3 text-gray-600" 
-                fill="none" 
-                viewBox="0 0 24 24" 
-                stroke="currentColor"
-              >
-                <path 
-                  strokeLinecap="round" 
-                  strokeLinejoin="round" 
-                  strokeWidth={2} 
-                  d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" 
-                />
-              </svg>
-            </button>
-            <button 
-              className="bg-white/80 rounded p-1 shadow-sm"
-              onClick={(e) => {
-                e.stopPropagation();
-                onRemove(index);
-              }}
-              title="Entfernen"
-            >
-              <svg 
-                xmlns="http://www.w3.org/2000/svg" 
-                className="h-3 w-3 text-gray-600" 
-                fill="none" 
-                viewBox="0 0 24 24" 
-                stroke="currentColor"
-              >
-                <path 
-                  strokeLinecap="round" 
-                  strokeLinejoin="round" 
-                  strokeWidth={2} 
-                  d="M6 18L18 6M6 6l12 12" 
-                />
-              </svg>
-            </button>
-          </div>
-        )}
+        {/* Item controls */}
+        <PDFItemControls
+          isHovered={isHovered}
+          onRotate={handleRotateClick}
+          onRemove={handleRemoveClick}
+        />
       </div>
     </div>
   );
