@@ -30,18 +30,19 @@ export const MainLayout = (props: MainLayoutProps) => {
   const { activeSection, onNavigate } = props;
   
   return (
-    <div className="flex min-h-screen w-full">
-      <Sidebar
-        className="w-60"
-        collapsible
-        collapsedWidth={56}
-      >
-        <AppSidebar activeSection={activeSection} onNavigate={onNavigate} />
-      </Sidebar>
-      
-      <div className="flex-1 p-6 overflow-auto">
-        <ContentRenderer {...props} />
+    <SidebarProvider>
+      <div className="flex min-h-screen w-full">
+        <Sidebar
+          className="w-60"
+          collapsible="icon"
+        >
+          <AppSidebar activeSection={activeSection} onNavigate={onNavigate} />
+        </Sidebar>
+        
+        <div className="flex-1 p-6 overflow-auto">
+          <ContentRenderer {...props} />
+        </div>
       </div>
-    </div>
+    </SidebarProvider>
   );
 };
