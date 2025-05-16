@@ -33,7 +33,7 @@ export const MainLayout = (props: MainLayoutProps) => {
     <div className="flex min-h-screen w-full">
       <Sidebar
         className="w-60"
-        collapsible
+        collapsible="icon"
         collapsedWidth={56}
       >
         <AppSidebar activeSection={activeSection} onNavigate={onNavigate} />
