@@ -117,112 +117,114 @@ export const exportPrintPlateToPDF = async (
         console.log(`PDF Export - Item position in points: x=${itemX}, y=${itemY}, width=${itemWidth}, height=${itemHeight}`);
         console.log(`PDF Export - Item center: centerX=${itemCenterX}, centerY=${itemCenterY}`);
         
-        // Completely rewritten rotation handling to fix issues with 90°, 180°, and 270° rotations
+        // Completely revised rotation handling logic
         if (item.rotation !== 0) {
           console.log(`PDF Export - Processing rotation: ${item.rotation}°`);
           
           try {
-            // Approach: For rotated items, we'll embed the PDF, then create a form XObject
-            // that we can rotate and position correctly
+            // IMPROVEMENT: New approach for handling rotations
+            // We'll create a new PDF document for each rotated item, apply the rotation there,
+            // then embed it back into our main document
             
-            // First, create a temporary PDF with the item
+            // First, create a temporary PDF that will hold our rotated content
             const tempPdf = await PDFDocument.create();
+            
+            // Determine dimensions for temporary PDF based on rotation angle
             let tempWidth = itemWidth;
             let tempHeight = itemHeight;
             
             // For 90° and 270° rotations, we need to swap width and height
-            // This is crucial for the correct placement
             if (item.rotation === 90 || item.rotation === 270) {
               console.log(`PDF Export - Swapping dimensions for ${item.rotation}° rotation`);
+              // CRITICAL FIX: For 90/270 degrees, we need to swap dimensions
               tempWidth = itemHeight;
               tempHeight = itemWidth;
             }
             
-            // Create a temporary page with the right dimensions
+            // Add a page to our temporary PDF with the appropriate dimensions
             const tempPage = tempPdf.addPage([tempWidth, tempHeight]);
             
-            // Draw the embedded page onto the temporary page
-            tempPage.drawPage(embeddedPage, {
-              x: 0,
-              y: 0,
-              width: tempWidth,
-              height: tempHeight,
-              rotate: degrees(0) // No rotation yet
+            // Embed original PDF into our temporary document
+            const tempEmbeddedPdf = await tempPdf.embedPdf(pdfBytes);
+            if (tempEmbeddedPdf.length === 0) {
+              throw new Error("Failed to embed PDF into temporary document");
+            }
+            
+            // Draw the original page onto our temp page with the right dimensions
+            // The key here is to draw it with the right dimensions BEFORE rotation
+            console.log(`PDF Export - Drawing original content to temp page with dimensions: ${tempWidth}x${tempHeight}`);
+            
+            // Different drawing logic based on rotation
+            if (item.rotation === 90) {
+              // For 90° rotation, we need to transform coordinates differently
+              tempPage.drawPage(tempEmbeddedPdf[0], {
+                x: 0,
+                y: 0,
+                width: tempWidth,
+                height: tempHeight,
+                rotate: degrees(90),
+                xScale: 1,
+                yScale: 1
+              });
+            } else if (item.rotation === 180) {
+              tempPage.drawPage(tempEmbeddedPdf[0], {
+                x: tempWidth, // Right edge
+                y: tempHeight, // Top edge
+                width: tempWidth,
+                height: tempHeight,
+                rotate: degrees(180),
+                xScale: 1,
+                yScale: 1
+              });
+            } else if (item.rotation === 270) {
+              tempPage.drawPage(tempEmbeddedPdf[0], {
+                x: tempWidth, // Right edge
+                y: 0, // Bottom edge
+                width: tempWidth,
+                height: tempHeight,
+                rotate: degrees(270),
+                xScale: 1,
+                yScale: 1
+              });
+            } else {
+              // For any non-standard rotation (shouldn't happen in our app, but just in case)
+              tempPage.drawPage(tempEmbeddedPdf[0], {
+                x: 0,
+                y: 0,
+                width: tempWidth,
+                height: tempHeight,
+                rotate: degrees(item.rotation)
+              });
+            }
+            
+            // Save temporary PDF
+            const rotatedPdfBytes = await tempPdf.save();
+            
+            // Embed the rotated PDF back into our main document
+            const rotatedPdfEmbed = await pdfDoc.embedPdf(rotatedPdfBytes);
+            
+            // Now place this rotated content in the main PDF at the right position
+            console.log(`PDF Export - Placing rotated content at: x=${itemX}, y=${itemY}`);
+            
+            // CRITICAL FIX: New position calculation based on rotation angle
+            // This is where most of our issues were occurring
+            let finalX = itemX;
+            let finalY = itemY;
+            
+            // Place the rotated content, with rotation-specific positioning
+            page.drawPage(rotatedPdfEmbed[0], {
+              x: finalX,
+              y: finalY,
+              width: item.rotation === 90 || item.rotation === 270 ? itemHeight : itemWidth,
+              height: item.rotation === 90 || item.rotation === 270 ? itemWidth : itemHeight
             });
             
-            // Save the temporary PDF
-            const tempPdfBytes = await tempPdf.save();
-            
-            // Re-embed this prepared content
-            const rotatedPdfEmbed = await pdfDoc.embedPdf(tempPdfBytes);
-            
-            if (rotatedPdfEmbed.length === 0) {
-              throw new Error("Failed to embed rotated PDF");
-            }
-            
-            // Calculate the position for the rotated item
-            // The key insight: We need different positioning logic depending on rotation angle
-            let drawX = itemX;
-            let drawY = itemY;
-            
-            // Apply rotation and adjust position
-            switch (item.rotation) {
-              case 90:
-                // For 90° rotation, adjust position since width and height swap
-                drawY = pageHeight - itemY - itemWidth; // Start from bottom edge
-                page.drawPage(rotatedPdfEmbed[0], {
-                  x: drawX,
-                  y: drawY,
-                  width: tempWidth,
-                  height: tempHeight,
-                  rotate: degrees(90)
-                });
-                break;
-                
-              case 180:
-                // For 180° rotation, adjust both X and Y
-                drawX = itemX + itemWidth; // Move to right edge
-                drawY = itemY + itemHeight; // Move to top edge
-                page.drawPage(rotatedPdfEmbed[0], {
-                  x: drawX,
-                  y: drawY, 
-                  width: itemWidth,
-                  height: itemHeight,
-                  rotate: degrees(180)
-                });
-                break;
-                
-              case 270:
-                // For 270° rotation, adjust X since width and height swap
-                drawX = itemX + itemHeight; // Start from right edge considering swapped dimensions
-                page.drawPage(rotatedPdfEmbed[0], {
-                  x: drawX,
-                  y: drawY,
-                  width: tempWidth, 
-                  height: tempHeight,
-                  rotate: degrees(270)
-                });
-                break;
-                
-              default:
-                // For any other custom rotation (not expected in this app)
-                page.drawPage(rotatedPdfEmbed[0], {
-                  x: drawX,
-                  y: drawY,
-                  width: itemWidth,
-                  height: itemHeight,
-                  rotate: degrees(item.rotation)
-                });
-                break;
-            }
-            
-            console.log(`PDF Export - Successfully applied ${item.rotation}° rotation using coordinates: x=${drawX}, y=${drawY}`);
-            
+            console.log(`PDF Export - Successfully added rotated item ${item.id} (${item.rotation}°) to PDF`);
           } catch (error) {
             console.error(`PDF Export - Error handling rotation for item ${item.id}:`, error);
             
-            // Fallback: If rotation fails, try to add without rotation
-            console.log(`PDF Export - Attempting fallback without rotation for item ${item.id}`);
+            // Fallback: Add item without rotation if rotation handling fails
+            console.log(`PDF Export - Falling back to non-rotated placement for item ${item.id}`);
             try {
               page.drawPage(embeddedPage, {
                 x: itemX,
@@ -231,11 +233,12 @@ export const exportPrintPlateToPDF = async (
                 height: itemHeight,
               });
             } catch (fallbackError) {
-              console.error(`PDF Export - Fallback also failed for item ${item.id}:`, fallbackError);
+              console.error(`PDF Export - Fallback placement also failed:`, fallbackError);
             }
           }
         } else {
-          // Non-rotated items can use the simpler drawing approach
+          // Non-rotated items - standard placement
+          console.log(`PDF Export - Adding non-rotated item ${item.id} to PDF`);
           try {
             page.drawPage(embeddedPage, {
               x: itemX,
@@ -243,14 +246,13 @@ export const exportPrintPlateToPDF = async (
               width: itemWidth,
               height: itemHeight,
             });
+            console.log(`PDF Export - Successfully added non-rotated item ${item.id} to PDF`);
           } catch (error) {
             console.error(`PDF Export - Error drawing non-rotated item ${item.id}:`, error);
           }
         }
-        
-        console.log(`PDF Export - Successfully added item ${item.id} to PDF`);
-      } catch (error) {
-        console.error(`Error embedding PDF for item ${item.id}:`, error);
+      } catch (itemError) {
+        console.error(`PDF Export - Error processing item ${item.id}:`, itemError);
       }
     }
     
