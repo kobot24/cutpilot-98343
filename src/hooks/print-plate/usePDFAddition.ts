@@ -4,7 +4,6 @@ import { UploadedFile } from '@/types/fileTypes';
 import { PDFItemType } from '@/components/print-plate/PDFItem';
 import { PrintPlateSize } from '@/components/print-plate/PrintPlateSettings';
 import { toast } from '@/components/ui/sonner';
-import { generateId } from '@/utils/fileUtils';
 
 /**
  * Hook for adding PDFs to the print plate
@@ -101,12 +100,9 @@ export const usePDFAddition = (
       const centerX = Math.max(0, (plateSize.width - width) / 2);
       const centerY = Math.max(0, (plateSize.height - height) / 2);
       
-      // Generate a unique ID for this item that's different from file.id
-      const uniqueItemId = `plate-${generateId()}`;
-      
       // Create a new PDF item with dimensions in cm
       const newItem: PDFItemType = {
-        id: uniqueItemId, // Use the uniquely generated ID to avoid duplicates
+        id: file.id,
         pdfUrl: file.convertedPdfUrl,
         pdfData, // Store the PDF binary data with the item
         x: centerX, // Center position in cm

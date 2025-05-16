@@ -2,7 +2,7 @@
 import { PDFDocument } from 'pdf-lib';
 import { getPDFDataFromItem } from './pdfDataUtils';
 import { calculateItemPositionInPoints } from './pdfCoordinateUtils';
-import { createRotatedPDF, isPDF } from './pdfRotationUtils';
+import { createRotatedPDF } from './pdfRotationUtils';
 import { getRotatedTransform, getEffectiveDimensions } from './pdfTransformUtils';
 
 /**
@@ -21,16 +21,12 @@ export const processPDFItem = async (pdfDoc: any, page: any, item: any, pageHeig
     // Get the PDF bytes - preferring cached data if available
     const pdfBytes = await getPDFDataFromItem(item);
     
-    // Check if source is an actual PDF file or an image
-    const isSourcePDF = isPDF(item.pdfUrl || pdfBytes);
-    console.log(`PDF Processing - Source file is a ${isSourcePDF ? 'PDF' : 'image'}`);
-    
     // Calculate position and dimensions in PDF points
     const itemPosition = calculateItemPositionInPoints(item, pageHeight);
     console.log(`PDF Processing - Item position in points: x=${itemPosition.x}, y=${itemPosition.y}, width=${itemPosition.width}, height=${itemPosition.height}`);
     
     // Process based on rotation
-    await processItemWithRotation(pdfDoc, page, pdfBytes, item, itemPosition, isSourcePDF);
+    await processItemWithRotation(pdfDoc, page, pdfBytes, item, itemPosition);
     
   } catch (error) {
     console.error(`PDF Processing - Error processing item ${item.id}:`, error);
@@ -44,15 +40,13 @@ export const processPDFItem = async (pdfDoc: any, page: any, item: any, pageHeig
  * @param pdfBytes The PDF data bytes
  * @param item The PDF item
  * @param itemPosition The calculated item position
- * @param isSourcePDF Whether the source is an actual PDF file
  */
 const processItemWithRotation = async (
   pdfDoc: any, 
   page: any, 
   pdfBytes: Uint8Array, 
   item: any, 
-  itemPosition: any,
-  isSourcePDF: boolean = true
+  itemPosition: any
 ) => {
   try {
     // If rotation is needed
@@ -74,8 +68,7 @@ const processItemWithRotation = async (
           pdfBytes, 
           item.rotation, 
           itemPosition.width, 
-          itemPosition.height,
-          !isSourcePDF // Pass the flag indicating if this is an image source
+          itemPosition.height
         );
         
         // Embed the rotated PDF back into our main document
@@ -90,22 +83,48 @@ const processItemWithRotation = async (
         const centerY = itemPosition.y + (itemPosition.height / 2);
         console.log(`PDF Processing - Item center point: (${centerX}, ${centerY})`);
         
-        // Calculate the position for the rotated item to maintain center point
-        // Adjust position based on rotation to correctly position the item
+        // Calculate the correct position for the rotated item to maintain center point
         let posX = 0;
         let posY = 0;
         
-        if (item.rotation === 90 || item.rotation === 270) {
-          // For 90° and 270° rotations, we need to account for the swapped dimensions
-          posX = centerX - (effectiveDimensions.width / 2);
-          posY = centerY - (effectiveDimensions.height / 2);
-        } else {
-          // For 0° and 180° rotations
-          posX = centerX - (effectiveDimensions.width / 2);
-          posY = centerY - (effectiveDimensions.height / 2);
+        // Adjust position based on rotation angle to preserve the center point
+        switch (item.rotation) {
+          case 90:
+            // For 90° rotation, we need to offset the position correctly
+            // to maintain the same center point
+            posX = centerX - (effectiveDimensions.width / 2);
+            posY = centerY - (effectiveDimensions.height / 2);
+            console.log(`PDF Processing - Adjusted position for 90° rotation: (${posX}, ${posY})`);
+            break;
+            
+          case 180:
+            posX = centerX - (effectiveDimensions.width / 2);
+            posY = centerY - (effectiveDimensions.height / 2);
+            console.log(`PDF Processing - Adjusted position for 180° rotation: (${posX}, ${posY})`);
+            break;
+            
+          case 270:
+            posX = centerX - (effectiveDimensions.width / 2);
+            posY = centerY - (effectiveDimensions.height / 2);
+            console.log(`PDF Processing - Adjusted position for 270° rotation: (${posX}, ${posY})`);
+            break;
+            
+          default:
+            posX = itemPosition.x;
+            posY = itemPosition.y;
         }
         
-        console.log(`PDF Processing - Final position for rotated item: x=${posX}, y=${posY}, width=${effectiveDimensions.width}, height=${effectiveDimensions.height}`);
+        // Add a horizontal shift for 90° and 270° rotations to match the UI preview
+        // This is an additional adjustment to account for the specific layout requirements
+        if (item.rotation === 90) {
+          // Move slightly to the right for 90° rotation
+          posX += 2; // Small adjustment in points to match preview better
+        } else if (item.rotation === 270) {
+          // Move slightly to account for 270° rotation
+          posX -= 2; // Small adjustment in points to match preview better
+        }
+        
+        console.log(`PDF Processing - Final position for rotated item: x=${posX}, y=${posY}`);
         
         // Draw the rotated page with the correct dimensions and position
         page.drawPage(rotatedPdfEmbed[0], {
@@ -115,7 +134,7 @@ const processItemWithRotation = async (
           height: effectiveDimensions.height
         });
         
-        console.log(`PDF Processing - Successfully added rotated item ${item.id} (${item.rotation}°) to PDF`);
+        console.log(`PDF Processing - Successfully added rotated item ${item.id} (${item.rotation}°) to PDF at position x=${posX}, y=${posY}, width=${effectiveDimensions.width}, height=${effectiveDimensions.height}`);
       } catch (error) {
         console.error(`PDF Processing - Error handling rotation for item ${item.id}:`, error);
         
