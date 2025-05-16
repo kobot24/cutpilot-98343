@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { UploadSection } from '@/components/upload/UploadSection';
 import { ConversionPanel } from '@/components/ConversionPanel';
@@ -63,6 +62,9 @@ export const ContentRenderer: React.FC<ContentRendererProps> = ({
           onConvertToPdf={convertToPdf}
           settings={settings}
           isLoading={isLoading}
+          files={files}
+          onSelectFile={selectFile}
+          onRemoveFile={removeFile}
           conversionProgress={conversionProgress}
         />
       );

@@ -6,14 +6,17 @@ import { UserSettings } from '@/hooks/useSettings';
 import { ConversionProgress } from '@/hooks/usePDFConverter';
 import { NoFileSelected } from './conversion/NoFileSelected';
 import { FileInfoCard } from './conversion/FileInfoCard';
-import { PDFPreviewCard } from './conversion/PDFPreviewCard';
 import { ConversionHeader } from './conversion/ConversionHeader';
+import { FilesList } from './FilesList';
 
 type ConversionPanelProps = {
   selectedFile: UploadedFile | null;
   onConvertToPdf: (fileId: string) => Promise<string | undefined>;
   settings: UserSettings;
   isLoading: boolean;
+  files: UploadedFile[];
+  onSelectFile: (id: string) => void;
+  onRemoveFile: (id: string) => void;
   conversionProgress?: ConversionProgress;
 };
 
@@ -22,11 +25,14 @@ export const ConversionPanel = ({
   onConvertToPdf,
   settings,
   isLoading,
+  files,
+  onSelectFile,
+  onRemoveFile,
   conversionProgress = { progress: 0, status: '' }
 }: ConversionPanelProps) => {
   const [conversionInProgress, setConversionInProgress] = useState(false);
-  const [showPreview, setShowPreview] = useState(false);
   const [conversionError, setConversionError] = useState<string | null>(null);
+  const [batchConversionInProgress, setBatchConversionInProgress] = useState(false);
 
   const handleConvert = async () => {
     if (!selectedFile) {
@@ -55,7 +61,6 @@ export const ConversionPanel = ({
           title: "PDF erstellt",
           description: "PDF mit CutContour wurde erfolgreich erstellt"
         });
-        setShowPreview(true);
       } else {
         throw new Error("Keine PDF-URL zurückgegeben");
       }
@@ -71,31 +76,69 @@ export const ConversionPanel = ({
       setConversionInProgress(false);
     }
   };
-
-  if (!selectedFile) {
-    return <NoFileSelected />;
-  }
+  
+  const handleBatchConvert = async (fileIds: string[]) => {
+    if (fileIds.length === 0) return;
+    
+    setBatchConversionInProgress(true);
+    let successCount = 0;
+    let failCount = 0;
+    
+    toast({
+      title: "Batch-Konvertierung gestartet",
+      description: `${fileIds.length} Dateien werden zu PDF konvertiert...`
+    });
+    
+    try {
+      // Convert files sequentially to avoid memory issues
+      for (const fileId of fileIds) {
+        try {
+          const result = await onConvertToPdf(fileId);
+          if (result) {
+            successCount++;
+          } else {
+            failCount++;
+          }
+        } catch (error) {
+          console.error(`Error converting file ${fileId}:`, error);
+          failCount++;
+        }
+      }
+      
+      toast({
+        title: "Batch-Konvertierung abgeschlossen",
+        description: `${successCount} von ${fileIds.length} Dateien erfolgreich konvertiert${failCount > 0 ? `, ${failCount} fehlgeschlagen` : ''}`
+      });
+    } finally {
+      setBatchConversionInProgress(false);
+    }
+  };
 
   return (
     <div className="space-y-6">
       <ConversionHeader />
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <FileInfoCard
-          selectedFile={selectedFile}
-          settings={settings}
-          conversionInProgress={conversionInProgress}
-          isLoading={isLoading}
-          onConvertClick={handleConvert}
-          conversionProgress={conversionProgress}
-          conversionError={conversionError}
-        />
+      <FilesList 
+        files={files}
+        selectedFileId={selectedFile?.id || null}
+        onSelectFile={onSelectFile}
+        onRemoveFile={onRemoveFile}
+        onBatchConvert={handleBatchConvert}
+      />
 
-        <PDFPreviewCard 
-          selectedFile={selectedFile} 
-          showPreview={showPreview} 
-        />
-      </div>
+      {selectedFile && (
+        <div className="max-w-md mx-auto">
+          <FileInfoCard
+            selectedFile={selectedFile}
+            settings={settings}
+            conversionInProgress={conversionInProgress || batchConversionInProgress}
+            isLoading={isLoading}
+            onConvertClick={handleConvert}
+            conversionProgress={conversionProgress}
+            conversionError={conversionError}
+          />
+        </div>
+      )}
     </div>
   );
 };
