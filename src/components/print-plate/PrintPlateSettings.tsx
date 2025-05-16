@@ -1,9 +1,5 @@
 
-import { useState } from 'react';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from '@/components/ui/sonner';
 
 export type PrintPlateSize = {
@@ -20,64 +16,57 @@ const DEFAULT_SIZE: PrintPlateSize = {
 type PrintPlateSettingsProps = {
   plateSize: PrintPlateSize;
   onSizeChange: (size: PrintPlateSize) => void;
+  className?: string;
 };
 
 export const PrintPlateSettings = ({
   plateSize,
   onSizeChange,
+  className = "",
 }: PrintPlateSettingsProps) => {
-  const [width, setWidth] = useState(plateSize.width.toString());
-  const [height, setHeight] = useState(plateSize.height.toString());
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleWidthChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newWidth = parseFloat(e.target.value);
+    if (isNaN(newWidth) || newWidth <= 0) return;
     
-    const newWidth = parseFloat(width);
-    const newHeight = parseFloat(height);
+    onSizeChange({ ...plateSize, width: newWidth });
+    toast.success('Druckplattenbreite aktualisiert');
+  };
+  
+  const handleHeightChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newHeight = parseFloat(e.target.value);
+    if (isNaN(newHeight) || newHeight <= 0) return;
     
-    if (isNaN(newWidth) || isNaN(newHeight) || newWidth <= 0 || newHeight <= 0) {
-      toast.error('Bitte geben Sie gültige Abmessungen ein');
-      return;
-    }
-    
-    onSizeChange({ width: newWidth, height: newHeight });
-    toast.success('Druckplattengröße aktualisiert');
+    onSizeChange({ ...plateSize, height: newHeight });
+    toast.success('Druckplattenhöhe aktualisiert');
   };
 
   return (
-    <Card className="mb-4">
-      <CardHeader className="pb-3">
-        <CardTitle className="text-base">Druckplattengröße</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit} className="flex flex-wrap items-end gap-2">
-          <div className="flex-1 min-w-[120px]">
-            <Label htmlFor="width" className="mb-1.5 block text-sm">Breite (cm)</Label>
-            <Input
-              id="width"
-              type="number"
-              min="1"
-              step="0.1"
-              value={width}
-              onChange={(e) => setWidth(e.target.value)}
-              className="h-9"
-            />
-          </div>
-          <div className="flex-1 min-w-[120px]">
-            <Label htmlFor="height" className="mb-1.5 block text-sm">Höhe (cm)</Label>
-            <Input
-              id="height"
-              type="number" 
-              min="1"
-              step="0.1"
-              value={height}
-              onChange={(e) => setHeight(e.target.value)}
-              className="h-9"
-            />
-          </div>
-          <Button type="submit" className="h-9 px-4">Aktualisieren</Button>
-        </form>
-      </CardContent>
-    </Card>
+    <div className={`flex items-center gap-2 ${className}`}>
+      <div className="flex items-center gap-1.5">
+        <span className="text-sm whitespace-nowrap">Breite:</span>
+        <Input
+          type="number"
+          min="1"
+          step="0.1"
+          value={plateSize.width}
+          onChange={handleWidthChange}
+          className="h-9 w-24"
+        />
+        <span className="text-sm">cm</span>
+      </div>
+      
+      <div className="flex items-center gap-1.5">
+        <span className="text-sm whitespace-nowrap">Höhe:</span>
+        <Input
+          type="number" 
+          min="1"
+          step="0.1"
+          value={plateSize.height}
+          onChange={handleHeightChange}
+          className="h-9 w-24"
+        />
+        <span className="text-sm">cm</span>
+      </div>
+    </div>
   );
 };

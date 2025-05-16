@@ -1,5 +1,4 @@
 
-import { PrintPlateSettings } from '@/components/print-plate/PrintPlateSettings';
 import { usePrintPlateState } from '@/hooks/usePrintPlateState';
 import { usePrintPlateItems } from '@/hooks/usePrintPlateItems';
 import { usePrintPlateExport } from '@/hooks/usePrintPlateExport';
@@ -34,14 +33,11 @@ export const PrintPlateCanvas = ({ files }: PrintPlateCanvasProps) => {
       <PlateCanvasHeader 
         itemCount={items.length}
         isExporting={isExporting}
+        plateSize={plateSize}
+        onSizeChange={setPlateSize}
         onClearPlate={handleClearPlate}
         onExportPlate={handleExportPlate}
         onAutoPosition={handleAutoPositionItems}
-      />
-
-      <PrintPlateSettings 
-        plateSize={plateSize}
-        onSizeChange={setPlateSize}
       />
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
