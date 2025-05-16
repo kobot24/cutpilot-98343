@@ -66,12 +66,12 @@ export const AppSidebar = ({ activeSection, onNavigate }: AppSidebarProps) => {
 
   return (
     <Sidebar className="w-64" variant="sidebar" collapsible="icon">
-      <SidebarHeader className="flex items-center justify-between">
-        <div className="px-2">
+      <SidebarHeader className="flex items-center">
+        <div className="flex justify-between items-center w-full px-2">
           {/* Logo display based on sidebar state */}
           {isCollapsed ? <CompactLogo /> : <FullLogo />}
+          <SidebarTrigger className="h-7 w-7" />
         </div>
-        <SidebarTrigger className="h-7 w-7 mr-2" />
       </SidebarHeader>
       
       <SidebarContent>
