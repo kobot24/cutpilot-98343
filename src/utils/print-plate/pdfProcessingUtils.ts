@@ -1,9 +1,9 @@
-
 import { PDFDocument } from 'pdf-lib';
 import { getPDFDataFromItem } from './pdfDataUtils';
 import { calculateItemPositionInPoints } from './pdfCoordinateUtils';
 import { createRotatedPDF } from './pdfRotationUtils';
 import { getRotatedTransform, getEffectiveDimensions } from './pdfTransformUtils';
+import { degrees } from 'pdf-lib';
 
 /**
  * Process a PDF item and add it to the main PDF document
@@ -49,7 +49,49 @@ const processItemWithRotation = async (
 ) => {
   try {
     // If rotation is needed
-    if (item.rotation !== 0) {
+    if (item.rotation === 90) {
+      console.log(`PDF Processing - Processing 90° rotation`);
+      
+      try {
+        // Embed the original PDF
+        const embeddedPdf = await pdfDoc.embedPdf(pdfBytes);
+        
+        if (embeddedPdf.length === 0) {
+          throw new Error("Failed to embed original PDF");
+        }
+        
+        console.log(`PDF Processing - Drawing 90° rotated page at x=${itemPosition.x}, y=${itemPosition.y}`);
+        console.log(`PDF Processing - Using swapped dimensions: width=${itemPosition.height}, height=${itemPosition.width}`);
+        
+        // Draw the rotated page with swapped dimensions and rotation
+        page.drawPage(embeddedPdf[0], {
+          x: itemPosition.x,
+          y: itemPosition.y,
+          width: itemPosition.height,   // swap dimensions
+          height: itemPosition.width,
+          rotate: degrees(90)           // 90° clockwise rotation
+        });
+        
+        console.log(`PDF Processing - Successfully added 90° rotated item ${item.id}`);
+      } catch (error) {
+        console.error(`PDF Processing - Error applying 90° rotation for item ${item.id}:`, error);
+        
+        // Fallback: Add item without rotation if transformation fails
+        try {
+          console.log(`PDF Processing - Attempting to add item ${item.id} without rotation as fallback`);
+          const embeddedPdf = await pdfDoc.embedPdf(pdfBytes);
+          page.drawPage(embeddedPdf[0], {
+            x: itemPosition.x,
+            y: itemPosition.y,
+            width: itemPosition.width,
+            height: itemPosition.height,
+          });
+        } catch (lastResortError) {
+          console.error(`PDF Processing - Fallback also failed for item ${item.id}:`, lastResortError);
+        }
+      }
+    } else if (item.rotation !== 0) {
+      // Other rotations - use existing logic
       console.log(`PDF Processing - Processing rotation: ${item.rotation}°`);
       
       try {
