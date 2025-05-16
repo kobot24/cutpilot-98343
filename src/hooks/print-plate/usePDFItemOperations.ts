@@ -1,7 +1,7 @@
-
 import { PDFItemType } from '@/components/print-plate/PDFItem';
 import { PrintPlateSize } from '@/components/print-plate/PrintPlateSettings';
 import { toast } from '@/components/ui/sonner';
+import { fetchPDFDataFromUrl } from '@/utils/print-plate/pdfDataUtils';
 
 /**
  * Hook for PDF item manipulation operations
@@ -50,29 +50,31 @@ export const usePDFItemOperations = (
 
   // Improved rotate item function with better position handling
   const handleRotateItem = (index: number) => {
-    const updatedItems = [...items];
-    const item = { ...updatedItems[index] };
+    const item = { ...items[index] };
     
     // Get the current center point before rotation
     const centerX = item.x + (item.width / 2);
     const centerY = item.y + (item.height / 2);
     
     // Rotate by 90 degrees clockwise each time
+    const oldRotation = item.rotation;
     item.rotation = (item.rotation + 90) % 360;
     
-    // For 90° and 270° rotations, we need to swap width and height for positioning
+    // For 90° and 270° rotations, we need to ensure position is correct
+    // for both the UI representation and the PDF export
+    
+    // If we're rotating to 90° or 270° from 0° or 180°
     if ((item.rotation === 90 || item.rotation === 270) && 
-        (updatedItems[index].rotation === 0 || updatedItems[index].rotation === 180)) {
-      // We need to maintain the same center point after rotation
-      // but adjust for the new dimensions (width and height swap)
+        (oldRotation === 0 || oldRotation === 180)) {
+      // Calculate new position to keep the center point the same
       item.x = centerX - (item.height / 2);
       item.y = centerY - (item.width / 2);
       
       console.log(`Rotated to ${item.rotation}°. Center: ${centerX}, ${centerY}. New position: ${item.x}, ${item.y}`);
     } 
-    // For 0° and 180° rotations after being at 90° or 270°
+    // If we're rotating back to 0° or 180° from 90° or 270°
     else if ((item.rotation === 0 || item.rotation === 180) && 
-             (updatedItems[index].rotation === 90 || updatedItems[index].rotation === 270)) {
+             (oldRotation === 90 || oldRotation === 270)) {
       // Readjust position when returning to original orientation
       item.x = centerX - (item.width / 2);
       item.y = centerY - (item.height / 2);
@@ -81,18 +83,14 @@ export const usePDFItemOperations = (
     }
     
     // Ensure we have PDF data for rotated items (critical for export)
-    if (!item.pdfData && item.pdfUrl) {
-      console.log(`Item ${item.id} rotated to ${item.rotation}° but missing PDF data. Attempting to fetch...`);
+    // Always fetch or ensure PDF data is available for better export reliability
+    if (item.pdfUrl) {
+      console.log(`Prefetching PDF data for rotated item ${item.id} (rotation: ${item.rotation}°)`);
       
       // Try to fetch PDF data immediately to ensure it's available for export
-      fetch(item.pdfUrl)
-        .then(response => {
-          if (!response.ok) throw new Error(`Failed to fetch PDF data: ${response.status}`);
-          return response.arrayBuffer();
-        })
-        .then(arrayBuffer => {
-          console.log(`PDF data fetched for rotated item ${item.id}`);
-          const pdfData = new Uint8Array(arrayBuffer);
+      fetchPDFDataFromUrl(item.pdfUrl)
+        .then(pdfData => {
+          console.log(`PDF data fetched for rotated item ${item.id}: ${pdfData.byteLength} bytes`);
           
           // Update the item with fetched PDF data
           setItems(prevItems => {
@@ -112,6 +110,8 @@ export const usePDFItemOperations = (
         });
     }
     
+    // Update the items array with the rotated item
+    const updatedItems = [...items];
     updatedItems[index] = item;
     setItems(updatedItems);
     

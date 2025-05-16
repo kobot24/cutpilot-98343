@@ -49,15 +49,6 @@ const processItemWithRotation = async (
   itemPosition: any
 ) => {
   try {
-    // Embed the original PDF
-    const embeddedPdf = await pdfDoc.embedPdf(pdfBytes);
-    if (embeddedPdf.length === 0) {
-      console.log(`PDF Processing - No pages in embedded PDF for item: ${item.id}`);
-      return;
-    }
-    
-    const embeddedPage = embeddedPdf[0];
-    
     // If rotation is needed
     if (item.rotation !== 0) {
       console.log(`PDF Processing - Processing rotation: ${item.rotation}°`);
@@ -74,26 +65,40 @@ const processItemWithRotation = async (
         // Embed the rotated PDF back into our main document
         const rotatedPdfEmbed = await pdfDoc.embedPdf(rotatedPdfBytes);
         
-        // Set final position
+        if (rotatedPdfEmbed.length === 0) {
+          throw new Error("Failed to embed rotated PDF");
+        }
+        
+        // Determine final position and dimensions based on rotation
         let finalX = itemPosition.x;
         let finalY = itemPosition.y;
+        let finalWidth = itemPosition.width;
+        let finalHeight = itemPosition.height;
         
-        // Place the rotated content
+        // For 90° and 270° rotations, swap dimensions
+        if (item.rotation === 90 || item.rotation === 270) {
+          console.log(`PDF Processing - Using swapped dimensions for ${item.rotation}° rotation`);
+          finalWidth = itemPosition.height;
+          finalHeight = itemPosition.width;
+        }
+        
+        // Draw the rotated page with correct dimensions
         page.drawPage(rotatedPdfEmbed[0], {
           x: finalX,
           y: finalY,
-          width: item.rotation === 90 || item.rotation === 270 ? itemPosition.height : itemPosition.width,
-          height: item.rotation === 90 || item.rotation === 270 ? itemPosition.width : itemPosition.height
+          width: finalWidth,
+          height: finalHeight
         });
         
-        console.log(`PDF Processing - Successfully added rotated item ${item.id} (${item.rotation}°) to PDF`);
+        console.log(`PDF Processing - Successfully added rotated item ${item.id} (${item.rotation}°) to PDF at position x=${finalX}, y=${finalY}, width=${finalWidth}, height=${finalHeight}`);
       } catch (error) {
         console.error(`PDF Processing - Error handling rotation for item ${item.id}:`, error);
         
         // Fallback: Add item without rotation if rotation handling fails
         console.log(`PDF Processing - Falling back to non-rotated placement for item ${item.id}`);
         try {
-          page.drawPage(embeddedPage, {
+          const embeddedPdf = await pdfDoc.embedPdf(pdfBytes);
+          page.drawPage(embeddedPdf[0], {
             x: itemPosition.x,
             y: itemPosition.y,
             width: itemPosition.width,
@@ -107,7 +112,8 @@ const processItemWithRotation = async (
       // Non-rotated items - standard placement
       console.log(`PDF Processing - Adding non-rotated item ${item.id} to PDF`);
       try {
-        page.drawPage(embeddedPage, {
+        const embeddedPdf = await pdfDoc.embedPdf(pdfBytes);
+        page.drawPage(embeddedPdf[0], {
           x: itemPosition.x,
           y: itemPosition.y,
           width: itemPosition.width,

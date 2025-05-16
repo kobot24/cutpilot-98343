@@ -41,7 +41,7 @@ export const createRotatedPDF = async (
   }
   
   // Apply rotation based on angle
-  applyRotationToPage(tempPage, tempEmbeddedPdf[0], rotation, tempWidth, tempHeight);
+  applyRotationToPage(tempPage, tempEmbeddedPdf[0], rotation, tempWidth, tempHeight, itemWidth, itemHeight);
   
   // Save and return the rotated PDF
   return await tempPdf.save();
@@ -52,36 +52,42 @@ export const createRotatedPDF = async (
  * @param page The page to apply rotation to
  * @param embeddedPage The embedded page content
  * @param rotation The rotation angle in degrees
- * @param width The width in points
- * @param height The height in points
+ * @param width The width in points (of the target page)
+ * @param height The height in points (of the target page)
+ * @param originalWidth The original width in points (of the source content)
+ * @param originalHeight The original height in points (of the source content)
  */
 const applyRotationToPage = (
   page: any, 
   embeddedPage: any, 
   rotation: number, 
   width: number, 
-  height: number
+  height: number,
+  originalWidth: number,
+  originalHeight: number
 ) => {
   console.log(`PDF Rotation - Applying ${rotation}° rotation to page`);
   
   switch (rotation) {
     case 90:
-      // For 90° rotation, we need to transform coordinates differently
+      // For 90° rotation, draw from bottom left, rotate around that point
+      // Note: The coordinate system starts from bottom-left in PDF
       page.drawPage(embeddedPage, {
         x: 0,
         y: 0,
-        width: width,
-        height: height,
+        width: height,  // swapped dimensions
+        height: width,  // swapped dimensions
         rotate: degrees(90),
         xScale: 1,
         yScale: 1
       });
+      console.log(`PDF Rotation - 90° rotation applied with dimensions w:${height} h:${width}`);
       break;
       
     case 180:
       page.drawPage(embeddedPage, {
-        x: width, // Right edge
-        y: height, // Top edge
+        x: 0,
+        y: 0,
         width: width,
         height: height,
         rotate: degrees(180),
@@ -92,10 +98,10 @@ const applyRotationToPage = (
       
     case 270:
       page.drawPage(embeddedPage, {
-        x: width, // Right edge
-        y: 0, // Bottom edge
-        width: width,
-        height: height,
+        x: height, // Move to right edge for 270° rotation
+        y: 0,
+        width: height,  // swapped dimensions
+        height: width,  // swapped dimensions
         rotate: degrees(270),
         xScale: 1,
         yScale: 1
@@ -103,7 +109,7 @@ const applyRotationToPage = (
       break;
       
     default:
-      // For any non-standard rotation (shouldn't happen in our app, but just in case)
+      // For 0° or any non-standard rotation
       page.drawPage(embeddedPage, {
         x: 0,
         y: 0,

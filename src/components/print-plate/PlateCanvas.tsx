@@ -57,6 +57,22 @@ export const PlateCanvas = ({ items, onItemsChange, plateSize, onFitToPlate }: P
   // Calculate approximate scale ratio for display (1:X)
   const scaleRatio = Math.round(100 / PIXELS_PER_CM);
 
+  // Add debug mode for development
+  const [showDebugInfo, setShowDebugInfo] = useState(false);
+
+  // Toggle debug info with Ctrl+Shift+D
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.ctrlKey && e.shiftKey && e.key === 'D') {
+        e.preventDefault();
+        setShowDebugInfo(prev => !prev);
+      }
+    };
+    
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
   return (
     <div className="print-plate-container">
       <div className="flex flex-col">
@@ -132,10 +148,24 @@ export const PlateCanvas = ({ items, onItemsChange, plateSize, onFitToPlate }: P
               </div>
             ) : null}
 
+            {/* Debug info overlay */}
+            {showDebugInfo && (
+              <div className="absolute top-2 left-2 bg-black/80 text-white text-xs p-2 rounded z-40">
+                <p>Debug Mode</p>
+                <p>Items: {items.length}</p>
+                {items.map((item, i) => (
+                  <div key={i} className="mt-1 border-t border-gray-700 pt-1">
+                    <p>Item {i}: x={item.x.toFixed(1)}, y={item.y.toFixed(1)}</p>
+                    <p>w={item.width.toFixed(1)}, h={item.height.toFixed(1)}, rot={item.rotation}°</p>
+                  </div>
+                ))}
+              </div>
+            )}
+
             {/* PDF Items */}
             {items.map((item, index) => (
               <PDFItem
-                key={index}
+                key={item.id || index}
                 item={item}
                 index={index}
                 scale={PIXELS_PER_CM}
@@ -154,6 +184,7 @@ export const PlateCanvas = ({ items, onItemsChange, plateSize, onFitToPlate }: P
       <div className="mt-2 text-xs text-gray-500">
         <p>Drücke <kbd className="px-1 py-0.5 bg-gray-100 border rounded">F2</kbd> oder den Button oben, um den Snap-Modus ein/auszuschalten</p>
         <p className="mt-0.5">Temporärer Snap-Modus: Halte die <kbd className="px-1 py-0.5 bg-gray-100 border rounded">Alt</kbd>-Taste gedrückt</p>
+        {showDebugInfo && <p className="mt-0.5 text-blue-500">Debug-Modus aktiv (Strg+Shift+D zum Ausschalten)</p>}
       </div>
     </div>
   );

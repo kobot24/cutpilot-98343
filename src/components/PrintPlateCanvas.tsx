@@ -22,7 +22,8 @@ export const PrintPlateCanvas = ({ files }: PrintPlateCanvasProps) => {
     setItems, 
     handleAddPDF, 
     handleFitToPlate, 
-    handleClearPlate 
+    handleClearPlate,
+    handleAutoPositionItems
   } = usePrintPlateItems(plateSize);
   
   // Get export functionality
@@ -35,6 +36,7 @@ export const PrintPlateCanvas = ({ files }: PrintPlateCanvasProps) => {
         isExporting={isExporting}
         onClearPlate={handleClearPlate}
         onExportPlate={handleExportPlate}
+        onAutoPosition={handleAutoPositionItems}
       />
 
       <PrintPlateSettings 
