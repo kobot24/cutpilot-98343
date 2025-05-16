@@ -1,13 +1,11 @@
 
 import React from 'react';
-import { SidebarProvider, SidebarTrigger, SidebarInset } from "@/components/ui/sidebar";
-import { AppSidebar } from './AppSidebar';
-import { ContentRenderer } from '@/components/layout/ContentRenderer';
 import { UploadedFile } from '@/types/fileTypes';
 import { UserSettings } from '@/hooks/useSettings';
+import { AppSidebar } from '@/components/layout/AppSidebar';
+import { ContentRenderer } from '@/components/layout/ContentRenderer';
+import { SidebarProvider } from '@/components/ui/sidebar';
 import { ConversionProgress } from '@/hooks/usePDFConverter';
-import { Button } from '@/components/ui/button';
-import { Trash2 } from 'lucide-react';
 
 type MainLayoutProps = {
   activeSection: string;
@@ -25,69 +23,20 @@ type MainLayoutProps = {
   convertToPdf: (fileId: string) => Promise<string | undefined>;
   clearAllFiles: () => void;
   updateSettings: (settings: Partial<UserSettings>) => void;
+  onBatchConvert?: (fileIds: string[]) => void;
 };
 
-export const MainLayout: React.FC<MainLayoutProps> = ({
-  activeSection,
-  onNavigate,
-  files,
-  selectedFile,
-  isLoading,
-  settings,
-  conversionProgress,
-  maxFiles,
-  maxFileSizeMB,
-  addFiles,
-  removeFile,
-  selectFile,
-  convertToPdf,
-  clearAllFiles,
-  updateSettings
-}) => {
+export const MainLayout = (props: MainLayoutProps) => {
+  const { activeSection, onNavigate } = props;
+  
   return (
-    <SidebarProvider>
-      <div className="flex h-screen overflow-hidden bg-gray-50 w-full">
+    <SidebarProvider collapsedWidth={56}>
+      <div className="flex min-h-screen w-full">
         <AppSidebar activeSection={activeSection} onNavigate={onNavigate} />
         
-        <SidebarInset className="flex-1">
-          <header className="h-16 border-b flex items-center justify-between px-6 bg-white">
-            <div className="flex items-center">
-              <SidebarTrigger className="mr-4" />
-              <h1 className="text-xl font-semibold capitalize">{activeSection}</h1>
-            </div>
-            
-            {activeSection === 'upload' && files.length > 0 && (
-              <Button 
-                variant="outline" 
-                size="sm"
-                className="text-red-500 hover:bg-red-50"
-                onClick={clearAllFiles}
-              >
-                <Trash2 className="h-4 w-4 mr-1" /> 
-                Alle Dateien löschen
-              </Button>
-            )}
-          </header>
-          
-          <main className="flex-1 overflow-auto p-6">
-            <ContentRenderer 
-              activeSection={activeSection}
-              files={files}
-              selectedFile={selectedFile}
-              isLoading={isLoading}
-              settings={settings}
-              conversionProgress={conversionProgress}
-              maxFiles={maxFiles}
-              maxFileSizeMB={maxFileSizeMB}
-              addFiles={addFiles}
-              removeFile={removeFile}
-              selectFile={selectFile}
-              convertToPdf={convertToPdf}
-              clearAllFiles={clearAllFiles}
-              updateSettings={updateSettings}
-            />
-          </main>
-        </SidebarInset>
+        <div className="flex-1 p-6 overflow-auto">
+          <ContentRenderer {...props} />
+        </div>
       </div>
     </SidebarProvider>
   );

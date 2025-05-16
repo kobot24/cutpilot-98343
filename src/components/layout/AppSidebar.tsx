@@ -14,7 +14,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Upload, FilePlus, Printer, User, Settings, LogOut } from "lucide-react";
+import { Upload, Printer, User, Settings, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { 
   DropdownMenu,
@@ -35,8 +35,7 @@ export const AppSidebar = ({ activeSection, onNavigate }: AppSidebarProps) => {
   const isCollapsed = state === "collapsed";
 
   const sidebarItems = [
-    { id: 'upload', title: 'Upload', icon: Upload },
-    { id: 'files', title: 'Dateien & Konvertierung', icon: FilePlus },
+    { id: 'upload', title: 'Upload & Konvertierung', icon: Upload },
     { id: 'printplate', title: 'Printplate-Erstellung', icon: Printer },
   ];
 

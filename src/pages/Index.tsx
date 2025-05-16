@@ -6,6 +6,7 @@ import { useSettings } from '@/hooks/useSettings';
 import { Toaster } from '@/components/ui/sonner';
 
 const Index = () => {
+  // Default to the upload section since it now includes conversion
   const [activeSection, setActiveSection] = useState('upload');
   const { 
     files, 
@@ -22,6 +23,28 @@ const Index = () => {
   } = useFileStorage();
   
   const { settings, updateSettings } = useSettings();
+
+  // Function to batch convert multiple files
+  const handleBatchConvert = async (fileIds: string[]) => {
+    if (fileIds.length === 0) return;
+    
+    let successCount = 0;
+    let failCount = 0;
+    
+    for (const fileId of fileIds) {
+      try {
+        const result = await convertToPdf(fileId);
+        if (result) {
+          successCount++;
+        } else {
+          failCount++;
+        }
+      } catch (error) {
+        console.error(`Error converting file ${fileId}:`, error);
+        failCount++;
+      }
+    }
+  };
 
   // Handle navigation between sidebar sections
   const handleNavigate = (section: string) => {
@@ -46,6 +69,7 @@ const Index = () => {
         convertToPdf={convertToPdf}
         clearAllFiles={clearAllFiles}
         updateSettings={updateSettings}
+        onBatchConvert={handleBatchConvert}
       />
       <Toaster />
     </>

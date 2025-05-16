@@ -7,14 +7,19 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { formatDistanceToNow } from 'date-fns';
 import { de } from 'date-fns/locale';
 import { UserSettings } from '@/hooks/useSettings';
+import { ConversionProgress } from '@/hooks/usePDFConverter';
+import { PDFDownloadButton } from '@/components/pdf/PDFDownloadButton';
 
 type FilesListProps = {
   files: UploadedFile[];
   selectedFileId: string | null;
   onSelectFile: (id: string) => void;
   onRemoveFile: (id: string) => void;
+  onConvertToPdf: (fileId: string) => Promise<string | undefined>;
   onBatchConvert?: (fileIds: string[]) => void;
-  settings?: UserSettings;
+  settings: UserSettings;
+  isLoading: boolean;
+  conversionProgress: ConversionProgress;
 };
 
 export const FilesList = ({
@@ -22,10 +27,15 @@ export const FilesList = ({
   selectedFileId,
   onSelectFile,
   onRemoveFile,
+  onConvertToPdf,
   onBatchConvert,
-  settings
+  settings,
+  isLoading,
+  conversionProgress
 }: FilesListProps) => {
   const [selectedFiles, setSelectedFiles] = useState<string[]>([]);
+  const [processingFiles, setProcessingFiles] = useState<Record<string, boolean>>({});
+  const [conversionErrors, setConversionErrors] = useState<Record<string, string>>({});
   
   const handleCheckboxClick = (e: React.MouseEvent, fileId: string) => {
     e.stopPropagation();
@@ -39,6 +49,24 @@ export const FilesList = ({
   const handleBatchConvert = () => {
     if (onBatchConvert && selectedFiles.length > 0) {
       onBatchConvert(selectedFiles);
+    }
+  };
+
+  const handleSingleConvert = async (e: React.MouseEvent, fileId: string) => {
+    e.stopPropagation();
+    
+    setProcessingFiles(prev => ({ ...prev, [fileId]: true }));
+    setConversionErrors(prev => ({ ...prev, [fileId]: '' }));
+    
+    try {
+      await onConvertToPdf(fileId);
+    } catch (error) {
+      setConversionErrors(prev => ({ 
+        ...prev, 
+        [fileId]: error instanceof Error ? error.message : 'Konvertierungsfehler' 
+      }));
+    } finally {
+      setProcessingFiles(prev => ({ ...prev, [fileId]: false }));
     }
   };
 
@@ -70,7 +98,7 @@ export const FilesList = ({
       {selectedFiles.length > 0 && (
         <div className="flex justify-between items-center mb-2">
           <span className="text-sm">{selectedFiles.length} Dateien ausgewählt</span>
-          <Button onClick={handleBatchConvert} className="text-sm">
+          <Button onClick={handleBatchConvert} className="text-sm" disabled={isLoading}>
             Ausgewählte zu PDF konvertieren
           </Button>
         </div>
@@ -117,18 +145,16 @@ export const FilesList = ({
                   </p>
                   
                   {/* Display settings information in each file card */}
-                  {settings && (
-                    <div className="mt-1 flex flex-col gap-0.5">
-                      <div className="flex items-center text-xs">
-                        <span className="font-medium text-[10px]">CutContour-Abstand:</span>
-                        <span className="ml-1 text-gray-600 text-[10px]">{settings.cutContourOffset} mm</span>
-                      </div>
-                      <div className="flex items-center text-xs">
-                        <span className="font-medium text-[10px]">Spotfarbe:</span>
-                        <span className="ml-1 text-gray-600 text-[10px]">{settings.spotColorName}</span>
-                      </div>
+                  <div className="mt-1 flex flex-col gap-0.5">
+                    <div className="flex items-center text-xs">
+                      <span className="font-medium text-[10px]">CutContour-Abstand:</span>
+                      <span className="ml-1 text-gray-600 text-[10px]">{settings.cutContourOffset} mm</span>
                     </div>
-                  )}
+                    <div className="flex items-center text-xs">
+                      <span className="font-medium text-[10px]">Spotfarbe:</span>
+                      <span className="ml-1 text-gray-600 text-[10px]">{settings.spotColorName}</span>
+                    </div>
+                  </div>
                 </div>
                 <Button
                   variant="ghost"
@@ -155,6 +181,44 @@ export const FilesList = ({
                   </svg>
                 </Button>
               </div>
+              
+              {/* PDF conversion and download buttons */}
+              <div className="flex gap-2 mt-2">
+                <Button 
+                  size="sm"
+                  variant="default"
+                  className="text-xs flex-1 h-7 py-0 px-2"
+                  disabled={!!file.convertedPdfUrl || isLoading || processingFiles[file.id]}
+                  onClick={(e) => handleSingleConvert(e, file.id)}
+                >
+                  {processingFiles[file.id] ? (
+                    <span className="flex items-center">
+                      <svg className="animate-spin -ml-1 mr-1 h-3 w-3 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      ...
+                    </span>
+                  ) : file.convertedPdfUrl ? 'PDF erstellt' : 'PDF erstellen'}
+                </Button>
+                
+                {file.convertedPdfUrl && (
+                  <PDFDownloadButton
+                    pdfUrl={file.convertedPdfUrl}
+                    fileName={file.name.replace(/\.[^/.]+$/, '.pdf')}
+                    variant="outline"
+                    className="h-7 py-0 px-2"
+                    iconOnly
+                  />
+                )}
+              </div>
+              
+              {/* Show error message if PDF conversion failed */}
+              {conversionErrors[file.id] && (
+                <div className="mt-1 text-xs text-red-600">
+                  {conversionErrors[file.id]}
+                </div>
+              )}
             </div>
           </Card>
         ))}

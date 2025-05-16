@@ -1,6 +1,6 @@
+
 import React from 'react';
 import { UploadSection } from '@/components/upload/UploadSection';
-import { ConversionPanel } from '@/components/ConversionPanel';
 import { SettingsPanel } from '@/components/SettingsPanel';
 import { PrintPlateCanvas } from '@/components/PrintPlateCanvas';
 import { UploadedFile } from '@/types/fileTypes';
@@ -22,6 +22,7 @@ type ContentRendererProps = {
   convertToPdf: (fileId: string) => Promise<string | undefined>;
   clearAllFiles: () => void;
   updateSettings: (settings: Partial<UserSettings>) => void;
+  onBatchConvert?: (fileIds: string[]) => void;
 };
 
 export const ContentRenderer: React.FC<ContentRendererProps> = ({
@@ -38,7 +39,8 @@ export const ContentRenderer: React.FC<ContentRendererProps> = ({
   selectFile,
   convertToPdf,
   clearAllFiles,
-  updateSettings
+  updateSettings,
+  onBatchConvert
 }) => {
   switch (activeSection) {
     case 'upload':
@@ -47,25 +49,16 @@ export const ContentRenderer: React.FC<ContentRendererProps> = ({
           files={files}
           selectedFileId={selectedFile?.id || null}
           isLoading={isLoading}
+          settings={settings}
+          conversionProgress={conversionProgress}
           onFilesAdded={addFiles}
           onSelectFile={selectFile}
           onRemoveFile={removeFile}
           onClearAllFiles={clearAllFiles}
+          onConvertToPdf={convertToPdf}
+          onBatchConvert={onBatchConvert}
           maxFiles={maxFiles}
           maxFileSizeMB={maxFileSizeMB}
-        />
-      );
-    case 'files':
-      return (
-        <ConversionPanel 
-          selectedFile={selectedFile} 
-          onConvertToPdf={convertToPdf}
-          settings={settings}
-          isLoading={isLoading}
-          files={files}
-          onSelectFile={selectFile}
-          onRemoveFile={removeFile}
-          conversionProgress={conversionProgress}
         />
       );
     case 'settings':
