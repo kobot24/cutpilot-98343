@@ -13,8 +13,17 @@ import {
   SidebarSeparator,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { Upload, FilePlus, Settings, Printer } from "lucide-react";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Upload, FilePlus, Printer, User, Settings, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { 
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger
+} from "@/components/ui/dropdown-menu";
+import cutpilotLogo from "@/assets/cutpilot-logo.svg";
 
 type AppSidebarProps = {
   activeSection: string;
@@ -28,21 +37,20 @@ export const AppSidebar = ({ activeSection, onNavigate }: AppSidebarProps) => {
   const sidebarItems = [
     { id: 'upload', title: 'Upload', icon: Upload },
     { id: 'files', title: 'Dateien & Konvertierung', icon: FilePlus },
-    { id: 'settings', title: 'Einstellungen', icon: Settings },
     { id: 'printplate', title: 'Printplate-Erstellung', icon: Printer },
   ];
 
   // Logo components for different sidebar states
   const CompactLogo = () => (
     <div className="rounded-md bg-primary p-1 w-8 h-8 flex items-center justify-center mx-auto">
-      <span className="text-sm font-bold text-primary-foreground">CP</span>
+      <img src={cutpilotLogo} alt="CutPilot Logo" className="w-full h-full" />
     </div>
   );
   
   const FullLogo = () => (
     <div className="flex items-center gap-2">
-      <div className="rounded-md bg-primary p-1 w-8 h-8 flex items-center justify-center">
-        <span className="text-sm font-bold text-primary-foreground">CP</span>
+      <div className="rounded-md bg-white p-1 w-8 h-8 flex items-center justify-center">
+        <img src={cutpilotLogo} alt="CutPilot Logo" className="w-full h-full" />
       </div>
       <div>
         <h3 className="text-lg font-semibold text-primary">CutPilot</h3>
@@ -50,6 +58,11 @@ export const AppSidebar = ({ activeSection, onNavigate }: AppSidebarProps) => {
       </div>
     </div>
   );
+
+  // Handle navigation for settings from dropdown
+  const handleSettingsClick = () => {
+    onNavigate('settings');
+  };
 
   return (
     <Sidebar className="w-64" variant="sidebar" collapsible="icon">
@@ -81,28 +94,54 @@ export const AppSidebar = ({ activeSection, onNavigate }: AppSidebarProps) => {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        <SidebarSeparator />
-
-        <SidebarGroup>
-          <SidebarGroupLabel>Info</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <div className="px-3 py-2">
-              <div className="mb-2 text-xs text-muted-foreground">
-                <p>PDF-Converter Pro</p>
-                <div className="w-full bg-muted rounded-full h-1.5 mt-1">
-                  <div className="bg-primary h-1.5 rounded-full w-3/4"></div>
-                </div>
-              </div>
-              <Button variant="outline" className="w-full text-xs" size="sm">
-                <span>Upgrade auf Pro</span>
-              </Button>
-            </div>
-          </SidebarGroupContent>
-        </SidebarGroup>
+        {/* Removed the "Info" section with the upgrade to pro content */}
       </SidebarContent>
       
       <SidebarFooter>
-        {/* The dropdown menu has been removed from the footer */}
+        <div className="px-3 py-2">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" className="w-full justify-start gap-2">
+                <Avatar className="h-6 w-6">
+                  <AvatarFallback>
+                    <User className="h-4 w-4" />
+                  </AvatarFallback>
+                </Avatar>
+                <span className="text-sm">Benutzer</span>
+                <span className="ml-auto flex h-4 w-4 items-center justify-center">
+                  <svg 
+                    width="12" 
+                    height="12" 
+                    viewBox="0 0 12 12" 
+                    fill="none" 
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="opacity-50"
+                  >
+                    <path 
+                      d="M6 8.5L10 4.5L9.3 3.8L6 7.1L2.7 3.8L2 4.5L6 8.5Z" 
+                      fill="currentColor"
+                    />
+                  </svg>
+                </span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuItem>
+                <User className="mr-2 h-4 w-4" />
+                <span>Profil</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleSettingsClick}>
+                <Settings className="mr-2 h-4 w-4" />
+                <span>Einstellungen</span>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem className="text-destructive">
+                <LogOut className="mr-2 h-4 w-4" />
+                <span>Abmelden</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </SidebarFooter>
     </Sidebar>
   );
