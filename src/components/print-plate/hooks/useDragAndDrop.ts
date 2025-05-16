@@ -1,12 +1,14 @@
 
 import { useRef, useState, useEffect } from 'react';
 import { PDFItemType } from '../PDFItem';
+import { PrintPlateSize } from '../PrintPlateSettings';
 
 export const useDragAndDrop = (
   items: PDFItemType[],
   onItemsChange: (items: PDFItemType[]) => void,
   canvasRef: React.RefObject<HTMLDivElement>,
-  getScale: () => number
+  getScale: () => number,
+  plateSize: PrintPlateSize // Add plateSize parameter
 ) => {
   const [isDragging, setIsDragging] = useState(false);
   const [draggedItemIndex, setDraggedItemIndex] = useState<number | null>(null);
@@ -54,7 +56,7 @@ export const useDragAndDrop = (
     setIsDragging(true);
   };
 
-  // Calculate snapping position for an item based on other items
+  // Calculate snapping position for an item based on other items and plate edges
   const calculateSnapPosition = (
     itemIndex: number,
     proposedX: number,
@@ -73,6 +75,27 @@ export const useDragAndDrop = (
     const draggedRight = proposedX + draggedItem.width;
     // Get bottom edge of dragged item
     const draggedBottom = proposedY + draggedItem.height;
+
+    // Check for snapping to plate edges
+    // Snap to left edge
+    if (Math.abs(proposedX) < snapThresholdPx) {
+      snappedX = 0;
+    }
+    
+    // Snap to top edge
+    if (Math.abs(proposedY) < snapThresholdPx) {
+      snappedY = 0;
+    }
+    
+    // Snap to right edge
+    if (Math.abs(plateSize.width - draggedRight) < snapThresholdPx) {
+      snappedX = plateSize.width - draggedItem.width;
+    }
+    
+    // Snap to bottom edge
+    if (Math.abs(plateSize.height - draggedBottom) < snapThresholdPx) {
+      snappedY = plateSize.height - draggedItem.height;
+    }
 
     // Check against other items for snapping
     for (let i = 0; i < items.length; i++) {

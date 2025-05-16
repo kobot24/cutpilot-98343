@@ -36,7 +36,13 @@ export const PlateCanvas = ({ items, onItemsChange, plateSize, onFitToPlate }: P
     handleMouseMove,
     handleMouseUp,
     isSnapModeEnabled
-  } = useDragAndDrop(items, onItemsChange, canvasRef, getScale);
+  } = useDragAndDrop(
+    items, 
+    onItemsChange, 
+    canvasRef, 
+    getScale,
+    plateSize  // Pass plateSize to the hook
+  );
   
   const {
     handleRotateItem,

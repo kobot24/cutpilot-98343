@@ -36,9 +36,9 @@ export const PlateDimensions = ({
           Einheit: 1 cm = 3.7 px
         </span>
         
-        {/* Snap mode indicator */}
+        {/* Snap mode indicator with improved visibility */}
         {isSnapModeEnabled && (
-          <span className="block mt-0.5 text-[10px] text-green-600 font-medium">
+          <span className="block mt-0.5 text-[10px] bg-green-100 text-green-700 font-medium py-0.5 px-1 rounded">
             Snap-Modus aktiv (Option-Taste gedrückt)
           </span>
         )}
