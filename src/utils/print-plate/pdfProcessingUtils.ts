@@ -24,7 +24,6 @@ export const processPDFItem = async (pdfDoc: any, page: any, item: any, pageHeig
     // Calculate position and dimensions in PDF points
     const itemPosition = calculateItemPositionInPoints(item, pageHeight);
     console.log(`PDF Processing - Item position in points: x=${itemPosition.x}, y=${itemPosition.y}, width=${itemPosition.width}, height=${itemPosition.height}`);
-    console.log(`PDF Processing - Item center: centerX=${itemPosition.centerX}, centerY=${itemPosition.centerY}`);
     
     // Process based on rotation
     await processItemWithRotation(pdfDoc, page, pdfBytes, item, itemPosition);
@@ -77,6 +76,8 @@ const processItemWithRotation = async (
           item.rotation
         );
         
+        console.log(`PDF Processing - Effective dimensions after rotation: width=${effectiveDimensions.width}, height=${effectiveDimensions.height}`);
+        
         // Draw the rotated page with correct dimensions
         page.drawPage(rotatedPdfEmbed[0], {
           x: itemPosition.x,
@@ -123,4 +124,3 @@ const processItemWithRotation = async (
     console.error(`PDF Processing - Failed to embed PDF for item ${item.id}:`, error);
   }
 };
-

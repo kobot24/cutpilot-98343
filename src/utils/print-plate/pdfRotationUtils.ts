@@ -17,6 +17,7 @@ export const createRotatedPDF = async (
   itemHeight: number
 ): Promise<Uint8Array> => {
   console.log(`PDF Rotation - Creating rotated PDF for ${rotation}° rotation`);
+  console.log(`PDF Rotation - Original dimensions: width=${itemWidth}, height=${itemHeight}`);
   
   // Create a temporary PDF that will hold our rotated content
   const tempPdf = await PDFDocument.create();
@@ -79,8 +80,8 @@ const applyRotationToPage = (
   page.drawPage(embeddedPage, {
     x: 0,
     y: 0,
-    width: transform.swapDimensions ? height : width,
-    height: transform.swapDimensions ? width : height,
+    width: transform.swapDimensions ? originalHeight : originalWidth,
+    height: transform.swapDimensions ? originalWidth : originalHeight,
     transform: {
       matrix: transform.matrix
     }
@@ -88,4 +89,3 @@ const applyRotationToPage = (
   
   console.log(`PDF Rotation - Applied ${rotation}° rotation with matrix: [${transform.matrix}]`);
 };
-

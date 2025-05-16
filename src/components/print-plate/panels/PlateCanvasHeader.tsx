@@ -1,6 +1,6 @@
 
 import { Button } from '@/components/ui/button';
-import { Grid } from 'lucide-react';
+import { Grid, RefreshCw } from 'lucide-react';
 
 type PlateCanvasHeaderProps = {
   itemCount: number;
@@ -41,8 +41,14 @@ export const PlateCanvasHeader = ({
         <Button
           onClick={onExportPlate}
           disabled={itemCount === 0 || isExporting}
+          className="flex items-center"
         >
-          {isExporting ? "Exportiere..." : "Als PDF exportieren"}
+          {isExporting ? (
+            <>
+              <RefreshCw className="mr-1 h-4 w-4 animate-spin" />
+              Exportiere...
+            </>
+          ) : "Als PDF exportieren"}
         </Button>
       </div>
     </div>

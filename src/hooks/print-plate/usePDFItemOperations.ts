@@ -18,7 +18,10 @@ export const usePDFItemOperations = (
     if (!items[index]) return;
     
     const item = items[index];
-    const itemAspectRatio = item.height / item.width;
+    
+    // Get effective dimensions based on rotation
+    const effectiveDim = getEffectiveDimensions(item.width, item.height, item.rotation);
+    const itemAspectRatio = effectiveDim.height / effectiveDim.width;
     const plateAspectRatio = plateSize.height / plateSize.width;
     
     let newWidth, newHeight;
@@ -37,11 +40,21 @@ export const usePDFItemOperations = (
     const centerX = (plateSize.width - newWidth) / 2;
     const centerY = (plateSize.height - newHeight) / 2;
     
+    // Apply dimensions according to rotation
+    let updatedWidth = newWidth;
+    let updatedHeight = newHeight;
+    
+    // If item is rotated 90° or 270°, we need to swap back the dimensions
+    if (item.rotation === 90 || item.rotation === 270) {
+      updatedWidth = newHeight;
+      updatedHeight = newWidth;
+    }
+    
     const updatedItems = [...items];
     updatedItems[index] = {
       ...item,
-      width: newWidth,
-      height: newHeight,
+      width: updatedWidth,
+      height: updatedHeight,
       x: centerX,
       y: centerY
     };

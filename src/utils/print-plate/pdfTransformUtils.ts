@@ -1,3 +1,4 @@
+
 /**
  * Utility functions for PDF transformations, especially rotation
  */
@@ -28,7 +29,7 @@ export const getRotatedTransform = (
   switch (rotationAngle) {
     case 90:
       // 90° clockwise: [0, 1, -1, 0, x + height, y]
-      // This swaps x and y, negates x, and translates to keep in view
+      // This correctly positions the rotated content within visible area
       console.log(`PDF Transform - Using 90° transform matrix: [0, 1, -1, 0, ${x + height}, ${y}]`);
       return {
         matrix: [0, 1, -1, 0, x + height, y],

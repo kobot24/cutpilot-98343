@@ -33,7 +33,7 @@ export const useAutoPosition = () => {
     });
     
     // Constants for layout
-    const SPACING_CM = 0.5; // Increased spacing for better visibility
+    const SPACING_CM = 0.5; // Spacing between items (0.5cm)
     const MARGIN_CM = 0.5; // Small margin from the edges
     
     // Initialize position trackers
@@ -64,6 +64,8 @@ export const useAutoPosition = () => {
       // Position the item
       item.x = currentX;
       item.y = currentY;
+      
+      console.log(`Auto Position - Item ${i}: x=${currentX}, y=${currentY}, w=${effectiveDim.width}, h=${effectiveDim.height}, rot=${item.rotation}°`);
       
       // Update position trackers
       currentX += effectiveDim.width + SPACING_CM;
