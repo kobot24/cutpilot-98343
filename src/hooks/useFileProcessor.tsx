@@ -15,16 +15,6 @@ export const useFileProcessor = () => {
     try {
       // Filter by file type and size
       const filesArray = validateFiles(Array.from(newFiles));
-
-      // Check if we're going to exceed the max file count
-      if (currentFiles.length + filesArray.length > FILE_STORAGE_LIMITS.MAX_FILES) {
-        toast({
-          title: "Dateien-Limit erreicht",
-          description: `Maximum von ${FILE_STORAGE_LIMITS.MAX_FILES} Dateien erreicht. Löschen Sie einige Dateien, um neue hinzuzufügen.`,
-          variant: "default"
-        });
-        filesArray.splice(FILE_STORAGE_LIMITS.MAX_FILES - currentFiles.length); // Keep only what we can add
-      }
       
       if (filesArray.length === 0) {
         return [];
@@ -94,15 +84,6 @@ export const useFileProcessor = () => {
           title: "Dateien hinzugefügt",
           description: `${processedFiles.length} ${processedFiles.length === 1 ? 'Datei' : 'Dateien'} erfolgreich hinzugefügt`
         });
-
-        // Show warning if approaching limit
-        if (currentFiles.length + processedFiles.length >= FILE_STORAGE_LIMITS.MAX_FILES) {
-          toast({
-            title: "Fast am Limit",
-            description: `Sie nähern sich dem Limit von ${FILE_STORAGE_LIMITS.MAX_FILES} Dateien.`,
-            variant: "default"
-          });
-        }
       }
       
       return processedFiles;
@@ -124,4 +105,3 @@ export const useFileProcessor = () => {
     isProcessing
   };
 };
-

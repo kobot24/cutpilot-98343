@@ -1,4 +1,3 @@
-
 import React, { useCallback, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -57,8 +56,6 @@ export const UploadArea = ({
     }
   }, [onFilesAdded]);
 
-  const filesRemaining = maxFiles - files.length;
-
   return (
     <div className="space-y-4">
       <Card
@@ -95,7 +92,7 @@ export const UploadArea = ({
             <Button 
               variant="outline" 
               onClick={() => document.getElementById('fileInput')?.click()}
-              disabled={isLoading || filesRemaining <= 0}
+              disabled={isLoading}
             >
               Dateien auswählen
             </Button>
@@ -113,20 +110,9 @@ export const UploadArea = ({
           <div className="mt-4 space-y-1 text-xs text-gray-400">
             <p>Unterstützte Formate: JPG, JPEG</p>
             <p>Maximale Dateigröße: {maxFileSizeMB}MB</p>
-            <p>
-              {filesRemaining > 0 
-                ? `Sie können noch ${filesRemaining} ${filesRemaining === 1 ? 'Datei' : 'Dateien'} hochladen` 
-                : 'Maximale Anzahl von Dateien erreicht'}
-            </p>
           </div>
         </CardContent>
       </Card>
-      
-      <div className="flex items-center justify-end">
-        <span className="text-sm text-gray-500">
-          {files.length} von {maxFiles} {files.length === 1 ? 'Datei' : 'Dateien'}
-        </span>
-      </div>
     </div>
   );
 };
