@@ -40,28 +40,31 @@ export const AppSidebar = ({ activeSection, onNavigate }: AppSidebarProps) => {
     { id: 'printplate', title: 'Printplate-Erstellung', icon: Printer },
   ];
 
+  // Logo components for different sidebar states
+  const CompactLogo = () => (
+    <div className="rounded-md bg-primary p-1 w-8 h-8 flex items-center justify-center mx-auto">
+      <span className="text-sm font-bold text-primary-foreground">CP</span>
+    </div>
+  );
+  
+  const FullLogo = () => (
+    <div className="flex items-center gap-2">
+      <div className="rounded-md bg-primary p-1 w-8 h-8 flex items-center justify-center">
+        <span className="text-sm font-bold text-primary-foreground">CP</span>
+      </div>
+      <div>
+        <h3 className="text-lg font-semibold text-primary">CutPilot</h3>
+        <p className="text-xs text-muted-foreground">JPG zu PDF mit CutContour</p>
+      </div>
+    </div>
+  );
+
   return (
     <Sidebar className="w-64" variant="sidebar" collapsible="icon">
       <SidebarHeader>
         <div className="flex items-center gap-2 px-2">
           {/* Logo display based on sidebar state */}
-          {isCollapsed ? (
-            // Compact logo for collapsed state
-            <div className="rounded-md bg-primary p-1 w-8 h-8 flex items-center justify-center mx-auto">
-              <span className="text-sm font-bold text-primary-foreground">CP</span>
-            </div>
-          ) : (
-            // Full logo for expanded state
-            <div className="flex items-center gap-2">
-              <div className="rounded-md bg-primary p-1 w-8 h-8 flex items-center justify-center">
-                <span className="text-sm font-bold text-primary-foreground">CP</span>
-              </div>
-              <div>
-                <h3 className="text-lg font-semibold text-primary">CutPilot</h3>
-                <p className="text-xs text-muted-foreground">JPG zu PDF mit CutContour</p>
-              </div>
-            </div>
-          )}
+          {isCollapsed ? <CompactLogo /> : <FullLogo />}
         </div>
       </SidebarHeader>
       
