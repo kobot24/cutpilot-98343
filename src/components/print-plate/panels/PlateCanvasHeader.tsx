@@ -1,6 +1,6 @@
 
 import { Button } from '@/components/ui/button';
-import { Grid, RefreshCw } from 'lucide-react';
+import { Grid, RefreshCw, Maximize } from 'lucide-react';
 import { PrintPlateSettings } from '@/components/print-plate/PrintPlateSettings';
 import { PrintPlateSize } from '@/components/print-plate/PrintPlateSettings';
 
@@ -31,6 +31,16 @@ export const PlateCanvasHeader = ({
           plateSize={plateSize}
           onSizeChange={onSizeChange}
         />
+        <Button
+          variant="outline"
+          onClick={() => onSizeChange({...plateSize})}
+          title="Druckplattengröße anpassen"
+          className="flex items-center"
+          size="sm"
+        >
+          <Maximize className="mr-1 h-4 w-4" />
+          Größe ändern
+        </Button>
       </div>
       <div className="flex space-x-2">
         <Button
