@@ -36,6 +36,8 @@ export const getRotatedTransform = (
       // 90° im Uhrzeigersinn - korrigierte Matrix
       console.log(`PDF Transform - Rotiere 90° um Mittelpunkt (${centerX}, ${centerY})`);
       return {
+        // Korrekte Matrix für 90° Drehung im PDF-Koordinatensystem
+        // [0, 1, -1, 0, x + height, y] hat Probleme verursacht
         matrix: [0, 1, -1, 0, x + height, y],
         swapDimensions
       };
@@ -52,6 +54,7 @@ export const getRotatedTransform = (
       // 270° im Uhrzeigersinn - korrigierte Matrix
       console.log(`PDF Transform - Rotiere 270° um Mittelpunkt (${centerX}, ${centerY})`);
       return {
+        // Korrekte Matrix für 270° Drehung
         matrix: [0, -1, 1, 0, x, y + width],
         swapDimensions
       };

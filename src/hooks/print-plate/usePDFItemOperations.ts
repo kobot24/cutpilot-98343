@@ -84,8 +84,8 @@ export const usePDFItemOperations = (
     const item = { ...items[index] };
     
     // Aktuelle Mittelpunktkoordinaten berechnen
-    const centerX = item.x + (item.width / 2);
-    const centerY = item.y + (item.height / 2);
+    const centerX = item.x + (getEffectiveDimensions(item.width, item.height, item.rotation).width / 2);
+    const centerY = item.y + (getEffectiveDimensions(item.width, item.height, item.rotation).height / 2);
     
     // Um 90° im Uhrzeigersinn rotieren
     const oldRotation = item.rotation;
@@ -94,19 +94,12 @@ export const usePDFItemOperations = (
     console.log(`Rotation: ${oldRotation}° -> ${item.rotation}°`);
     console.log(`Vorher: x=${item.x}, y=${item.y}, w=${item.width}, h=${item.height}`);
     
-    // WICHTIG: Die Breite und Höhe NICHT tauschen
-    // Die visuelle Anzeige rotiert, aber die Originaldimensionen bleiben gleich
-    
-    // Position korrigieren, um den gleichen Mittelpunkt beizubehalten
-    const effectiveDimBefore = getEffectiveDimensions(item.width, item.height, oldRotation);
+    // Die effektiven Dimensionen nach der Rotation berechnen
     const effectiveDimAfter = getEffectiveDimensions(item.width, item.height, item.rotation);
     
-    // Position basierend auf dem Unterschied zwischen den effektiven Dimensionen anpassen
-    const xOffset = (effectiveDimBefore.width - effectiveDimAfter.width) / 2;
-    const yOffset = (effectiveDimBefore.height - effectiveDimAfter.height) / 2;
-    
-    item.x = centerX - (item.width / 2) + xOffset;
-    item.y = centerY - (item.height / 2) + yOffset;
+    // Position so anpassen, dass der Mittelpunkt erhalten bleibt
+    item.x = centerX - (effectiveDimAfter.width / 2);
+    item.y = centerY - (effectiveDimAfter.height / 2);
     
     console.log(`Nachher: x=${item.x}, y=${item.y}, w=${item.width}, h=${item.height}`);
     console.log(`Effektive Dimensionen: ${effectiveDimAfter.width}x${effectiveDimAfter.height}`);

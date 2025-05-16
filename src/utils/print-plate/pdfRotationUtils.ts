@@ -75,12 +75,12 @@ const applyRotationToPage = (
   // Apply rotation and transformation based on rotation angle
   switch (rotation) {
     case 90:
-      // 90° im Uhrzeigersinn
+      // 90° im Uhrzeigersinn - korrigierte Implementierung
       page.drawPage(embeddedPage, {
         x: 0,
         y: 0,
-        width: originalHeight,
-        height: originalWidth,
+        width: width,
+        height: height,
         rotate: degrees(90),
         xSkew: degrees(0),
         ySkew: degrees(0)
@@ -101,12 +101,12 @@ const applyRotationToPage = (
       break;
       
     case 270:
-      // 270° im Uhrzeigersinn
+      // 270° im Uhrzeigersinn - korrigierte Implementierung
       page.drawPage(embeddedPage, {
         x: 0,
         y: 0,
-        width: originalHeight,
-        height: originalWidth,
+        width: width,
+        height: height,
         rotate: degrees(270),
         xSkew: degrees(0),
         ySkew: degrees(0)
