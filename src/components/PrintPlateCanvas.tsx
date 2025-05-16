@@ -29,7 +29,6 @@ export const PrintPlateCanvas = ({ files }: PrintPlateCanvasProps) => {
     
     try {
       // Create a temporary PDF loader to get dimensions
-      const { pdfUrl } = file;
       const pdfLoader = new Promise<{ width: number, height: number }>((resolve) => {
         // Load the PDF to get its dimensions
         const img = new Image();
@@ -52,7 +51,8 @@ export const PrintPlateCanvas = ({ files }: PrintPlateCanvasProps) => {
           });
         };
         
-        img.src = pdfUrl;
+        // Use the file.url instead of pdfUrl which doesn't exist on UploadedFile
+        img.src = file.url;
       });
       
       const { width, height } = await pdfLoader;
