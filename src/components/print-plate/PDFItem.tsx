@@ -4,11 +4,14 @@ import { Document, Page } from 'react-pdf';
 import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
 import 'react-pdf/dist/esm/Page/TextLayer.css';
 import { usePDFLoader } from '@/hooks/usePDFLoader';
+import { PrintPlateSize } from './PrintPlateSettings';
+import { getEffectiveDimensions } from '@/utils/print-plate/pdfTransformUtils';
 
 type PDFItemProps = {
   item: PDFItemType;
   index: number;
   scale: number;
+  plateSize: PrintPlateSize; // Add plateSize prop
   onDragStart: (index: number, e: React.MouseEvent) => void;
   onRotate: (index: number) => void;
   onRemove: (index: number) => void;
@@ -28,7 +31,7 @@ export type PDFItemType = {
   dpi?: number;
 };
 
-export const PDFItem = ({ item, index, scale, onDragStart, onRotate, onRemove }: PDFItemProps) => {
+export const PDFItem = ({ item, index, scale, plateSize, onDragStart, onRotate, onRemove }: PDFItemProps) => {
   const [isHovered, setIsHovered] = useState(false);
   const [showDebug, setShowDebug] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -39,6 +42,24 @@ export const PDFItem = ({ item, index, scale, onDragStart, onRotate, onRemove }:
   const pixelHeight = item.height * scale;
   const pixelX = item.x * scale;
   const pixelY = item.y * scale;
+
+  // Calculate effective dimensions based on rotation
+  const effectiveDimensions = getEffectiveDimensions(item.width, item.height, item.rotation);
+  const effectiveWidth = effectiveDimensions.width;
+  const effectiveHeight = effectiveDimensions.height;
+  
+  // Check if the item exceeds the plate boundaries
+  const exceedsLeft = item.x < 0;
+  const exceedsTop = item.y < 0;
+  const exceedsRight = item.x + effectiveWidth > plateSize.width;
+  const exceedsBottom = item.y + effectiveHeight > plateSize.height;
+  const exceedsBoundaries = exceedsLeft || exceedsTop || exceedsRight || exceedsBottom;
+  
+  // Calculate the clipping for each edge (in px)
+  const clipLeft = exceedsLeft ? Math.abs(item.x * scale) : 0;
+  const clipTop = exceedsTop ? Math.abs(item.y * scale) : 0;
+  const clipRight = exceedsRight ? Math.abs((item.x + effectiveWidth - plateSize.width) * scale) : 0;
+  const clipBottom = exceedsBottom ? Math.abs((item.y + effectiveHeight - plateSize.height) * scale) : 0;
   
   // Toggle debug info with Ctrl+D
   useEffect(() => {
@@ -96,6 +117,55 @@ export const PDFItem = ({ item, index, scale, onDragStart, onRotate, onRemove }:
           />
         </Document>
         
+        {/* Darkened overlay areas for parts that extend beyond plate boundaries */}
+        {exceedsBoundaries && (
+          <>
+            {/* Left overflow */}
+            {exceedsLeft && (
+              <div 
+                className="absolute top-0 left-0 bg-black/40 pointer-events-none z-10"
+                style={{ 
+                  width: `${clipLeft}px`,
+                  height: '100%',
+                }}
+              />
+            )}
+            
+            {/* Top overflow */}
+            {exceedsTop && (
+              <div 
+                className="absolute top-0 left-0 bg-black/40 pointer-events-none z-10"
+                style={{ 
+                  width: '100%',
+                  height: `${clipTop}px`,
+                }}
+              />
+            )}
+            
+            {/* Right overflow */}
+            {exceedsRight && (
+              <div 
+                className="absolute top-0 right-0 bg-black/40 pointer-events-none z-10"
+                style={{ 
+                  width: `${clipRight}px`,
+                  height: '100%',
+                }}
+              />
+            )}
+            
+            {/* Bottom overflow */}
+            {exceedsBottom && (
+              <div 
+                className="absolute bottom-0 left-0 bg-black/40 pointer-events-none z-10"
+                style={{ 
+                  width: '100%',
+                  height: `${clipBottom}px`,
+                }}
+              />
+            )}
+          </>
+        )}
+        
         {/* Item center marker for debugging */}
         {showDebug && (
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
@@ -114,6 +184,13 @@ export const PDFItem = ({ item, index, scale, onDragStart, onRotate, onRemove }:
             {showDebug && (
               <div className="text-[10px] text-gray-600 mt-1">
                 x: {item.x.toFixed(2)}, y: {item.y.toFixed(2)}
+              </div>
+            )}
+            
+            {/* Add indicator if item exceeds plate boundaries */}
+            {exceedsBoundaries && (
+              <div className="text-[10px] text-red-600 mt-0.5 font-medium">
+                Außerhalb der Druckplatte
               </div>
             )}
           </div>

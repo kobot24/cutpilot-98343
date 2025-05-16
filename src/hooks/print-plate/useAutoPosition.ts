@@ -33,13 +33,14 @@ export const useAutoPosition = () => {
     });
     
     // Constants for layout
-    const SPACING_CM = 0.5; // Spacing between items (0.5cm)
-    const MARGIN_CM = 0.5; // Small margin from the edges
+    const SPACING_CM = 1.0; // Increased spacing between items (1.0cm)
+    const MARGIN_CM = 1.0; // Increased margin from the edges (1.0cm)
     
     // Initialize position trackers
     let currentX = MARGIN_CM;
     let currentY = MARGIN_CM;
     let rowHeight = 0;
+    let itemsPlaced = 0;
     
     // Position each item
     for (let i = 0; i < newItems.length; i++) {
@@ -55,15 +56,21 @@ export const useAutoPosition = () => {
         rowHeight = 0;
       }
       
-      // Check if we need to start a new column (if item doesn't fit in height)
+      // Check if we need to stop (if item doesn't fit in height)
       if (currentY + effectiveDim.height > plateSize.height - MARGIN_CM) {
-        toast.warning("Nicht alle Elemente passen auf die Druckplatte");
+        // Don't show warning if at least some items were placed
+        if (itemsPlaced === 0) {
+          toast.warning("Die erste Datei ist zu groß für die Druckplatte");
+        } else if (i < newItems.length) {
+          toast.warning(`${i} von ${newItems.length} Elementen wurden positioniert. Die restlichen passen nicht auf die Platte.`);
+        }
         break; // Stop adding items if we run out of space
       }
       
       // Position the item - this now correctly accounts for rotation
       item.x = currentX;
       item.y = currentY;
+      itemsPlaced++;
       
       console.log(`Auto Position - Item ${i}: x=${currentX}, y=${currentY}, w=${effectiveDim.width}, h=${effectiveDim.height}, rot=${item.rotation}°`);
       

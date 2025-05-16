@@ -162,13 +162,14 @@ export const PlateCanvas = ({ items, onItemsChange, plateSize, onFitToPlate }: P
               </div>
             )}
 
-            {/* PDF Items */}
+            {/* PDF Items - Now passing plateSize to each item */}
             {items.map((item, index) => (
               <PDFItem
                 key={item.id || index}
                 item={item}
                 index={index}
                 scale={PIXELS_PER_CM}
+                plateSize={plateSize}
                 onDragStart={handleDragStart}
                 onRotate={handleRotateItem}
                 onRemove={handleRemoveItem}

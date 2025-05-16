@@ -1,4 +1,3 @@
-
 import { PDFItemType } from '@/components/print-plate/PDFItem';
 import { PrintPlateSize } from '@/components/print-plate/PrintPlateSettings';
 import { toast } from '@/components/ui/sonner';
@@ -75,22 +74,13 @@ export const usePDFItemOperations = (
     const oldRotation = item.rotation;
     item.rotation = (item.rotation + 90) % 360;
     
-    // Calculate the effective dimensions after rotation
-    const effectiveDimensions = getEffectiveDimensions(item.width, item.height, item.rotation);
+    // Calculate the new dimensions after rotation
+    // Width and height remain unchanged (we don't swap them anymore)
+    // This allows the visual representation to rotate while keeping the same size
     
     // Calculate new position to maintain the same center point
-    item.x = centerX - (effectiveDimensions.width / 2);
-    item.y = centerY - (effectiveDimensions.height / 2);
-    
-    // Ensure the item is still within plate boundaries
-    if (item.x < 0) item.x = 0;
-    if (item.y < 0) item.y = 0;
-    if (item.x + effectiveDimensions.width > plateSize.width) {
-      item.x = Math.max(0, plateSize.width - effectiveDimensions.width);
-    }
-    if (item.y + effectiveDimensions.height > plateSize.height) {
-      item.y = Math.max(0, plateSize.height - effectiveDimensions.height);
-    }
+    item.x = centerX - (item.width / 2);
+    item.y = centerY - (item.height / 2);
     
     console.log(`Rotated to ${item.rotation}°. Center: ${centerX}, ${centerY}. New position: ${item.x}, ${item.y}`);
     
@@ -100,22 +90,6 @@ export const usePDFItemOperations = (
       
       // Try to fetch PDF data immediately to ensure it's available for export
       fetchPDFDataFromUrl(item.pdfUrl)
-        .then(pdfData => {
-          console.log(`PDF data fetched for rotated item ${item.id}: ${pdfData.byteLength} bytes`);
-          
-          // Update the item with fetched PDF data
-          setItems(prevItems => {
-            const updatedItems = [...prevItems];
-            const itemIndex = updatedItems.findIndex(i => i.id === item.id);
-            if (itemIndex !== -1) {
-              updatedItems[itemIndex] = {
-                ...updatedItems[itemIndex],
-                pdfData
-              };
-            }
-            return updatedItems;
-          });
-        })
         .catch(error => {
           console.error(`Failed to fetch PDF data for rotated item ${item.id}:`, error);
         });

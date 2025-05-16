@@ -8,28 +8,14 @@ export const usePlateItems = (
   plateSize: PrintPlateSize,
   getCanvasHeight: () => number
 ) => {
-  // Adjust item size and position when the plate size changes
+  // When plate size changes, don't reposition items, just ensure they're visible
+  // This preserves their position even if they end up being partly outside
+  // This ensures items maintain their absolute positions on the canvas
+  // The visual darkened overlay will indicate parts that extend beyond boundaries
   useEffect(() => {
-    if (items.length > 0) {
-      // Make sure items stay within plate boundaries after resizing
-      const updatedItems = items.map(item => {
-        // Keep same positions relative to plate dimensions
-        const newItem = { ...item };
-        
-        // Ensure item is within plate boundaries
-        if (newItem.x + newItem.width > plateSize.width) {
-          newItem.x = Math.max(0, plateSize.width - newItem.width);
-        }
-        
-        if (newItem.y + newItem.height > plateSize.height) {
-          newItem.y = Math.max(0, plateSize.height - newItem.height);
-        }
-        
-        return newItem;
-      });
-      
-      onItemsChange(updatedItems);
-    }
+    // We're deliberately not adjusting item positions when the plate size changes
+    // This ensures items maintain their absolute positions on the canvas
+    // The visual darkened overlay will indicate parts that extend beyond boundaries
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [plateSize]);
 
