@@ -1,5 +1,4 @@
 
-import { useState } from "react";
 import { 
   Sidebar, 
   SidebarContent, 
@@ -12,6 +11,7 @@ import {
   SidebarHeader,
   SidebarFooter,
   SidebarSeparator,
+  useSidebar,
 } from "@/components/ui/sidebar";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Upload, FilePlus, Settings, Printer, ChevronDown } from "lucide-react";
@@ -30,7 +30,8 @@ type AppSidebarProps = {
 };
 
 export const AppSidebar = ({ activeSection, onNavigate }: AppSidebarProps) => {
-  const [open, setOpen] = useState(true);
+  const { state } = useSidebar();
+  const isCollapsed = state === "collapsed";
 
   const sidebarItems = [
     { id: 'upload', title: 'Upload', icon: Upload },
@@ -40,16 +41,27 @@ export const AppSidebar = ({ activeSection, onNavigate }: AppSidebarProps) => {
   ];
 
   return (
-    <Sidebar className={open ? "w-64" : "w-[var(--sidebar-width-icon)]"} variant="sidebar" collapsible="icon">
+    <Sidebar className="w-64" variant="sidebar" collapsible="icon">
       <SidebarHeader>
         <div className="flex items-center gap-2 px-2">
-          <div className="rounded-md bg-primary p-1 w-8 h-8 flex items-center justify-center">
-            <span className="text-sm font-bold text-primary-foreground">PP</span>
-          </div>
-          <div>
-            <h3 className="text-lg font-semibold text-primary">PrintPlate</h3>
-            <p className="text-xs text-muted-foreground">JPG zu PDF mit CutContour</p>
-          </div>
+          {/* Logo display based on sidebar state */}
+          {isCollapsed ? (
+            // Compact logo for collapsed state
+            <div className="rounded-md bg-primary p-1 w-8 h-8 flex items-center justify-center mx-auto">
+              <span className="text-sm font-bold text-primary-foreground">CP</span>
+            </div>
+          ) : (
+            // Full logo for expanded state
+            <div className="flex items-center gap-2">
+              <div className="rounded-md bg-primary p-1 w-8 h-8 flex items-center justify-center">
+                <span className="text-sm font-bold text-primary-foreground">CP</span>
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-primary">CutPilot</h3>
+                <p className="text-xs text-muted-foreground">JPG zu PDF mit CutContour</p>
+              </div>
+            </div>
+          )}
         </div>
       </SidebarHeader>
       

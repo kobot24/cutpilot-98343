@@ -26,7 +26,7 @@ export const Sidebar = ({ onNavigate, activeSection }: SidebarProps) => {
   return (
     <div className="w-64 bg-gray-50 border-r border-gray-200 h-screen p-4">
       <div className="mb-6">
-        <h1 className="text-xl font-bold text-blue-600">PrintPlate</h1>
+        <h1 className="text-xl font-bold text-primary">CutPilot</h1>
         <p className="text-sm text-gray-500">JPG zu PDF mit CutContour</p>
       </div>
       
@@ -38,8 +38,8 @@ export const Sidebar = ({ onNavigate, activeSection }: SidebarProps) => {
             className={cn(
               "w-full justify-start text-left font-normal",
               activeSection === item.id 
-                ? "bg-blue-600 text-white" 
-                : "text-gray-600 hover:text-blue-600 hover:bg-gray-100"
+                ? "bg-primary text-white" 
+                : "text-gray-600 hover:text-primary hover:bg-gray-100"
             )}
             onClick={() => onNavigate(item.id)}
           >

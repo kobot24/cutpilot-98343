@@ -56,7 +56,7 @@ export default {
 				sidebar: {
 					DEFAULT: 'hsl(var(--sidebar-background, 0 0% 100%))',
 					foreground: 'hsl(var(--sidebar-foreground, 222.2 84% 4.9%))',
-					primary: 'hsl(var(--sidebar-primary, 221 83% 53%))',
+					primary: 'hsl(var(--sidebar-primary, 291 84% 60%))', // Changed to magenta
 					'primary-foreground': 'hsl(var(--sidebar-primary-foreground, 210 40% 98%))',
 					accent: 'hsl(var(--sidebar-accent, 210 40% 96.1%))',
 					'accent-foreground': 'hsl(var(--sidebar-accent-foreground, 222.2 47.4% 11.2%))',
