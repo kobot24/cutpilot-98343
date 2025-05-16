@@ -10,7 +10,7 @@ import { getEffectiveDimensions } from '@/utils/print-plate/pdfTransformUtils';
  */
 export const useAutoPosition = () => {
   /**
-   * Automatically position all items on the plate with spacing between them
+   * Automatically position all items on the plate with no spacing between them
    * @param items Current plate items
    * @param plateSize Dimensions of the print plate
    * @returns New array of positioned items
@@ -32,9 +32,9 @@ export const useAutoPosition = () => {
       return bEffectiveDim.height - aEffectiveDim.height;
     });
     
-    // Constants for layout
-    const SPACING_CM = 1.0; // Increased spacing between items (1.0cm)
-    const MARGIN_CM = 1.0; // Increased margin from the edges (1.0cm)
+    // Constants for layout - remove spacing
+    const SPACING_CM = 0.0; // No spacing between items
+    const MARGIN_CM = 0.5; // Small margin from the edges (0.5cm)
     
     // Initialize position trackers
     let currentX = MARGIN_CM;
