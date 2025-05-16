@@ -76,7 +76,7 @@ const applyRotationToPage = (
   // For PDF coordinates, origin (0,0) is at the bottom left
   const transform = getRotatedTransform(0, 0, originalWidth, originalHeight, rotation);
   
-  // Apply the transformation
+  // Apply the transformation while preserving aspect ratio
   page.drawPage(embeddedPage, {
     x: 0,
     y: 0,

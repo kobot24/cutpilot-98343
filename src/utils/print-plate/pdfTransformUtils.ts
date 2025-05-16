@@ -1,4 +1,3 @@
-
 /**
  * Utility functions for PDF transformations, especially rotation
  */
@@ -26,10 +25,12 @@ export const getRotatedTransform = (
   const swapDimensions = rotationAngle === 90 || rotationAngle === 270;
   
   // Calculate transformation matrix based on rotation angle
+  // For PDF coordinate system, origin (0,0) is at the bottom left
   switch (rotationAngle) {
     case 90:
       // 90° clockwise: [0, 1, -1, 0, x + height, y]
       // This correctly positions the rotated content within visible area
+      // by translating it upward by the height amount
       console.log(`PDF Transform - Using 90° transform matrix: [0, 1, -1, 0, ${x + height}, ${y}]`);
       return {
         matrix: [0, 1, -1, 0, x + height, y],
@@ -76,9 +77,10 @@ export const getEffectiveDimensions = (
   height: number,
   rotation: number
 ): { width: number, height: number } => {
+  // For 90° and 270° rotations, swap width and height
   if (rotation === 90 || rotation === 270) {
-    // Swap dimensions for 90° and 270° rotations
     return { width: height, height: width };
   }
+  // For 0° and 180° rotations, keep original dimensions
   return { width, height };
 };

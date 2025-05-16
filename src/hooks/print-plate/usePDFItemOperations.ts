@@ -82,6 +82,16 @@ export const usePDFItemOperations = (
     item.x = centerX - (effectiveDimensions.width / 2);
     item.y = centerY - (effectiveDimensions.height / 2);
     
+    // Ensure the item is still within plate boundaries
+    if (item.x < 0) item.x = 0;
+    if (item.y < 0) item.y = 0;
+    if (item.x + effectiveDimensions.width > plateSize.width) {
+      item.x = Math.max(0, plateSize.width - effectiveDimensions.width);
+    }
+    if (item.y + effectiveDimensions.height > plateSize.height) {
+      item.y = Math.max(0, plateSize.height - effectiveDimensions.height);
+    }
+    
     console.log(`Rotated to ${item.rotation}°. Center: ${centerX}, ${centerY}. New position: ${item.x}, ${item.y}`);
     
     // Ensure we have PDF data for rotated items (critical for export)

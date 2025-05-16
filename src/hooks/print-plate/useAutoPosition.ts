@@ -61,7 +61,7 @@ export const useAutoPosition = () => {
         break; // Stop adding items if we run out of space
       }
       
-      // Position the item
+      // Position the item - this now correctly accounts for rotation
       item.x = currentX;
       item.y = currentY;
       

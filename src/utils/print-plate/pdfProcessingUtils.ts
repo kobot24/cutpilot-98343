@@ -54,6 +54,15 @@ const processItemWithRotation = async (
       console.log(`PDF Processing - Processing rotation: ${item.rotation}°`);
       
       try {
+        // Get the effective dimensions based on rotation
+        const effectiveDimensions = getEffectiveDimensions(
+          itemPosition.width,
+          itemPosition.height,
+          item.rotation
+        );
+        
+        console.log(`PDF Processing - Effective dimensions for rotation: width=${effectiveDimensions.width}, height=${effectiveDimensions.height}`);
+        
         // Create a rotated PDF
         const rotatedPdfBytes = await createRotatedPDF(
           pdfBytes, 
@@ -69,24 +78,38 @@ const processItemWithRotation = async (
           throw new Error("Failed to embed rotated PDF");
         }
         
-        // Get the correct dimensions based on rotation
-        const effectiveDimensions = getEffectiveDimensions(
-          itemPosition.width,
-          itemPosition.height,
-          item.rotation
-        );
+        // Corrected positioning for rotated items
+        let posX = itemPosition.x;
+        let posY = itemPosition.y;
         
-        console.log(`PDF Processing - Effective dimensions after rotation: width=${effectiveDimensions.width}, height=${effectiveDimensions.height}`);
+        // Account for vertical positioning adjustment in 90° and 270° rotations
+        if (item.rotation === 90 || item.rotation === 270) {
+          // We need to adjust the Y position for rotated items
+          // to ensure they align with their expected position
+          console.log(`PDF Processing - Adjusting position for ${item.rotation}° rotation`);
+          
+          // This adjustment ensures the rotated item is positioned correctly
+          // vertically on the print plate
+          if (item.rotation === 90) {
+            // For 90° rotation, move down to match expected position
+            posY -= (effectiveDimensions.height - effectiveDimensions.width) / 2;
+          } else if (item.rotation === 270) {
+            // For 270° rotation, adjust similarly
+            posY -= (effectiveDimensions.height - effectiveDimensions.width) / 2;
+          }
+        }
         
-        // Draw the rotated page with correct dimensions
+        console.log(`PDF Processing - Adjusted position for rotated item: x=${posX}, y=${posY}`);
+        
+        // Draw the rotated page with the correct dimensions and position
         page.drawPage(rotatedPdfEmbed[0], {
-          x: itemPosition.x,
-          y: itemPosition.y,
+          x: posX,
+          y: posY,
           width: effectiveDimensions.width,
           height: effectiveDimensions.height
         });
         
-        console.log(`PDF Processing - Successfully added rotated item ${item.id} (${item.rotation}°) to PDF at position x=${itemPosition.x}, y=${itemPosition.y}, width=${effectiveDimensions.width}, height=${effectiveDimensions.height}`);
+        console.log(`PDF Processing - Successfully added rotated item ${item.id} (${item.rotation}°) to PDF at position x=${posX}, y=${posY}, width=${effectiveDimensions.width}, height=${effectiveDimensions.height}`);
       } catch (error) {
         console.error(`PDF Processing - Error handling rotation for item ${item.id}:`, error);
         
