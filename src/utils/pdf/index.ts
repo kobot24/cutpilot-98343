@@ -9,3 +9,4 @@ export { exportPrintPlateToPDF, downloadPDF } from '../print-plate/printPlateExp
 export { CM_TO_POINTS, convertDimensionsToPoints, calculateItemPositionInPoints } from '../print-plate/pdfCoordinateUtils';
 export { createRotatedPDF } from '../print-plate/pdfRotationUtils';
 export { fetchPDFDataFromUrl, getPDFDataFromItem } from '../print-plate/pdfDataUtils';
+export { processPDFItem } from '../print-plate/pdfProcessingUtils';
