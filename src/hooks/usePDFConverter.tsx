@@ -4,10 +4,19 @@ import { toast } from '@/components/ui/use-toast';
 import { UploadedFile } from '../types/fileTypes';
 import { createPdfWithCutContour } from '../utils/pdf/pdfCreator';
 import { isImageTooLarge } from '../utils/fileValidationUtils';
+import { ProgressTracker } from '../utils/progressUtils';
 
 export type ConversionProgress = {
   progress: number;
   status: string;
+};
+
+export type BatchConversionProgress = {
+  isActive: boolean;
+  totalFiles: number;
+  currentFileIndex: number;
+  currentFileName: string;
+  overallProgress: number;
 };
 
 export const usePDFConverter = () => {
@@ -15,6 +24,13 @@ export const usePDFConverter = () => {
   const [conversionProgress, setConversionProgress] = useState<ConversionProgress>({ 
     progress: 0, 
     status: '' 
+  });
+  const [batchProgress, setBatchProgress] = useState<BatchConversionProgress>({
+    isActive: false,
+    totalFiles: 0,
+    currentFileIndex: 0,
+    currentFileName: '',
+    overallProgress: 0
   });
 
   const convertToPdf = async (file: UploadedFile): Promise<string | undefined> => {
@@ -41,11 +57,13 @@ export const usePDFConverter = () => {
         ? JSON.parse(storedSettings)
         : { cutContourOffset: 3, spotColorName: 'CutContour' };
       
-      // Show processing toast
-      toast({
-        title: "PDF wird erstellt",
-        description: "Bitte warten Sie, während die PDF erstellt wird..."
-      });
+      // Show processing toast only when not in batch mode
+      if (!batchProgress.isActive) {
+        toast({
+          title: "PDF wird erstellt",
+          description: "Bitte warten Sie, während die PDF erstellt wird..."
+        });
+      }
       
       // Track progress during PDF creation
       const handleProgress = (progress: number, status: string) => {
@@ -60,10 +78,13 @@ export const usePDFConverter = () => {
         throw new Error("Keine PDF-URL zurückgegeben");
       }
       
-      toast({
-        title: "PDF erstellt",
-        description: "PDF mit CutContour wurde erfolgreich erstellt"
-      });
+      // Show success toast only when not in batch mode
+      if (!batchProgress.isActive) {
+        toast({
+          title: "PDF erstellt",
+          description: "PDF mit CutContour wurde erfolgreich erstellt"
+        });
+      }
       
       return pdfUrl;
     } catch (error) {
@@ -85,24 +106,75 @@ export const usePDFConverter = () => {
         }
       }
       
-      toast({
-        title: "Konvertierungsfehler",
-        description: errorMessage,
-        variant: "destructive"
-      });
+      // Show error toast only when not in batch mode
+      if (!batchProgress.isActive) {
+        toast({
+          title: "Konvertierungsfehler",
+          description: errorMessage,
+          variant: "destructive"
+        });
+      }
       return undefined;
     } finally {
       setIsConverting(false);
       // Reset progress after a short delay to show completion
-      setTimeout(() => {
-        setConversionProgress({ progress: 0, status: '' });
-      }, 1000);
+      if (!batchProgress.isActive) {
+        setTimeout(() => {
+          setConversionProgress({ progress: 0, status: '' });
+        }, 1000);
+      }
     }
+  };
+
+  // New function to start batch conversion tracking
+  const startBatchConversion = (totalFiles: number, firstFileName: string) => {
+    setBatchProgress({
+      isActive: true,
+      totalFiles,
+      currentFileIndex: 0,
+      currentFileName: firstFileName,
+      overallProgress: 0
+    });
+  };
+
+  // Update batch progress during conversion
+  const updateBatchProgress = (currentFileIndex: number, fileName: string, success: boolean) => {
+    const overallProgress = Math.round((currentFileIndex / batchProgress.totalFiles) * 100);
+    
+    setBatchProgress(prev => ({
+      ...prev,
+      currentFileIndex,
+      currentFileName: fileName,
+      overallProgress
+    }));
+  };
+
+  // End batch conversion tracking
+  const endBatchConversion = () => {
+    // Show completion for a second before resetting
+    setBatchProgress(prev => ({
+      ...prev,
+      overallProgress: 100
+    }));
+    
+    setTimeout(() => {
+      setBatchProgress({
+        isActive: false,
+        totalFiles: 0,
+        currentFileIndex: 0,
+        currentFileName: '',
+        overallProgress: 0
+      });
+    }, 1500);
   };
 
   return {
     convertToPdf,
     isConverting,
-    conversionProgress
+    conversionProgress,
+    batchProgress,
+    startBatchConversion,
+    updateBatchProgress,
+    endBatchConversion
   };
 };

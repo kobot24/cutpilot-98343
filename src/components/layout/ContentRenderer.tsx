@@ -5,7 +5,7 @@ import { SettingsPanel } from '@/components/SettingsPanel';
 import { PrintPlateCanvas } from '@/components/PrintPlateCanvas';
 import { UploadedFile } from '@/types/fileTypes';
 import { UserSettings } from '@/hooks/useSettings';
-import { ConversionProgress } from '@/hooks/usePDFConverter';
+import { BatchConversionProgress, ConversionProgress } from '@/hooks/usePDFConverter';
 
 type ContentRendererProps = {
   activeSection: string;
@@ -14,6 +14,7 @@ type ContentRendererProps = {
   isLoading: boolean;
   settings: UserSettings;
   conversionProgress: ConversionProgress;
+  batchProgress?: BatchConversionProgress;
   maxFiles: number;
   maxFileSizeMB: number;
   addFiles: (files: FileList) => void;
@@ -23,6 +24,9 @@ type ContentRendererProps = {
   clearAllFiles: () => void;
   updateSettings: (settings: Partial<UserSettings>) => void;
   onBatchConvert?: (fileIds: string[]) => void;
+  startBatchConversion?: (totalFiles: number, firstFileName: string) => void;
+  updateBatchProgress?: (currentFileIndex: number, fileName: string, success: boolean) => void;
+  endBatchConversion?: () => void;
 };
 
 export const ContentRenderer: React.FC<ContentRendererProps> = ({
@@ -32,6 +36,7 @@ export const ContentRenderer: React.FC<ContentRendererProps> = ({
   isLoading,
   settings,
   conversionProgress,
+  batchProgress,
   maxFiles,
   maxFileSizeMB,
   addFiles,
@@ -40,7 +45,10 @@ export const ContentRenderer: React.FC<ContentRendererProps> = ({
   convertToPdf,
   clearAllFiles,
   updateSettings,
-  onBatchConvert
+  onBatchConvert,
+  startBatchConversion,
+  updateBatchProgress,
+  endBatchConversion
 }) => {
   switch (activeSection) {
     case 'upload':
@@ -51,6 +59,7 @@ export const ContentRenderer: React.FC<ContentRendererProps> = ({
           isLoading={isLoading}
           settings={settings}
           conversionProgress={conversionProgress}
+          batchProgress={batchProgress}
           onFilesAdded={addFiles}
           onSelectFile={selectFile}
           onRemoveFile={removeFile}

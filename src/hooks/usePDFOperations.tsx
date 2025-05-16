@@ -10,7 +10,15 @@ export const usePDFOperations = (
   setSelectedFile: React.Dispatch<React.SetStateAction<UploadedFile | null>>,
   setIsLoading: React.Dispatch<React.SetStateAction<boolean>>
 ) => {
-  const { convertToPdf, isConverting, conversionProgress } = usePDFConverter();
+  const { 
+    convertToPdf, 
+    isConverting, 
+    conversionProgress,
+    batchProgress,
+    startBatchConversion,
+    updateBatchProgress,
+    endBatchConversion
+  } = usePDFConverter();
 
   const handleConvertToPdf = async (fileId: string) => {
     setIsLoading(true);
@@ -51,6 +59,10 @@ export const usePDFOperations = (
   return {
     convertToPdf: handleConvertToPdf,
     isConverting,
-    conversionProgress
+    conversionProgress,
+    batchProgress,
+    startBatchConversion,
+    updateBatchProgress,
+    endBatchConversion
   };
 };

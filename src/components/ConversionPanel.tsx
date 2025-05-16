@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { toast } from '@/components/ui/use-toast';
 import { UploadedFile } from '@/types/fileTypes';
 import { UserSettings } from '@/hooks/useSettings';
-import { ConversionProgress } from '@/hooks/usePDFConverter';
+import { BatchConversionProgress, ConversionProgress } from '@/hooks/usePDFConverter';
 import { NoFileSelected } from './conversion/NoFileSelected';
 import { FileInfoCard } from './conversion/FileInfoCard';
 import { ConversionHeader } from './conversion/ConversionHeader';
@@ -18,6 +18,10 @@ type ConversionPanelProps = {
   onSelectFile: (id: string) => void;
   onRemoveFile: (id: string) => void;
   conversionProgress?: ConversionProgress;
+  batchProgress?: BatchConversionProgress;
+  startBatchConversion?: (totalFiles: number, firstFileName: string) => void;
+  updateBatchProgress?: (currentFileIndex: number, fileName: string, success: boolean) => void;
+  endBatchConversion?: () => void;
 };
 
 export const ConversionPanel = ({
@@ -28,7 +32,11 @@ export const ConversionPanel = ({
   files,
   onSelectFile,
   onRemoveFile,
-  conversionProgress = { progress: 0, status: '' }
+  conversionProgress = { progress: 0, status: '' },
+  batchProgress,
+  startBatchConversion,
+  updateBatchProgress,
+  endBatchConversion
 }: ConversionPanelProps) => {
   const [conversionInProgress, setConversionInProgress] = useState(false);
   const [conversionError, setConversionError] = useState<string | null>(null);
@@ -84,6 +92,12 @@ export const ConversionPanel = ({
     let successCount = 0;
     let failCount = 0;
     
+    // Initialize batch progress
+    if (startBatchConversion && fileIds.length > 0) {
+      const firstFile = files.find(f => f.id === fileIds[0]);
+      startBatchConversion(fileIds.length, firstFile?.name || 'Unbekannte Datei');
+    }
+    
     toast({
       title: "Batch-Konvertierung gestartet",
       description: `${fileIds.length} Dateien werden zu PDF konvertiert...`
@@ -91,11 +105,27 @@ export const ConversionPanel = ({
     
     try {
       // Convert files sequentially to avoid memory issues
-      for (const fileId of fileIds) {
+      for (let i = 0; i < fileIds.length; i++) {
+        const fileId = fileIds[i];
+        const file = files.find(f => f.id === fileId);
+        
+        if (!file) {
+          failCount++;
+          continue;
+        }
+        
+        // Update batch progress
+        if (updateBatchProgress) {
+          updateBatchProgress(i + 1, file.name, false);
+        }
+        
         try {
           const result = await onConvertToPdf(fileId);
           if (result) {
             successCount++;
+            if (updateBatchProgress) {
+              updateBatchProgress(i + 1, file.name, true);
+            }
           } else {
             failCount++;
           }
@@ -110,6 +140,9 @@ export const ConversionPanel = ({
         description: `${successCount} von ${fileIds.length} Dateien erfolgreich konvertiert${failCount > 0 ? `, ${failCount} fehlgeschlagen` : ''}`
       });
     } finally {
+      if (endBatchConversion) {
+        endBatchConversion();
+      }
       setBatchConversionInProgress(false);
     }
   };
@@ -125,9 +158,10 @@ export const ConversionPanel = ({
         onRemoveFile={onRemoveFile}
         onBatchConvert={handleBatchConvert}
         settings={settings}
-        onConvertToPdf={onConvertToPdf} // Added missing prop
-        isLoading={isLoading} // Added missing prop
-        conversionProgress={conversionProgress} // Added missing prop
+        onConvertToPdf={onConvertToPdf}
+        isLoading={isLoading || batchConversionInProgress}
+        conversionProgress={conversionProgress}
+        batchProgress={batchProgress}
       />
 
       {selectedFile && (

@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { UploadedFile } from '@/types/fileTypes';
 import { UserSettings } from '@/hooks/useSettings';
-import { ConversionProgress } from '@/hooks/usePDFConverter';
+import { BatchConversionProgress, ConversionProgress } from '@/hooks/usePDFConverter';
 import { FileCard } from './files/FileCard';
 import { FilesEmptyState } from './files/FilesEmptyState';
 import { FilesListHeader } from './files/FilesListHeader';
+import { BatchConversionProgress as BatchProgressComponent } from './pdf/BatchConversionProgress';
 
 type FilesListProps = {
   files: UploadedFile[];
@@ -16,6 +17,7 @@ type FilesListProps = {
   settings: UserSettings;
   isLoading: boolean;
   conversionProgress: ConversionProgress;
+  batchProgress?: BatchConversionProgress;
 };
 
 export const FilesList = ({
@@ -27,7 +29,8 @@ export const FilesList = ({
   onBatchConvert,
   settings,
   isLoading,
-  conversionProgress
+  conversionProgress,
+  batchProgress
 }: FilesListProps) => {
   const [selectedFiles, setSelectedFiles] = useState<string[]>([]);
   const [processingFiles, setProcessingFiles] = useState<Record<string, boolean>>({});
@@ -63,13 +66,17 @@ export const FilesList = ({
 
   return (
     <div className="space-y-4">
+      {batchProgress && batchProgress.isActive && (
+        <BatchProgressComponent progress={batchProgress} />
+      )}
+      
       <FilesListHeader 
         filesCount={files.length}
         selectedFilesCount={selectedFiles.length}
         onSelectAll={handleSelectAll}
         onBatchConvert={handleBatchConvert}
         isAllSelected={selectedFiles.length === files.length}
-        isLoading={isLoading}
+        isLoading={isLoading || (batchProgress?.isActive || false)}
       />
       
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 mt-2">
@@ -86,6 +93,7 @@ export const FilesList = ({
             isGlobalLoading={isLoading}
             onCheckboxClick={handleCheckboxClick}
             isCheckboxSelected={selectedFiles.includes(file.id)}
+            isBatchProcessing={batchProgress?.isActive || false}
           />
         ))}
       </div>

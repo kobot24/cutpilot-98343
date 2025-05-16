@@ -28,7 +28,11 @@ export const useFileStorage = () => {
   const {
     convertToPdf,
     isConverting,
-    conversionProgress
+    conversionProgress,
+    batchProgress,
+    startBatchConversion,
+    updateBatchProgress,
+    endBatchConversion
   } = usePDFOperations(files, setFiles, selectedFile, setSelectedFile, setIsLoading);
   
   // Use the storage sync hook
@@ -46,11 +50,15 @@ export const useFileStorage = () => {
     selectedFile,
     isLoading: isLoading || isProcessing || isConverting,
     conversionProgress,
+    batchProgress,
     addFiles,
     removeFile,
     selectFile,
     convertToPdf,
     clearAllFiles,
+    startBatchConversion,
+    updateBatchProgress,
+    endBatchConversion,
     MAX_FILE_SIZE_MB: FILE_STORAGE_LIMITS.MAX_FILE_SIZE_MB,
     MAX_FILES: FILE_STORAGE_LIMITS.MAX_FILES
   };

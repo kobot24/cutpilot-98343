@@ -5,7 +5,7 @@ import { UserSettings } from '@/hooks/useSettings';
 import { AppSidebar } from '@/components/layout/AppSidebar';
 import { ContentRenderer } from '@/components/layout/ContentRenderer';
 import { SidebarProvider, SidebarRail } from '@/components/ui/sidebar';
-import { ConversionProgress } from '@/hooks/usePDFConverter';
+import { BatchConversionProgress, ConversionProgress } from '@/hooks/usePDFConverter';
 
 type MainLayoutProps = {
   activeSection: string;
@@ -15,6 +15,7 @@ type MainLayoutProps = {
   isLoading: boolean;
   settings: UserSettings;
   conversionProgress: ConversionProgress;
+  batchProgress?: BatchConversionProgress;
   maxFiles: number;
   maxFileSizeMB: number;
   addFiles: (files: FileList) => void;
@@ -24,6 +25,9 @@ type MainLayoutProps = {
   clearAllFiles: () => void;
   updateSettings: (settings: Partial<UserSettings>) => void;
   onBatchConvert?: (fileIds: string[]) => void;
+  startBatchConversion?: (totalFiles: number, firstFileName: string) => void;
+  updateBatchProgress?: (currentFileIndex: number, fileName: string, success: boolean) => void;
+  endBatchConversion?: () => void;
 };
 
 export const MainLayout = (props: MainLayoutProps) => {

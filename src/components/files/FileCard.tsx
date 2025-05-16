@@ -20,6 +20,7 @@ type FileCardProps = {
   isGlobalLoading: boolean;
   onCheckboxClick: (e: React.MouseEvent, fileId: string) => void;
   isCheckboxSelected: boolean;
+  isBatchProcessing?: boolean;
 };
 
 export const FileCard = ({
@@ -33,6 +34,7 @@ export const FileCard = ({
   isGlobalLoading,
   onCheckboxClick,
   isCheckboxSelected,
+  isBatchProcessing = false,
 }: FileCardProps) => {
   const [isConverting, setIsConverting] = useState(false);
   const [conversionError, setConversionError] = useState<string>('');
@@ -51,6 +53,9 @@ export const FileCard = ({
       setIsConverting(false);
     }
   };
+
+  // Disable interactions during batch processing
+  const isDisabled = isGlobalLoading || isConverting || isBatchProcessing;
 
   return (
     <Card
@@ -73,6 +78,7 @@ export const FileCard = ({
             checked={isCheckboxSelected}
             onClick={(e) => onCheckboxClick(e, file.id)}
             className="bg-white border-gray-300 data-[state=checked]:bg-blue-500"
+            disabled={isBatchProcessing}
           />
         </div>
         {file.convertedPdfUrl && (
@@ -112,6 +118,7 @@ export const FileCard = ({
               e.stopPropagation();
               onRemove(file.id);
             }}
+            disabled={isBatchProcessing}
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -136,7 +143,7 @@ export const FileCard = ({
             size="sm"
             variant="default"
             className="text-xs flex-1 h-7 py-0 px-2"
-            disabled={!!file.convertedPdfUrl || isGlobalLoading || isConverting}
+            disabled={!!file.convertedPdfUrl || isDisabled}
             onClick={handleSingleConvert}
           >
             {isConverting ? (

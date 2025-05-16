@@ -5,7 +5,7 @@ import { UploadArea } from '@/components/UploadArea';
 import { FilesList } from '@/components/FilesList';
 import { UploadedFile } from '@/types/fileTypes';
 import { UserSettings } from '@/hooks/useSettings';
-import { ConversionProgress } from '@/hooks/usePDFConverter';
+import { BatchConversionProgress, ConversionProgress } from '@/hooks/usePDFConverter';
 
 type UploadSectionProps = {
   files: UploadedFile[];
@@ -13,6 +13,7 @@ type UploadSectionProps = {
   isLoading: boolean;
   settings: UserSettings;
   conversionProgress: ConversionProgress;
+  batchProgress?: BatchConversionProgress;
   onFilesAdded: (files: FileList) => void;
   onSelectFile: (id: string) => void;
   onRemoveFile: (id: string) => void;
@@ -29,6 +30,7 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
   isLoading,
   settings,
   conversionProgress,
+  batchProgress,
   onFilesAdded,
   onSelectFile,
   onRemoveFile,
@@ -71,6 +73,7 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
           settings={settings}
           isLoading={isLoading}
           conversionProgress={conversionProgress}
+          batchProgress={batchProgress}
         />
       </div>
     </div>

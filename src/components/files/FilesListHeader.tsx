@@ -1,6 +1,7 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
+import { Loader } from 'lucide-react';
 
 type FilesListHeaderProps = {
   filesCount: number;
@@ -35,6 +36,7 @@ export const FilesListHeader = ({
           variant="outline" 
           size="sm" 
           className="text-xs"
+          disabled={isLoading}
         >
           {isAllSelected ? "Alle abwählen" : "Alle auswählen"}
         </Button>
@@ -47,7 +49,14 @@ export const FilesListHeader = ({
             size="sm" 
             disabled={isLoading}
           >
-            Ausgewählte zu PDF konvertieren
+            {isLoading ? (
+              <span className="flex items-center">
+                <Loader className="h-3 w-3 mr-1 animate-spin" />
+                Konvertiere...
+              </span>
+            ) : (
+              "Ausgewählte zu PDF konvertieren"
+            )}
           </Button>
         )}
       </div>
