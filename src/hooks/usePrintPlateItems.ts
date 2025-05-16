@@ -23,10 +23,10 @@ export const usePrintPlateItems = (plateSize: PrintPlateSize) => {
     handleClearPlate 
   } = usePDFItemOperations(items, setItems, plateSize);
   
-  // Add the auto-positioning hook
-  const { autoPositionItems } = useAutoPosition();
+  // Add the auto-positioning hook with enhanced features
+  const { autoPositionItems, fitAllItemsToPlate } = useAutoPosition();
   
-  // Auto-position all items on the plate with 1px spacing
+  // Auto-position all items on the plate with optimal spacing
   const handleAutoPositionItems = () => {
     if (items.length === 0) {
       toast.error("Keine Elemente auf der Druckplatte");
@@ -35,7 +35,30 @@ export const usePrintPlateItems = (plateSize: PrintPlateSize) => {
     
     const positionedItems = autoPositionItems(items, plateSize);
     setItems(positionedItems);
-    toast.success(`${positionedItems.length} Elemente wurden automatisch positioniert`);
+  };
+  
+  // Scale and position all items to fit the plate optimally
+  const handleFitAllItemsToPlate = () => {
+    if (items.length === 0) {
+      toast.error("Keine Elemente auf der Druckplatte");
+      return;
+    }
+    
+    // Check if any items exceed plate dimensions
+    const oversizedItems = items.filter(item => {
+      return item.width > plateSize.width || item.height > plateSize.height;
+    });
+    
+    if (oversizedItems.length === 0) {
+      toast.info("Alle Elemente passen bereits auf die Platte");
+      // Still run auto-position to optimize layout
+      handleAutoPositionItems();
+      return;
+    }
+    
+    const fittedItems = fitAllItemsToPlate(items, plateSize);
+    setItems(fittedItems);
+    toast.success("Alle Elemente wurden angepasst und positioniert");
   };
 
   return {
@@ -46,6 +69,7 @@ export const usePrintPlateItems = (plateSize: PrintPlateSize) => {
     handleClearPlate,
     handleRotateItem,
     handleRemoveItem,
-    handleAutoPositionItems
+    handleAutoPositionItems,
+    handleFitAllItemsToPlate
   };
 };

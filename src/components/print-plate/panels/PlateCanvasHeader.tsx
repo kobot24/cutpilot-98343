@@ -1,6 +1,6 @@
 
 import { Button } from '@/components/ui/button';
-import { Grid, RefreshCw, Maximize } from 'lucide-react';
+import { Grid, RefreshCw, Maximize, FolderOpen, MinusCircle } from 'lucide-react';
 import { PrintPlateSettings } from '@/components/print-plate/PrintPlateSettings';
 import { PrintPlateSize } from '@/components/print-plate/PrintPlateSettings';
 
@@ -12,6 +12,7 @@ type PlateCanvasHeaderProps = {
   onClearPlate: () => void;
   onExportPlate: () => void;
   onAutoPosition: () => void;
+  onFitAllToPlate: () => void;
 };
 
 export const PlateCanvasHeader = ({ 
@@ -21,7 +22,8 @@ export const PlateCanvasHeader = ({
   onSizeChange,
   onClearPlate, 
   onExportPlate,
-  onAutoPosition
+  onAutoPosition,
+  onFitAllToPlate
 }: PlateCanvasHeaderProps) => {
   return (
     <div className="flex flex-wrap items-center justify-between gap-4">
@@ -42,7 +44,7 @@ export const PlateCanvasHeader = ({
           Größe ändern
         </Button>
       </div>
-      <div className="flex space-x-2">
+      <div className="flex flex-wrap space-x-2 gap-y-2">
         <Button
           variant="outline"
           onClick={onAutoPosition}
@@ -53,11 +55,23 @@ export const PlateCanvasHeader = ({
           <Grid className="mr-1 h-4 w-4" />
           Auto-Position
         </Button>
+        <Button
+          variant="outline"
+          onClick={onFitAllToPlate}
+          disabled={itemCount === 0 || isExporting}
+          title="Alle Elemente an die Plattengröße anpassen"
+          className="flex items-center"
+        >
+          <FolderOpen className="mr-1 h-4 w-4" />
+          Alle anpassen
+        </Button>
         <Button 
           variant="outline"
           onClick={onClearPlate}
           disabled={itemCount === 0 || isExporting}
+          className="flex items-center"
         >
+          <MinusCircle className="mr-1 h-4 w-4" />
           Leeren
         </Button>
         <Button

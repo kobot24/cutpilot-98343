@@ -22,7 +22,8 @@ export const PrintPlateCanvas = ({ files }: PrintPlateCanvasProps) => {
     handleAddPDF, 
     handleFitToPlate, 
     handleClearPlate,
-    handleAutoPositionItems
+    handleAutoPositionItems,
+    handleFitAllItemsToPlate
   } = usePrintPlateItems(plateSize);
   
   // Get export functionality
@@ -38,6 +39,7 @@ export const PrintPlateCanvas = ({ files }: PrintPlateCanvasProps) => {
         onClearPlate={handleClearPlate}
         onExportPlate={handleExportPlate}
         onAutoPosition={handleAutoPositionItems}
+        onFitAllToPlate={handleFitAllItemsToPlate}
       />
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
