@@ -1,11 +1,13 @@
 
 import { PDFDocument } from 'pdf-lib';
+import { PDFItemType } from '@/components/print-plate/pdf-item/PDFItemType';
+import { PrintPlateSize } from '@/components/print-plate/PrintPlateSettings';
 import { CM_TO_POINTS, convertDimensionsToPoints } from './pdfCoordinateUtils';
-import { processPDFItem } from './pdfProcessingUtils';
+import { processPDFItem } from './pdfItemProcessor';
 
 export const exportPrintPlateToPDF = async (
-  items: any[],
-  plateSize: any
+  items: PDFItemType[],
+  plateSize: PrintPlateSize
 ): Promise<Uint8Array | null> => {
   try {
     // Create a new PDF document

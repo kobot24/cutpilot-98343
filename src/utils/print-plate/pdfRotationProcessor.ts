@@ -1,37 +1,8 @@
 
 import { PDFDocument } from 'pdf-lib';
-import { getPDFDataFromItem } from './pdfDataUtils';
-import { calculateItemPositionInPoints } from './pdfCoordinateUtils';
+import { PDFItemType } from '@/components/print-plate/pdf-item/PDFItemType';
 import { createRotatedPDF } from './pdfRotationUtils';
-import { getRotatedTransform, getEffectiveDimensions } from './pdfTransformUtils';
-
-/**
- * Process a PDF item and add it to the main PDF document
- * @param pdfDoc The main PDF document
- * @param page The PDF page to add content to
- * @param item The PDF item to process
- * @param pageHeight The PDF page height in points
- */
-export const processPDFItem = async (pdfDoc: any, page: any, item: any, pageHeight: number): Promise<void> => {
-  console.log(`PDF Processing - Processing item: ${item.id}`);
-  console.log(`PDF Processing - Item position: x=${item.x}, y=${item.y}, width=${item.width}, height=${item.height}, rotation=${item.rotation}`);
-  console.log(`PDF Processing - Has cached PDF data: ${item.pdfData ? 'Yes, ' + item.pdfData.byteLength + ' bytes' : 'No'}`);
-  
-  try {
-    // Get the PDF bytes - preferring cached data if available
-    const pdfBytes = await getPDFDataFromItem(item);
-    
-    // Calculate position and dimensions in PDF points
-    const itemPosition = calculateItemPositionInPoints(item, pageHeight);
-    console.log(`PDF Processing - Item position in points: x=${itemPosition.x}, y=${itemPosition.y}, width=${itemPosition.width}, height=${itemPosition.height}`);
-    
-    // Process based on rotation
-    await processItemWithRotation(pdfDoc, page, pdfBytes, item, itemPosition);
-    
-  } catch (error) {
-    console.error(`PDF Processing - Error processing item ${item.id}:`, error);
-  }
-};
+import { getEffectiveDimensions } from './pdfTransformUtils';
 
 /**
  * Process an item with rotation handling
@@ -41,11 +12,11 @@ export const processPDFItem = async (pdfDoc: any, page: any, item: any, pageHeig
  * @param item The PDF item
  * @param itemPosition The calculated item position
  */
-const processItemWithRotation = async (
+export const processItemWithRotation = async (
   pdfDoc: any, 
   page: any, 
   pdfBytes: Uint8Array, 
-  item: any, 
+  item: PDFItemType, 
   itemPosition: any
 ) => {
   try {
@@ -140,35 +111,41 @@ const processItemWithRotation = async (
         
         // Fallback: Add item without rotation if rotation handling fails
         console.log(`PDF Processing - Falling back to non-rotated placement for item ${item.id}`);
-        try {
-          const embeddedPdf = await pdfDoc.embedPdf(pdfBytes);
-          page.drawPage(embeddedPdf[0], {
-            x: itemPosition.x,
-            y: itemPosition.y,
-            width: itemPosition.width,
-            height: itemPosition.height,
-          });
-        } catch (fallbackError) {
-          console.error(`PDF Processing - Fallback placement also failed:`, fallbackError);
-        }
+        addNonRotatedItem(pdfDoc, page, pdfBytes, itemPosition);
       }
     } else {
       // Non-rotated items - standard placement
-      console.log(`PDF Processing - Adding non-rotated item ${item.id} to PDF`);
-      try {
-        const embeddedPdf = await pdfDoc.embedPdf(pdfBytes);
-        page.drawPage(embeddedPdf[0], {
-          x: itemPosition.x,
-          y: itemPosition.y,
-          width: itemPosition.width,
-          height: itemPosition.height,
-        });
-        console.log(`PDF Processing - Successfully added non-rotated item ${item.id} to PDF`);
-      } catch (error) {
-        console.error(`PDF Processing - Error drawing non-rotated item ${item.id}:`, error);
-      }
+      addNonRotatedItem(pdfDoc, page, pdfBytes, itemPosition);
     }
   } catch (error) {
     console.error(`PDF Processing - Failed to embed PDF for item ${item.id}:`, error);
+  }
+};
+
+/**
+ * Add a non-rotated PDF item to the page
+ * @param pdfDoc The PDF document
+ * @param page The page to add the item to
+ * @param pdfBytes The PDF data bytes
+ * @param itemPosition The item position data
+ */
+const addNonRotatedItem = async (
+  pdfDoc: any, 
+  page: any, 
+  pdfBytes: Uint8Array, 
+  itemPosition: any
+) => {
+  console.log(`PDF Processing - Adding non-rotated item to PDF`);
+  try {
+    const embeddedPdf = await pdfDoc.embedPdf(pdfBytes);
+    page.drawPage(embeddedPdf[0], {
+      x: itemPosition.x,
+      y: itemPosition.y,
+      width: itemPosition.width,
+      height: itemPosition.height,
+    });
+    console.log(`PDF Processing - Successfully added non-rotated item to PDF`);
+  } catch (error) {
+    console.error(`PDF Processing - Error drawing non-rotated item:`, error);
   }
 };
