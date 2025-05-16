@@ -83,8 +83,8 @@ export const exportPrintPlateToPDF = async (
 
         // For items with rotation, we need to use the PDFPage.drawPage with the proper parameters
         if (item.rotation !== 0) {
-          // Since pdf-lib doesn't support setting rotation center directly,
-          // we need to create a temporary PDF with the rotated content
+          // Create a two-step approach for rotation that correctly preserves position
+          // Step 1: Create a temporary PDF with the content
           const tempPdf = await PDFDocument.create();
           const tempPage = tempPdf.addPage([width, height]);
           
@@ -96,20 +96,36 @@ export const exportPrintPlateToPDF = async (
             height: height,
           });
           
-          // Embed the temporary PDF back into our main document
-          const rotatedPdfBytes = await tempPdf.save();
-          const rotatedPdf = await pdfDoc.embedPdf(rotatedPdfBytes);
+          // Save the temporary PDF
+          const tempPdfBytes = await tempPdf.save();
           
-          if (rotatedPdf.length === 0) {
+          // Step 2: Re-embed the temporary PDF into our main document
+          const rotatedPdfEmbed = await pdfDoc.embedPdf(tempPdfBytes);
+          
+          if (rotatedPdfEmbed.length === 0) {
             console.log(`PDF Export - Failed to create rotated PDF for item: ${item.id}`);
             continue;
           }
           
-          // Draw the rotated PDF at the correct position with rotation
-          // Since we don't have direct control over rotation center, we position carefully
-          page.drawPage(rotatedPdf[0], {
-            x: centerX - (width / 2),
-            y: centerY - (height / 2),
+          // Important fix: The coordinate system needs to be adjusted for rotation
+          // For 90° rotations, we need to swap width and height in positioning
+          let drawX = centerX - (width / 2);
+          let drawY = centerY - (height / 2);
+          
+          // For 90° and 270° rotations, we need more precise positioning
+          if (item.rotation === 90 || item.rotation === 270) {
+            // Adjust the position to account for dimension swapping in rotated state
+            // This ensures the object stays centered at its original position
+            drawX = centerX - (height / 2);
+            drawY = centerY - (width / 2);
+          }
+          
+          console.log(`PDF Export - Drawing rotated item at: x=${drawX}, y=${drawY} with rotation=${item.rotation}`);
+          
+          // Draw the rotated PDF with precise positioning
+          page.drawPage(rotatedPdfEmbed[0], {
+            x: drawX,
+            y: drawY,
             width: width,
             height: height,
             rotate: degrees(item.rotation),
