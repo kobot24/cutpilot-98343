@@ -32,6 +32,8 @@ const Index = () => {
   const handleBatchConvert = async (fileIds: string[]) => {
     if (fileIds.length === 0) return;
     
+    console.log(`Starting batch conversion of ${fileIds.length} files`);
+    
     // Initialize batch conversion progress
     if (startBatchConversion && fileIds.length > 0) {
       const firstFile = files.find(f => f.id === fileIds[0]);
@@ -41,35 +43,44 @@ const Index = () => {
     let successCount = 0;
     let failCount = 0;
     
+    // Important: Process files one by one in sequence, not just looping through IDs
     for (let i = 0; i < fileIds.length; i++) {
       const fileId = fileIds[i];
       const file = files.find(f => f.id === fileId);
       
       if (!file) {
+        console.log(`File with ID ${fileId} not found`);
         failCount++;
         continue;
       }
       
-      // Update batch progress
+      console.log(`Converting file ${i + 1}/${fileIds.length}: ${file.name}`);
+      
+      // Update batch progress before conversion
       if (updateBatchProgress) {
         updateBatchProgress(i + 1, file.name, false);
       }
       
       try {
+        // Wait for each conversion to complete before moving to the next
         const result = await convertToPdf(fileId);
         if (result) {
           successCount++;
+          console.log(`Successfully converted ${file.name} to PDF`);
           if (updateBatchProgress) {
             updateBatchProgress(i + 1, file.name, true);
           }
         } else {
           failCount++;
+          console.log(`Failed to convert ${file.name} to PDF`);
         }
       } catch (error) {
         console.error(`Error converting file ${fileId}:`, error);
         failCount++;
       }
     }
+    
+    console.log(`Batch conversion completed: ${successCount} successful, ${failCount} failed`);
     
     // End batch conversion
     if (endBatchConversion) {

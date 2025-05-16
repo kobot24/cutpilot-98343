@@ -64,8 +64,8 @@ export const FileCard = ({
         isSelected
           ? 'border-blue-500 ring-1 ring-blue-200'
           : 'border-gray-200 hover:border-gray-300'
-      }`}
-      onClick={() => onSelect(file.id)}
+      } ${isBatchProcessing ? 'opacity-70' : ''}`}
+      onClick={() => !isDisabled && onSelect(file.id)}
     >
       <div className="aspect-square relative bg-gray-100">
         <img

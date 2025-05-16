@@ -11,7 +11,7 @@ export const usePDFOperations = (
   setIsLoading: React.Dispatch<React.SetStateAction<boolean>>
 ) => {
   const { 
-    convertToPdf, 
+    convertToPdf: pdfConverterFn, 
     isConverting, 
     conversionProgress,
     batchProgress,
@@ -21,20 +21,25 @@ export const usePDFOperations = (
   } = usePDFConverter();
 
   const handleConvertToPdf = async (fileId: string) => {
+    console.log(`PDF Operations: Converting file ${fileId} to PDF`);
     setIsLoading(true);
     try {
       // Find the file to convert
       const file = files.find(f => f.id === fileId);
       if (!file) {
+        console.log(`PDF Operations: File ${fileId} not found`);
         return;
       }
       
       // Convert to PDF
-      const pdfUrl = await convertToPdf(file);
+      const pdfUrl = await pdfConverterFn(file);
       
       if (!pdfUrl) {
+        console.log(`PDF Operations: No PDF URL returned for file ${fileId}`);
         return;
       }
+      
+      console.log(`PDF Operations: Successfully converted file ${fileId} to PDF`);
       
       // Update file with converted PDF URL
       const updatedFiles = files.map(f => 
@@ -51,6 +56,9 @@ export const usePDFOperations = (
       }
       
       return pdfUrl;
+    } catch (error) {
+      console.error(`PDF Operations: Error converting file ${fileId} to PDF:`, error);
+      throw error;
     } finally {
       setIsLoading(false);
     }
