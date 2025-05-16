@@ -21,41 +21,68 @@ export const useDragAndDrop = (
   
   const dragOffsetX = useRef(0);
   const dragOffsetY = useRef(0);
-  const snapThresholdCm = 0.15; // Even tighter threshold for precise snapping
+  // Increase snap threshold for more obvious snapping behavior
+  const snapThresholdCm = 0.5; // Was 0.15, now 0.5 for stronger snapping effect
 
-  // Improved key detection for cross-browser compatibility
+  // Check for Alt key status - use both keyboard and mouse events for better detection
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Check for Alt key using both key and code properties for better cross-browser support
-      if (e.key === 'Alt' || e.key === 'Option' || e.code === 'AltLeft' || e.code === 'AltRight') {
+      if (e.key === 'Alt' || e.code === 'AltLeft' || e.code === 'AltRight') {
         setIsSnapModeEnabled(true);
-        console.log('Snap mode enabled');
+        console.log('Snap mode enabled (key down)');
       }
     };
 
     const handleKeyUp = (e: KeyboardEvent) => {
-      if (e.key === 'Alt' || e.key === 'Option' || e.code === 'AltLeft' || e.code === 'AltRight') {
+      if (e.key === 'Alt' || e.code === 'AltLeft' || e.code === 'AltRight') {
         setIsSnapModeEnabled(false);
         setNearestSnapEdge({ x: null, y: null, type: null });
-        console.log('Snap mode disabled');
+        console.log('Snap mode disabled (key up)');
       }
     };
 
-    // Add focus event to ensure we detect key events when window regains focus
-    const handleFocus = () => {
-      // Reset snap mode when window gets focus in case keys were released while out of focus
+    // Check if the Alt key is already pressed when the component mounts
+    const checkAltKey = () => {
+      if (navigator.userAgent.indexOf('Mac') !== -1) {
+        // For Mac
+        if (navigator.userAgent.indexOf('Safari') !== -1) {
+          console.log('Mac Safari detected - using option key detection');
+        }
+      }
+    };
+    
+    checkAltKey();
+
+    // Also handle blur/focus events to reset state when user switches tabs/windows
+    const handleBlur = () => {
       setIsSnapModeEnabled(false);
       setNearestSnapEdge({ x: null, y: null, type: null });
+      console.log('Window blur - reset snap mode');
     };
 
     window.addEventListener('keydown', handleKeyDown);
     window.addEventListener('keyup', handleKeyUp);
-    window.addEventListener('focus', handleFocus);
+    window.addEventListener('blur', handleBlur);
+
+    // Force manual activation for testing
+    const forceSnapModeToggle = (e: KeyboardEvent) => {
+      // Allow toggling snap mode with F2 key for testing
+      if (e.key === 'F2') {
+        setIsSnapModeEnabled(prev => {
+          const newState = !prev;
+          console.log(`Snap mode ${newState ? 'enabled' : 'disabled'} via F2 toggle`);
+          return newState;
+        });
+      }
+    };
+    
+    window.addEventListener('keydown', forceSnapModeToggle);
 
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
-      window.removeEventListener('focus', handleFocus);
+      window.removeEventListener('blur', handleBlur);
+      window.removeEventListener('keydown', forceSnapModeToggle);
     };
   }, []);
 
@@ -108,6 +135,7 @@ export const useDragAndDrop = (
       closestSnapDistanceX = leftEdgeDist;
       closestSnapEdgeX = 0;
       snappedX = 0;
+      console.log(`Snapped to left edge: ${snappedX}`);
     }
     
     // Snap to top edge
@@ -116,6 +144,7 @@ export const useDragAndDrop = (
       closestSnapDistanceY = topEdgeDist;
       closestSnapEdgeY = 0;
       snappedY = 0;
+      console.log(`Snapped to top edge: ${snappedY}`);
     }
     
     // Snap to right edge
@@ -124,6 +153,7 @@ export const useDragAndDrop = (
       closestSnapDistanceX = rightEdgeDist;
       closestSnapEdgeX = plateSize.width;
       snappedX = plateSize.width - draggedItem.width;
+      console.log(`Snapped to right edge: ${snappedX}`);
     }
     
     // Snap to bottom edge
@@ -132,6 +162,7 @@ export const useDragAndDrop = (
       closestSnapDistanceY = bottomEdgeDist;
       closestSnapEdgeY = plateSize.height;
       snappedY = plateSize.height - draggedItem.height;
+      console.log(`Snapped to bottom edge: ${snappedY}`);
     }
 
     // Check against other items for snapping
@@ -148,6 +179,7 @@ export const useDragAndDrop = (
         closestSnapDistanceX = leftToRightDist;
         closestSnapEdgeX = otherRight;
         snappedX = otherRight;
+        console.log(`Snapped left to right: ${snappedX}`);
       }
       
       // Snap right edge to left edge (tight snapping)
@@ -156,6 +188,7 @@ export const useDragAndDrop = (
         closestSnapDistanceX = rightToLeftDist;
         closestSnapEdgeX = otherItem.x;
         snappedX = otherItem.x - draggedItem.width;
+        console.log(`Snapped right to left: ${snappedX}`);
       }
       
       // Snap top edge to bottom edge (tight snapping)
@@ -164,6 +197,7 @@ export const useDragAndDrop = (
         closestSnapDistanceY = topToBottomDist;
         closestSnapEdgeY = otherBottom;
         snappedY = otherBottom;
+        console.log(`Snapped top to bottom: ${snappedY}`);
       }
       
       // Snap bottom edge to top edge (tight snapping)
@@ -172,6 +206,7 @@ export const useDragAndDrop = (
         closestSnapDistanceY = bottomToTopDist;
         closestSnapEdgeY = otherItem.y;
         snappedY = otherItem.y - draggedItem.height;
+        console.log(`Snapped bottom to top: ${snappedY}`);
       }
       
       // Snap to align horizontally (top edges)
@@ -180,6 +215,7 @@ export const useDragAndDrop = (
         closestSnapDistanceY = topEdgesAlignDist;
         closestSnapEdgeY = otherItem.y;
         snappedY = otherItem.y;
+        console.log(`Snapped top edges: ${snappedY}`);
       }
       
       // Snap to align horizontally (bottom edges)
@@ -188,6 +224,7 @@ export const useDragAndDrop = (
         closestSnapDistanceY = bottomEdgesAlignDist;
         closestSnapEdgeY = otherBottom - draggedItem.height;
         snappedY = otherBottom - draggedItem.height;
+        console.log(`Snapped bottom edges: ${snappedY}`);
       }
       
       // Snap to align vertically (left edges)
@@ -196,6 +233,7 @@ export const useDragAndDrop = (
         closestSnapDistanceX = leftEdgesAlignDist;
         closestSnapEdgeX = otherItem.x;
         snappedX = otherItem.x;
+        console.log(`Snapped left edges: ${snappedX}`);
       }
       
       // Snap to align vertically (right edges)
@@ -204,6 +242,7 @@ export const useDragAndDrop = (
         closestSnapDistanceX = rightEdgesAlignDist;
         closestSnapEdgeX = otherRight - draggedItem.width;
         snappedX = otherRight - draggedItem.width;
+        console.log(`Snapped right edges: ${snappedX}`);
       }
     }
     

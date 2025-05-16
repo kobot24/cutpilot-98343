@@ -30,6 +30,7 @@ export type PDFItemType = {
 
 export const PDFItem = ({ item, index, scale, onDragStart, onRotate, onRemove, onFitToPlate }: PDFItemProps) => {
   const [isHovered, setIsHovered] = useState(false);
+  const [showDebug, setShowDebug] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const { handleDocumentLoadSuccess } = usePDFLoader({ pdfUrl: item.pdfUrl });
   
@@ -38,6 +39,19 @@ export const PDFItem = ({ item, index, scale, onDragStart, onRotate, onRemove, o
   const pixelHeight = item.height * scale;
   const pixelX = item.x * scale;
   const pixelY = item.y * scale;
+  
+  // Toggle debug info with Ctrl+D
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.ctrlKey && e.key === 'd') {
+        e.preventDefault();
+        setShowDebug(prev => !prev);
+      }
+    };
+    
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
   
   return (
     <div
@@ -49,6 +63,7 @@ export const PDFItem = ({ item, index, scale, onDragStart, onRotate, onRemove, o
         width: `${pixelWidth}px`,
         height: `${pixelHeight}px`,
         transform: `rotate(${item.rotation}deg)`,
+        transformOrigin: 'center center', // Make sure rotation is around center
       }}
       onMouseDown={(e) => onDragStart(index, e)}
       onMouseEnter={() => setIsHovered(true)}
@@ -81,11 +96,26 @@ export const PDFItem = ({ item, index, scale, onDragStart, onRotate, onRemove, o
           />
         </Document>
         
+        {/* Item center marker for debugging */}
+        {showDebug && (
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+            <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+            <div className="absolute top-0 bottom-0 w-0.5 bg-red-300 opacity-50"></div>
+            <div className="absolute left-0 right-0 h-0.5 bg-red-300 opacity-50"></div>
+          </div>
+        )}
+        
         {/* Physical size indicator when hovered */}
-        {isHovered && (
+        {(isHovered || showDebug) && (
           <div className="absolute top-1 left-1 bg-white/80 text-xs px-2 py-1 rounded shadow-sm z-10">
             {item.width.toFixed(1)} × {item.height.toFixed(1)} cm
+            {item.rotation !== 0 && <span className="ml-1 text-orange-500">({item.rotation}°)</span>}
             {item.dpi && <span className="ml-1 text-gray-500">({item.dpi} DPI)</span>}
+            {showDebug && (
+              <div className="text-[10px] text-gray-600 mt-1">
+                x: {item.x.toFixed(2)}, y: {item.y.toFixed(2)}
+              </div>
+            )}
           </div>
         )}
         
@@ -168,4 +198,3 @@ export const PDFItem = ({ item, index, scale, onDragStart, onRotate, onRemove, o
     </div>
   );
 };
-
