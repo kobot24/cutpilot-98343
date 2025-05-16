@@ -1,3 +1,4 @@
+
 import React, { useCallback, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -60,7 +61,7 @@ export const UploadArea = ({
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-end">
         <span className="text-sm text-gray-500">
           {files.length} von {maxFiles} {files.length === 1 ? 'Datei' : 'Dateien'}
         </span>
