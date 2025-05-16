@@ -34,7 +34,8 @@ export const PlateCanvas = ({ items, onItemsChange, plateSize, onFitToPlate }: P
   const { 
     handleDragStart,
     handleMouseMove,
-    handleMouseUp 
+    handleMouseUp,
+    isSnapModeEnabled
   } = useDragAndDrop(items, onItemsChange, canvasRef, getScale);
   
   const {
@@ -55,7 +56,8 @@ export const PlateCanvas = ({ items, onItemsChange, plateSize, onFitToPlate }: P
         
         <PlateDimensions 
           plateSize={plateSize} 
-          canvasHeight={canvasHeight} 
+          canvasHeight={canvasHeight}
+          isSnapModeEnabled={isSnapModeEnabled}
         />
 
         <div className="flex">
@@ -97,4 +99,3 @@ export const PlateCanvas = ({ items, onItemsChange, plateSize, onFitToPlate }: P
     </div>
   );
 };
-

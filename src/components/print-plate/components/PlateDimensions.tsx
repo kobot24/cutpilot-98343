@@ -4,9 +4,14 @@ import { PrintPlateSize } from '../PrintPlateSettings';
 type PlateDimensionsProps = {
   plateSize: PrintPlateSize;
   canvasHeight: number;
+  isSnapModeEnabled?: boolean;
 };
 
-export const PlateDimensions = ({ plateSize, canvasHeight }: PlateDimensionsProps) => {
+export const PlateDimensions = ({ 
+  plateSize, 
+  canvasHeight, 
+  isSnapModeEnabled 
+}: PlateDimensionsProps) => {
   return (
     <div className="relative">
       {/* Width dimension at top */}
@@ -30,6 +35,13 @@ export const PlateDimensions = ({ plateSize, canvasHeight }: PlateDimensionsProp
         <span className="block mt-0.5 text-[10px] text-gray-400">
           Einheit: 1 cm = 3.7 px
         </span>
+        
+        {/* Snap mode indicator */}
+        {isSnapModeEnabled && (
+          <span className="block mt-0.5 text-[10px] text-green-600 font-medium">
+            Snap-Modus aktiv (Option-Taste gedrückt)
+          </span>
+        )}
       </div>
     </div>
   );

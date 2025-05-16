@@ -36,24 +36,15 @@ export const usePlateItems = (
   const handleRotateItem = (index: number) => {
     const updatedItems = items.map((item, i) => {
       if (i === index) {
-        // When rotating, we need to swap width and height to maintain aspect ratio
+        // Preserve original dimensions regardless of rotation
         const newRotation = (item.rotation + 90) % 360;
-        let newItem = { ...item, rotation: newRotation };
         
-        // If rotation is 90 or 270 degrees, swap width and height
-        if ((newRotation % 180) === 90) {
-          if (item.aspectRatio) {
-            // Calculate new dimensions based on aspect ratio
-            const aspectRatio = 1 / item.aspectRatio; // Invert for rotation
-            newItem = {
-              ...newItem,
-              width: item.height,
-              height: item.width
-            };
-          }
-        }
-        
-        return newItem;
+        // Keep the width and height the same
+        // Just update the rotation value
+        return {
+          ...item,
+          rotation: newRotation
+        };
       }
       return item;
     });
