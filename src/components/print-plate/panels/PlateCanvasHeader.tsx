@@ -25,7 +25,7 @@ export const PlateCanvasHeader = ({
           variant="outline"
           onClick={onAutoPosition}
           disabled={itemCount === 0 || isExporting}
-          title="Elemente automatisch platzieren"
+          title="Elemente automatisch optimal anordnen"
           className="flex items-center"
         >
           <Grid className="mr-1 h-4 w-4" />

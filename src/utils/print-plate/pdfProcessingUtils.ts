@@ -3,6 +3,7 @@ import { PDFDocument } from 'pdf-lib';
 import { getPDFDataFromItem } from './pdfDataUtils';
 import { calculateItemPositionInPoints } from './pdfCoordinateUtils';
 import { createRotatedPDF } from './pdfRotationUtils';
+import { getRotatedTransform, getEffectiveDimensions } from './pdfTransformUtils';
 
 /**
  * Process a PDF item and add it to the main PDF document
@@ -69,28 +70,22 @@ const processItemWithRotation = async (
           throw new Error("Failed to embed rotated PDF");
         }
         
-        // Determine final position and dimensions based on rotation
-        let finalX = itemPosition.x;
-        let finalY = itemPosition.y;
-        let finalWidth = itemPosition.width;
-        let finalHeight = itemPosition.height;
-        
-        // For 90° and 270° rotations, swap dimensions
-        if (item.rotation === 90 || item.rotation === 270) {
-          console.log(`PDF Processing - Using swapped dimensions for ${item.rotation}° rotation`);
-          finalWidth = itemPosition.height;
-          finalHeight = itemPosition.width;
-        }
+        // Get the correct dimensions based on rotation
+        const effectiveDimensions = getEffectiveDimensions(
+          itemPosition.width,
+          itemPosition.height,
+          item.rotation
+        );
         
         // Draw the rotated page with correct dimensions
         page.drawPage(rotatedPdfEmbed[0], {
-          x: finalX,
-          y: finalY,
-          width: finalWidth,
-          height: finalHeight
+          x: itemPosition.x,
+          y: itemPosition.y,
+          width: effectiveDimensions.width,
+          height: effectiveDimensions.height
         });
         
-        console.log(`PDF Processing - Successfully added rotated item ${item.id} (${item.rotation}°) to PDF at position x=${finalX}, y=${finalY}, width=${finalWidth}, height=${finalHeight}`);
+        console.log(`PDF Processing - Successfully added rotated item ${item.id} (${item.rotation}°) to PDF at position x=${itemPosition.x}, y=${itemPosition.y}, width=${effectiveDimensions.width}, height=${effectiveDimensions.height}`);
       } catch (error) {
         console.error(`PDF Processing - Error handling rotation for item ${item.id}:`, error);
         
@@ -128,3 +123,4 @@ const processItemWithRotation = async (
     console.error(`PDF Processing - Failed to embed PDF for item ${item.id}:`, error);
   }
 };
+

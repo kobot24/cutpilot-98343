@@ -2,6 +2,7 @@
 import { PDFItemType } from '@/components/print-plate/PDFItem';
 import { PrintPlateSize } from '@/components/print-plate/PrintPlateSettings';
 import { toast } from '@/components/ui/sonner';
+import { getEffectiveDimensions } from '@/utils/print-plate/pdfTransformUtils';
 
 /**
  * Hook for auto-positioning items on the print plate
@@ -9,7 +10,7 @@ import { toast } from '@/components/ui/sonner';
  */
 export const useAutoPosition = () => {
   /**
-   * Automatically position all items on the plate with 1px spacing between them
+   * Automatically position all items on the plate with spacing between them
    * @param items Current plate items
    * @param plateSize Dimensions of the print plate
    * @returns New array of positioned items
@@ -24,13 +25,15 @@ export const useAutoPosition = () => {
     
     // Sort items by height (tallest first) to optimize space usage
     newItems.sort((a: PDFItemType, b: PDFItemType) => {
-      const aHeight = a.rotation === 90 || a.rotation === 270 ? a.width : a.height;
-      const bHeight = b.rotation === 90 || b.rotation === 270 ? b.width : b.height;
-      return bHeight - aHeight;
+      // Use the effective dimensions based on rotation
+      const aEffectiveDim = getEffectiveDimensions(a.width, a.height, a.rotation);
+      const bEffectiveDim = getEffectiveDimensions(b.width, b.height, b.rotation);
+      
+      return bEffectiveDim.height - aEffectiveDim.height;
     });
     
     // Constants for layout
-    const SPACING_CM = 0.05; // 1px is roughly 0.03-0.05cm depending on DPI
+    const SPACING_CM = 0.5; // Increased spacing for better visibility
     const MARGIN_CM = 0.5; // Small margin from the edges
     
     // Initialize position trackers
@@ -43,18 +46,17 @@ export const useAutoPosition = () => {
       const item = newItems[i];
       
       // Get effective width and height based on rotation
-      const effectiveWidth = item.rotation === 90 || item.rotation === 270 ? item.height : item.width;
-      const effectiveHeight = item.rotation === 90 || item.rotation === 270 ? item.width : item.height;
+      const effectiveDim = getEffectiveDimensions(item.width, item.height, item.rotation);
       
       // Check if we need to start a new row
-      if (currentX + effectiveWidth > plateSize.width - MARGIN_CM) {
+      if (currentX + effectiveDim.width > plateSize.width - MARGIN_CM) {
         currentX = MARGIN_CM;
         currentY += rowHeight + SPACING_CM;
         rowHeight = 0;
       }
       
       // Check if we need to start a new column (if item doesn't fit in height)
-      if (currentY + effectiveHeight > plateSize.height - MARGIN_CM) {
+      if (currentY + effectiveDim.height > plateSize.height - MARGIN_CM) {
         toast.warning("Nicht alle Elemente passen auf die Druckplatte");
         break; // Stop adding items if we run out of space
       }
@@ -64,8 +66,8 @@ export const useAutoPosition = () => {
       item.y = currentY;
       
       // Update position trackers
-      currentX += effectiveWidth + SPACING_CM;
-      rowHeight = Math.max(rowHeight, effectiveHeight);
+      currentX += effectiveDim.width + SPACING_CM;
+      rowHeight = Math.max(rowHeight, effectiveDim.height);
     }
     
     return newItems;

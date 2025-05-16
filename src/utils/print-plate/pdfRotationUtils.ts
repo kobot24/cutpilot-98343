@@ -1,5 +1,6 @@
 
 import { PDFDocument, degrees } from 'pdf-lib';
+import { getRotatedTransform } from './pdfTransformUtils';
 
 /**
  * Creates a temporary PDF with rotated content
@@ -48,7 +49,7 @@ export const createRotatedPDF = async (
 };
 
 /**
- * Applies the specified rotation to a PDF page
+ * Applies the specified rotation to a PDF page using the correct transformation matrix
  * @param page The page to apply rotation to
  * @param embeddedPage The embedded page content
  * @param rotation The rotation angle in degrees
@@ -67,55 +68,24 @@ const applyRotationToPage = (
   originalHeight: number
 ) => {
   console.log(`PDF Rotation - Applying ${rotation}° rotation to page`);
+  console.log(`PDF Rotation - Target dimensions: w=${width}, h=${height}`);
+  console.log(`PDF Rotation - Original dimensions: w=${originalWidth}, h=${originalHeight}`);
   
-  switch (rotation) {
-    case 90:
-      // For 90° rotation, draw from bottom left, rotate around that point
-      // Note: The coordinate system starts from bottom-left in PDF
-      page.drawPage(embeddedPage, {
-        x: 0,
-        y: 0,
-        width: height,  // swapped dimensions
-        height: width,  // swapped dimensions
-        rotate: degrees(90),
-        xScale: 1,
-        yScale: 1
-      });
-      console.log(`PDF Rotation - 90° rotation applied with dimensions w:${height} h:${width}`);
-      break;
-      
-    case 180:
-      page.drawPage(embeddedPage, {
-        x: 0,
-        y: 0,
-        width: width,
-        height: height,
-        rotate: degrees(180),
-        xScale: 1,
-        yScale: 1
-      });
-      break;
-      
-    case 270:
-      page.drawPage(embeddedPage, {
-        x: height, // Move to right edge for 270° rotation
-        y: 0,
-        width: height,  // swapped dimensions
-        height: width,  // swapped dimensions
-        rotate: degrees(270),
-        xScale: 1,
-        yScale: 1
-      });
-      break;
-      
-    default:
-      // For 0° or any non-standard rotation
-      page.drawPage(embeddedPage, {
-        x: 0,
-        y: 0,
-        width: width,
-        height: height,
-        rotate: degrees(rotation)
-      });
-  }
+  // Calculate the transformation for the given rotation
+  // For PDF coordinates, origin (0,0) is at the bottom left
+  const transform = getRotatedTransform(0, 0, originalWidth, originalHeight, rotation);
+  
+  // Apply the transformation
+  page.drawPage(embeddedPage, {
+    x: 0,
+    y: 0,
+    width: transform.swapDimensions ? height : width,
+    height: transform.swapDimensions ? width : height,
+    transform: {
+      matrix: transform.matrix
+    }
+  });
+  
+  console.log(`PDF Rotation - Applied ${rotation}° rotation with matrix: [${transform.matrix}]`);
 };
+

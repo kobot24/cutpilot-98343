@@ -10,3 +10,4 @@ export { CM_TO_POINTS, convertDimensionsToPoints, calculateItemPositionInPoints 
 export { createRotatedPDF } from '../print-plate/pdfRotationUtils';
 export { fetchPDFDataFromUrl, getPDFDataFromItem } from '../print-plate/pdfDataUtils';
 export { processPDFItem } from '../print-plate/pdfProcessingUtils';
+export { getRotatedTransform, getEffectiveDimensions } from '../print-plate/pdfTransformUtils';

@@ -1,7 +1,9 @@
+
 import { PDFItemType } from '@/components/print-plate/PDFItem';
 import { PrintPlateSize } from '@/components/print-plate/PrintPlateSettings';
 import { toast } from '@/components/ui/sonner';
 import { fetchPDFDataFromUrl } from '@/utils/print-plate/pdfDataUtils';
+import { getEffectiveDimensions } from '@/utils/print-plate/pdfTransformUtils';
 
 /**
  * Hook for PDF item manipulation operations
@@ -48,7 +50,7 @@ export const usePDFItemOperations = (
     toast.success("Druckdatei an die Plattengröße angepasst");
   };
 
-  // Improved rotate item function with better position handling
+  // Improved rotate item function with correct position handling
   const handleRotateItem = (index: number) => {
     const item = { ...items[index] };
     
@@ -60,30 +62,16 @@ export const usePDFItemOperations = (
     const oldRotation = item.rotation;
     item.rotation = (item.rotation + 90) % 360;
     
-    // For 90° and 270° rotations, we need to ensure position is correct
-    // for both the UI representation and the PDF export
+    // Calculate the effective dimensions after rotation
+    const effectiveDimensions = getEffectiveDimensions(item.width, item.height, item.rotation);
     
-    // If we're rotating to 90° or 270° from 0° or 180°
-    if ((item.rotation === 90 || item.rotation === 270) && 
-        (oldRotation === 0 || oldRotation === 180)) {
-      // Calculate new position to keep the center point the same
-      item.x = centerX - (item.height / 2);
-      item.y = centerY - (item.width / 2);
-      
-      console.log(`Rotated to ${item.rotation}°. Center: ${centerX}, ${centerY}. New position: ${item.x}, ${item.y}`);
-    } 
-    // If we're rotating back to 0° or 180° from 90° or 270°
-    else if ((item.rotation === 0 || item.rotation === 180) && 
-             (oldRotation === 90 || oldRotation === 270)) {
-      // Readjust position when returning to original orientation
-      item.x = centerX - (item.width / 2);
-      item.y = centerY - (item.height / 2);
-      
-      console.log(`Rotated to ${item.rotation}°. Center: ${centerX}, ${centerY}. New position: ${item.x}, ${item.y}`);
-    }
+    // Calculate new position to maintain the same center point
+    item.x = centerX - (effectiveDimensions.width / 2);
+    item.y = centerY - (effectiveDimensions.height / 2);
+    
+    console.log(`Rotated to ${item.rotation}°. Center: ${centerX}, ${centerY}. New position: ${item.x}, ${item.y}`);
     
     // Ensure we have PDF data for rotated items (critical for export)
-    // Always fetch or ensure PDF data is available for better export reliability
     if (item.pdfUrl) {
       console.log(`Prefetching PDF data for rotated item ${item.id} (rotation: ${item.rotation}°)`);
       
