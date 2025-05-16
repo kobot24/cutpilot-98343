@@ -83,25 +83,36 @@ export const exportPrintPlateToPDF = async (
 
         // For items with rotation, we need to use the PDFPage.drawPage with the proper parameters
         if (item.rotation !== 0) {
-          // For rotated items, we need special handling with transformations
-          // We set up a transformation matrix that:
-          // 1. Translates to the center of where the item should be
-          // 2. Rotates around that center
-          // 3. Translates back to the correct position
+          // Since pdf-lib doesn't support setting rotation center directly,
+          // we need to create a temporary PDF with the rotated content
+          const tempPdf = await PDFDocument.create();
+          const tempPage = tempPdf.addPage([width, height]);
           
-          // Save graphics state
-          page.drawText('', { x: 0, y: 0 }); // Dummy operation to start a new graphics state
+          // Draw the embedded page on the temporary page
+          tempPage.drawPage(embeddedPage, {
+            x: 0,
+            y: 0,
+            width: width,
+            height: height,
+          });
           
-          // Draw the embedded page with rotation
-          // For pdf-lib, we need to use the rotation parameter of drawPage
-          page.drawPage(embeddedPage, {
+          // Embed the temporary PDF back into our main document
+          const rotatedPdfBytes = await tempPdf.save();
+          const rotatedPdf = await pdfDoc.embedPdf(rotatedPdfBytes);
+          
+          if (rotatedPdf.length === 0) {
+            console.log(`PDF Export - Failed to create rotated PDF for item: ${item.id}`);
+            continue;
+          }
+          
+          // Draw the rotated PDF at the correct position with rotation
+          // Since we don't have direct control over rotation center, we position carefully
+          page.drawPage(rotatedPdf[0], {
             x: centerX - (width / 2),
             y: centerY - (height / 2),
-            width,
-            height,
+            width: width,
+            height: height,
             rotate: degrees(item.rotation),
-            xOffset: width / 2,
-            yOffset: height / 2,
           });
         } else {
           // For non-rotated items, drawing is straightforward
