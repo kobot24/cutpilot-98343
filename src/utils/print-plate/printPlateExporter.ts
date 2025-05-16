@@ -1,5 +1,5 @@
 
-import { PDFDocument } from 'pdf-lib';
+import { PDFDocument, degrees } from 'pdf-lib';
 import { PDFItemType } from '@/components/print-plate/PDFItem';
 import { PrintPlateSize } from '@/components/print-plate/PrintPlateSettings';
 
@@ -21,10 +21,6 @@ export const exportPrintPlateToPDF = async (
     // Add a page with the specified dimensions
     const page = pdfDoc.addPage([pageWidth, pageHeight]);
 
-    // Calculate the scale factor between canvas pixels and PDF points
-    // We'll assume that our canvas uses the same aspect ratio as the PDF page
-    // This is a simplified approach and might need refinement based on actual canvas size
-    
     // For each PDF item on the plate
     for (const item of items) {
       if (!item.pdfUrl) continue;
@@ -53,24 +49,19 @@ export const exportPrintPlateToPDF = async (
         const embeddedPage = embedPdf[0];
         
         // Calculate position and dimensions in PDF points
-        // Convert from screen pixels to PDF points using the plate dimensions
-        const scaleX = pageWidth / 100; // Assuming the canvas width is normalized to 100
-        const scaleY = pageHeight / 100; // Assuming the canvas height is normalized to 100
-        
-        // Calculate position and size in PDF coordinates
         const x = (item.x / 100) * pageWidth;
         const y = pageHeight - ((item.y / 100) * pageHeight) - ((item.height / 100) * pageHeight); // Flip Y coordinate for PDF
         const width = (item.width / 100) * pageWidth;
         const height = (item.height / 100) * pageHeight;
         
         // Draw the embedded PDF page onto the main page
-        // Apply rotation if needed
+        // Use degrees() to convert rotation degrees to the proper Rotation type
         page.drawPage(embeddedPage, {
           x,
           y,
           width,
           height,
-          rotate: item.rotation * (Math.PI / 180), // Convert degrees to radians
+          rotate: degrees(item.rotation), // Fix: Use degrees() function for rotation
         });
       } catch (error) {
         console.error(`Error embedding PDF for item ${item.id}:`, error);

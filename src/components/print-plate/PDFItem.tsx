@@ -1,5 +1,8 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { Document, Page } from 'react-pdf';
+import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
+import 'react-pdf/dist/esm/Page/TextLayer.css';
 
 type PDFItemProps = {
   item: PDFItemType;
@@ -23,9 +26,17 @@ export type PDFItemType = {
 
 export const PDFItem = ({ item, index, onDragStart, onRotate, onRemove }: PDFItemProps) => {
   const [isHovered, setIsHovered] = useState(false);
+  const [pdfLoaded, setPdfLoaded] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+  
+  // Function to handle successful PDF loading
+  const onLoadSuccess = ({ numPages }: { numPages: number }) => {
+    setPdfLoaded(true);
+  };
   
   return (
     <div
+      ref={containerRef}
       className="pdf-item absolute bg-white shadow-md border border-gray-200 flex flex-col"
       style={{
         left: `${item.x}px`,
@@ -39,11 +50,32 @@ export const PDFItem = ({ item, index, onDragStart, onRotate, onRemove }: PDFIte
       onMouseLeave={() => setIsHovered(false)}
     >
       <div className="relative flex-1">
-        <img 
-          src={item.thumbnail || item.pdfUrl} 
-          alt={`PDF ${index}`} 
-          className="w-full h-full object-contain"
-        />
+        <Document
+          file={item.pdfUrl}
+          onLoadSuccess={onLoadSuccess}
+          loading={
+            <div className="flex items-center justify-center w-full h-full bg-gray-100">
+              <div className="animate-pulse text-xs text-gray-400">Lädt PDF...</div>
+            </div>
+          }
+          error={
+            <div className="flex items-center justify-center w-full h-full bg-gray-100">
+              <div className="text-xs text-red-400">Fehler beim Laden</div>
+            </div>
+          }
+          className="w-full h-full"
+        >
+          <Page
+            pageNumber={1}
+            width={item.width}
+            height={item.height}
+            renderTextLayer={false}
+            renderAnnotationLayer={false}
+            className="pdf-page"
+            scale={1}
+          />
+        </Document>
+        
         {(isHovered || window.innerWidth < 768) && (
           <div className="absolute bottom-1 right-1 flex space-x-1">
             <button 

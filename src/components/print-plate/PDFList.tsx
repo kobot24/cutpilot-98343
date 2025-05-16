@@ -1,6 +1,8 @@
 
 import { UploadedFile } from '@/types/fileTypes';
 import { Button } from '@/components/ui/button';
+import { Document, Page } from 'react-pdf';
+import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
 
 type PDFListProps = {
   pdfFiles: UploadedFile[];
@@ -26,11 +28,14 @@ export const PDFList = ({ pdfFiles, onAddPDF }: PDFListProps) => {
             >
               <div className="w-12 h-16 bg-gray-50 rounded flex items-center justify-center overflow-hidden">
                 {file.convertedPdfUrl ? (
-                  <img 
-                    src={file.convertedPdfUrl} 
-                    alt={file.name} 
-                    className="object-contain w-full h-full"
-                  />
+                  <Document file={file.convertedPdfUrl}>
+                    <Page 
+                      pageNumber={1} 
+                      width={48} 
+                      renderTextLayer={false}
+                      renderAnnotationLayer={false}
+                    />
+                  </Document>
                 ) : (
                   <svg 
                     xmlns="http://www.w3.org/2000/svg" 

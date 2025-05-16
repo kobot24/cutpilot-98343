@@ -10,6 +10,7 @@ import { PDFItemType } from '@/components/print-plate/PDFItem';
 import { PrintPlateSettings } from '@/components/print-plate/PrintPlateSettings';
 import { usePrintPlateState } from '@/hooks/usePrintPlateState';
 import { exportPrintPlateToPDF, downloadPDF } from '@/utils/print-plate/printPlateExporter';
+import { usePDFLoader } from '@/hooks/usePDFLoader';
 
 type PrintPlateCanvasProps = {
   files: UploadedFile[];
@@ -23,29 +24,31 @@ export const PrintPlateCanvas = ({ files }: PrintPlateCanvasProps) => {
   // Filter files that have been converted to PDFs
   const pdfFiles = files.filter(file => file.convertedPdfUrl);
   
-  // Estimate a good initial size for PDF items based on the plate size
-  const getInitialItemSize = () => {
-    const maxWidth = 100; // Some reasonable default in pixels
-    const maxHeight = 150; // Some reasonable default in pixels
-    return { width: maxWidth, height: maxHeight };
+  // Estimate a good initial size for PDF items
+  const getInitialItemSize = (file: UploadedFile) => {
+    // Default size if we can't determine or have no aspect ratio
+    const defaultWidth = 20; // 20% of canvas width
+    const defaultHeight = 20; // 20% of canvas height
+    
+    return { width: defaultWidth, height: defaultHeight };
   };
   
   const handleAddPDF = (file: UploadedFile) => {
     if (!file.convertedPdfUrl) return;
     
-    const { width, height } = getInitialItemSize();
+    // Start with default sizes
+    const { width: initialWidth, height: initialHeight } = getInitialItemSize(file);
     
     // Create a new PDF item
     const newItem: PDFItemType = {
       id: file.id,
       pdfUrl: file.convertedPdfUrl,
-      x: 20,
-      y: 20,
-      width,
-      height,
+      x: 10,
+      y: 10,
+      width: initialWidth,
+      height: initialHeight,
       rotation: 0,
       thumbnail: file.convertedPdfUrl,
-      aspectRatio: 0.707 // Default A4 aspect ratio (width/height)
     };
     
     setItems([...items, newItem]);
