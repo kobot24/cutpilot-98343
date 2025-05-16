@@ -61,12 +61,6 @@ export const UploadArea = ({
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-end">
-        <span className="text-sm text-gray-500">
-          {files.length} von {maxFiles} {files.length === 1 ? 'Datei' : 'Dateien'}
-        </span>
-      </div>
-      
       <Card
         className={`border-2 border-dashed p-6 ${
           isDragging ? 'border-blue-500 bg-blue-50' : 'border-gray-300'
@@ -127,6 +121,12 @@ export const UploadArea = ({
           </div>
         </CardContent>
       </Card>
+      
+      <div className="flex items-center justify-end">
+        <span className="text-sm text-gray-500">
+          {files.length} von {maxFiles} {files.length === 1 ? 'Datei' : 'Dateien'}
+        </span>
+      </div>
     </div>
   );
 };
