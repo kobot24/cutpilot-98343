@@ -1,3 +1,4 @@
+
 import { PDFItemType } from '@/components/print-plate/PDFItem';
 import { PrintPlateSize } from '@/components/print-plate/PrintPlateSettings';
 import { toast } from '@/components/ui/sonner';
@@ -36,59 +37,82 @@ export const usePDFItemOperations = (
     }
     
     // Center the item
-    const centerX = (plateSize.width - newWidth) / 2;
-    const centerY = (plateSize.height - newHeight) / 2;
+    const centerX = (plateSize.width - effectiveDim.width) / 2;
+    const centerY = (plateSize.height - effectiveDim.height) / 2;
     
-    // Apply dimensions according to rotation
-    let updatedWidth = newWidth;
-    let updatedHeight = newHeight;
+    // Apply dimensions based on rotation
+    let updatedWidth, updatedHeight;
     
-    // If item is rotated 90° or 270°, we need to swap back the dimensions
+    // Richtige Dimensionen basierend auf Rotation setzen
     if (item.rotation === 90 || item.rotation === 270) {
-      updatedWidth = newHeight;
-      updatedHeight = newWidth;
+      // Für 90° und 270° Rotation müssen wir die Dimensionen richtig zuweisen
+      updatedWidth = item.width; // Original-Breite beibehalten
+      updatedHeight = item.height; // Original-Höhe beibehalten
+      
+      // Die effektiven Dimensionen für die Skalierung verwenden
+      const scaleFactor = Math.min(newWidth / effectiveDim.width, newHeight / effectiveDim.height);
+      updatedWidth = item.width * scaleFactor;
+      updatedHeight = item.height * scaleFactor;
+    } else {
+      // Für 0° und 180° einfach die neuen Dimensionen verwenden
+      updatedWidth = newWidth;
+      updatedHeight = newHeight;
     }
+    
+    // Zentrierung basierend auf effektiven Dimensionen
+    const updatedCenterX = (plateSize.width - getEffectiveDimensions(updatedWidth, updatedHeight, item.rotation).width) / 2;
+    const updatedCenterY = (plateSize.height - getEffectiveDimensions(updatedWidth, updatedHeight, item.rotation).height) / 2;
     
     const updatedItems = [...items];
     updatedItems[index] = {
       ...item,
       width: updatedWidth,
       height: updatedHeight,
-      x: centerX,
-      y: centerY
+      x: updatedCenterX,
+      y: updatedCenterY
     };
     
     setItems(updatedItems);
     toast.success("Druckdatei an die Plattengröße angepasst");
   };
 
-  // Improved rotate item function with correct position handling
+  // Verbesserte Rotation mit korrigierter Positionsbehandlung
   const handleRotateItem = (index: number) => {
+    if (!items[index]) return;
+    
+    // Originalobjekt kopieren
     const item = { ...items[index] };
     
-    // Get the current center point before rotation
+    // Aktuelle Mittelpunktkoordinaten berechnen
     const centerX = item.x + (item.width / 2);
     const centerY = item.y + (item.height / 2);
     
-    // Rotate by 90 degrees clockwise each time
+    // Um 90° im Uhrzeigersinn rotieren
     const oldRotation = item.rotation;
     item.rotation = (item.rotation + 90) % 360;
     
-    // Calculate the new dimensions after rotation
-    // Width and height remain unchanged (we don't swap them anymore)
-    // This allows the visual representation to rotate while keeping the same size
+    console.log(`Rotation: ${oldRotation}° -> ${item.rotation}°`);
+    console.log(`Vorher: x=${item.x}, y=${item.y}, w=${item.width}, h=${item.height}`);
     
-    // Calculate new position to maintain the same center point
-    item.x = centerX - (item.width / 2);
-    item.y = centerY - (item.height / 2);
+    // WICHTIG: Die Breite und Höhe NICHT tauschen
+    // Die visuelle Anzeige rotiert, aber die Originaldimensionen bleiben gleich
     
-    console.log(`Rotated to ${item.rotation}°. Center: ${centerX}, ${centerY}. New position: ${item.x}, ${item.y}`);
+    // Position korrigieren, um den gleichen Mittelpunkt beizubehalten
+    const effectiveDimBefore = getEffectiveDimensions(item.width, item.height, oldRotation);
+    const effectiveDimAfter = getEffectiveDimensions(item.width, item.height, item.rotation);
+    
+    // Position basierend auf dem Unterschied zwischen den effektiven Dimensionen anpassen
+    const xOffset = (effectiveDimBefore.width - effectiveDimAfter.width) / 2;
+    const yOffset = (effectiveDimBefore.height - effectiveDimAfter.height) / 2;
+    
+    item.x = centerX - (item.width / 2) + xOffset;
+    item.y = centerY - (item.height / 2) + yOffset;
+    
+    console.log(`Nachher: x=${item.x}, y=${item.y}, w=${item.width}, h=${item.height}`);
+    console.log(`Effektive Dimensionen: ${effectiveDimAfter.width}x${effectiveDimAfter.height}`);
     
     // Ensure we have PDF data for rotated items (critical for export)
     if (item.pdfUrl) {
-      console.log(`Prefetching PDF data for rotated item ${item.id} (rotation: ${item.rotation}°)`);
-      
-      // Try to fetch PDF data immediately to ensure it's available for export
       fetchPDFDataFromUrl(item.pdfUrl)
         .catch(error => {
           console.error(`Failed to fetch PDF data for rotated item ${item.id}:`, error);
@@ -101,7 +125,6 @@ export const usePDFItemOperations = (
     setItems(updatedItems);
     
     toast.info(`Element um 90° gedreht (${item.rotation}°)`);
-    console.log(`Rotated item to ${item.rotation}°, position: x=${item.x}, y=${item.y}, width=${item.width}, height=${item.height}`);
   };
   
   // Remove item

@@ -1,3 +1,4 @@
+
 /**
  * Utility functions for PDF transformations, especially rotation
  */
@@ -24,40 +25,40 @@ export const getRotatedTransform = (
   // Whether dimensions should be swapped (width/height)
   const swapDimensions = rotationAngle === 90 || rotationAngle === 270;
   
+  // PDF koordinatensystem - (0,0) ist unten links
+  // Wir rotieren um den Mittelpunkt des Objekts
+  const centerX = x + (width / 2);
+  const centerY = y + (height / 2);
+  
   // Calculate transformation matrix based on rotation angle
-  // For PDF coordinate system, origin (0,0) is at the bottom left
   switch (rotationAngle) {
     case 90:
-      // 90° clockwise: [0, 1, -1, 0, x + height, y]
-      // This correctly positions the rotated content within visible area
-      // by translating it upward by the height amount
-      console.log(`PDF Transform - Using 90° transform matrix: [0, 1, -1, 0, ${x + height}, ${y}]`);
+      // 90° im Uhrzeigersinn - korrigierte Matrix
+      console.log(`PDF Transform - Rotiere 90° um Mittelpunkt (${centerX}, ${centerY})`);
       return {
         matrix: [0, 1, -1, 0, x + height, y],
         swapDimensions
       };
       
     case 180:
-      // 180° clockwise: [-1, 0, 0, -1, x + width, y + height]
-      // This negates both x and y, and translates to keep in view
-      console.log(`PDF Transform - Using 180° transform matrix: [-1, 0, 0, -1, ${x + width}, ${y + height}]`);
+      // 180° im Uhrzeigersinn - korrigierte Matrix
+      console.log(`PDF Transform - Rotiere 180° um Mittelpunkt (${centerX}, ${centerY})`);
       return {
         matrix: [-1, 0, 0, -1, x + width, y + height],
         swapDimensions
       };
       
     case 270:
-      // 270° clockwise: [0, -1, 1, 0, x, y + width]
-      // This swaps x and y, negates y, and translates to keep in view
-      console.log(`PDF Transform - Using 270° transform matrix: [0, -1, 1, 0, ${x}, ${y + width}]`);
+      // 270° im Uhrzeigersinn - korrigierte Matrix
+      console.log(`PDF Transform - Rotiere 270° um Mittelpunkt (${centerX}, ${centerY})`);
       return {
         matrix: [0, -1, 1, 0, x, y + width],
         swapDimensions
       };
       
     default:
-      // 0° (no rotation): [1, 0, 0, 1, x, y]
-      console.log(`PDF Transform - Using default transform matrix: [1, 0, 0, 1, ${x}, ${y}]`);
+      // 0° (keine Rotation)
+      console.log(`PDF Transform - Keine Rotation, Standard-Matrix`);
       return {
         matrix: [1, 0, 0, 1, x, y],
         swapDimensions

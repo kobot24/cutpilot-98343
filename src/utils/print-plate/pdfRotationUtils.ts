@@ -72,20 +72,57 @@ const applyRotationToPage = (
   console.log(`PDF Rotation - Target dimensions: w=${width}, h=${height}`);
   console.log(`PDF Rotation - Original dimensions: w=${originalWidth}, h=${originalHeight}`);
   
-  // Calculate the transformation for the given rotation
-  // For PDF coordinates, origin (0,0) is at the bottom left
-  const transform = getRotatedTransform(0, 0, originalWidth, originalHeight, rotation);
+  // Apply rotation and transformation based on rotation angle
+  switch (rotation) {
+    case 90:
+      // 90° im Uhrzeigersinn
+      page.drawPage(embeddedPage, {
+        x: 0,
+        y: 0,
+        width: originalHeight,
+        height: originalWidth,
+        rotate: degrees(90),
+        xSkew: degrees(0),
+        ySkew: degrees(0)
+      });
+      break;
+      
+    case 180:
+      // 180° im Uhrzeigersinn
+      page.drawPage(embeddedPage, {
+        x: 0,
+        y: 0,
+        width: originalWidth,
+        height: originalHeight,
+        rotate: degrees(180),
+        xSkew: degrees(0),
+        ySkew: degrees(0)
+      });
+      break;
+      
+    case 270:
+      // 270° im Uhrzeigersinn
+      page.drawPage(embeddedPage, {
+        x: 0,
+        y: 0,
+        width: originalHeight,
+        height: originalWidth,
+        rotate: degrees(270),
+        xSkew: degrees(0),
+        ySkew: degrees(0)
+      });
+      break;
+      
+    default:
+      // Keine Rotation (0°)
+      page.drawPage(embeddedPage, {
+        x: 0,
+        y: 0,
+        width: originalWidth,
+        height: originalHeight
+      });
+      break;
+  }
   
-  // Apply the transformation while preserving aspect ratio
-  page.drawPage(embeddedPage, {
-    x: 0,
-    y: 0,
-    width: transform.swapDimensions ? originalHeight : originalWidth,
-    height: transform.swapDimensions ? originalWidth : originalHeight,
-    transform: {
-      matrix: transform.matrix
-    }
-  });
-  
-  console.log(`PDF Rotation - Applied ${rotation}° rotation with matrix: [${transform.matrix}]`);
+  console.log(`PDF Rotation - Applied ${rotation}° rotation successfully`);
 };

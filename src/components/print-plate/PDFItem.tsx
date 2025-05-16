@@ -84,7 +84,7 @@ export const PDFItem = ({ item, index, scale, plateSize, onDragStart, onRotate, 
         width: `${pixelWidth}px`,
         height: `${pixelHeight}px`,
         transform: `rotate(${item.rotation}deg)`,
-        transformOrigin: 'center center', // Make sure rotation is around center
+        transformOrigin: 'center center', // Rotation um den Mittelpunkt
       }}
       onMouseDown={(e) => onDragStart(index, e)}
       onMouseEnter={() => setIsHovered(true)}
