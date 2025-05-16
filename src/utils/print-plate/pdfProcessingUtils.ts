@@ -58,6 +58,8 @@ const processItemWithRotation = async (
     }
     
     const embeddedPage = embeddedPdf[0];
+    
+    // Get the dimensions and position
     const x = itemPosition.x;
     const y = itemPosition.y;
     const width = itemPosition.width;

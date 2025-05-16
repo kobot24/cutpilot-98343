@@ -42,7 +42,7 @@ export const createRotatedPDF = async (
     throw new Error("Failed to embed PDF into temporary document");
   }
   
-  // Apply rotation based on angle
+  // Apply rotation based on angle using our center-preserving function
   applyRotationToPage(
     tempPage, 
     tempEmbeddedPdf[0], 
