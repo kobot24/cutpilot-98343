@@ -6,6 +6,7 @@ import { Card } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { formatDistanceToNow } from 'date-fns';
 import { de } from 'date-fns/locale';
+import { UserSettings } from '@/hooks/useSettings';
 
 type FilesListProps = {
   files: UploadedFile[];
@@ -13,6 +14,7 @@ type FilesListProps = {
   onSelectFile: (id: string) => void;
   onRemoveFile: (id: string) => void;
   onBatchConvert?: (fileIds: string[]) => void;
+  settings?: UserSettings;
 };
 
 export const FilesList = ({
@@ -20,7 +22,8 @@ export const FilesList = ({
   selectedFileId,
   onSelectFile,
   onRemoveFile,
-  onBatchConvert
+  onBatchConvert,
+  settings
 }: FilesListProps) => {
   const [selectedFiles, setSelectedFiles] = useState<string[]>([]);
   
@@ -112,6 +115,20 @@ export const FilesList = ({
                       locale: de,
                     })}
                   </p>
+                  
+                  {/* Display settings information in each file card */}
+                  {settings && (
+                    <div className="mt-1 flex flex-col gap-0.5">
+                      <div className="flex items-center text-xs">
+                        <span className="font-medium text-[10px]">CutContour-Abstand:</span>
+                        <span className="ml-1 text-gray-600 text-[10px]">{settings.cutContourOffset} mm</span>
+                      </div>
+                      <div className="flex items-center text-xs">
+                        <span className="font-medium text-[10px]">Spotfarbe:</span>
+                        <span className="ml-1 text-gray-600 text-[10px]">{settings.spotColorName}</span>
+                      </div>
+                    </div>
+                  )}
                 </div>
                 <Button
                   variant="ghost"

@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { toast } from '@/components/ui/use-toast';
 import { UploadedFile } from '@/types/fileTypes';
@@ -124,6 +123,7 @@ export const ConversionPanel = ({
         onSelectFile={onSelectFile}
         onRemoveFile={onRemoveFile}
         onBatchConvert={handleBatchConvert}
+        settings={settings}
       />
 
       {selectedFile && (

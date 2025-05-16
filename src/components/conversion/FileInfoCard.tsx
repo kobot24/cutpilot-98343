@@ -43,17 +43,18 @@ export const FileInfoCard = ({
             <p className="text-xs text-gray-500">
               {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
             </p>
-          </div>
-        </div>
-        
-        <div className="flex flex-wrap gap-3 text-xs">
-          <div>
-            <span className="font-medium">CutContour-Abstand:</span>{' '}
-            <span className="text-gray-600">{settings.cutContourOffset} mm</span>
-          </div>
-          <div>
-            <span className="font-medium">Spotfarbe:</span>{' '}
-            <span className="text-gray-600">{settings.spotColorName}</span>
+            
+            {/* Settings information prominently displayed in each card */}
+            <div className="mt-1.5 flex flex-col gap-1">
+              <div className="flex items-center text-xs">
+                <span className="font-medium">CutContour-Abstand:</span>
+                <span className="ml-1 text-gray-600">{settings.cutContourOffset} mm</span>
+              </div>
+              <div className="flex items-center text-xs">
+                <span className="font-medium">Spotfarbe:</span>
+                <span className="ml-1 text-gray-600">{settings.spotColorName}</span>
+              </div>
+            </div>
           </div>
         </div>
         
