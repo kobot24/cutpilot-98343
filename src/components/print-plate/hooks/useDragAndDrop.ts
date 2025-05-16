@@ -2,6 +2,7 @@
 import { useRef, useState, useEffect } from 'react';
 import { PDFItemType } from '../PDFItem';
 import { PrintPlateSize } from '../PrintPlateSettings';
+import { toast } from '@/components/ui/sonner';
 
 export const useDragAndDrop = (
   items: PDFItemType[],
@@ -12,7 +13,10 @@ export const useDragAndDrop = (
 ) => {
   const [isDragging, setIsDragging] = useState(false);
   const [draggedItemIndex, setDraggedItemIndex] = useState<number | null>(null);
+  // Change from temporary snap mode to persistent snap mode
   const [isSnapModeEnabled, setIsSnapModeEnabled] = useState(false);
+  // New state for sticky behavior
+  const [isStickySnapEnabled, setIsStickySnapEnabled] = useState(true);
   const [nearestSnapEdge, setNearestSnapEdge] = useState<{
     x: number | null;
     y: number | null;
@@ -24,20 +28,35 @@ export const useDragAndDrop = (
   // Increase snap threshold for more obvious snapping behavior
   const snapThresholdCm = 0.5; // Was 0.15, now 0.5 for stronger snapping effect
 
+  // Track temporary snap toggle with Alt key
+  const [isAltKeyPressed, setIsAltKeyPressed] = useState(false);
+
+  // Load snap mode preference from localStorage on initial mount
+  useEffect(() => {
+    const storedSnapModePreference = localStorage.getItem('snapModeEnabled');
+    if (storedSnapModePreference !== null) {
+      setIsSnapModeEnabled(storedSnapModePreference === 'true');
+    }
+  }, []);
+
+  // Save snap mode preference when it changes
+  useEffect(() => {
+    localStorage.setItem('snapModeEnabled', String(isSnapModeEnabled));
+  }, [isSnapModeEnabled]);
+
   // Check for Alt key status - use both keyboard and mouse events for better detection
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Alt' || e.code === 'AltLeft' || e.code === 'AltRight') {
-        setIsSnapModeEnabled(true);
-        console.log('Snap mode enabled (key down)');
+        setIsAltKeyPressed(true);
+        console.log('Alt key pressed');
       }
     };
 
     const handleKeyUp = (e: KeyboardEvent) => {
       if (e.key === 'Alt' || e.code === 'AltLeft' || e.code === 'AltRight') {
-        setIsSnapModeEnabled(false);
-        setNearestSnapEdge({ x: null, y: null, type: null });
-        console.log('Snap mode disabled (key up)');
+        setIsAltKeyPressed(false);
+        console.log('Alt key released');
       }
     };
 
@@ -55,34 +74,33 @@ export const useDragAndDrop = (
 
     // Also handle blur/focus events to reset state when user switches tabs/windows
     const handleBlur = () => {
-      setIsSnapModeEnabled(false);
-      setNearestSnapEdge({ x: null, y: null, type: null });
-      console.log('Window blur - reset snap mode');
+      setIsAltKeyPressed(false);
+      console.log('Window blur - reset alt key state');
     };
 
     window.addEventListener('keydown', handleKeyDown);
     window.addEventListener('keyup', handleKeyUp);
     window.addEventListener('blur', handleBlur);
 
-    // Force manual activation for testing
-    const forceSnapModeToggle = (e: KeyboardEvent) => {
-      // Allow toggling snap mode with F2 key for testing
+    // Toggle snap mode with F2 key
+    const toggleSnapMode = (e: KeyboardEvent) => {
       if (e.key === 'F2') {
         setIsSnapModeEnabled(prev => {
           const newState = !prev;
           console.log(`Snap mode ${newState ? 'enabled' : 'disabled'} via F2 toggle`);
+          toast.info(`Snap-Modus ${newState ? 'aktiviert' : 'deaktiviert'}`);
           return newState;
         });
       }
     };
     
-    window.addEventListener('keydown', forceSnapModeToggle);
+    window.addEventListener('keydown', toggleSnapMode);
 
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
       window.removeEventListener('blur', handleBlur);
-      window.removeEventListener('keydown', forceSnapModeToggle);
+      window.removeEventListener('keydown', toggleSnapMode);
     };
   }, []);
 
@@ -100,7 +118,7 @@ export const useDragAndDrop = (
     
     setDraggedItemIndex(index);
     setIsDragging(true);
-    console.log(`Started dragging item ${index}, snap mode: ${isSnapModeEnabled ? 'active' : 'inactive'}`);
+    console.log(`Started dragging item ${index}, snap mode: ${isSnapModeEnabled || isAltKeyPressed ? 'active' : 'inactive'}`);
   };
 
   // Calculate snapping position for an item based on other items and plate edges
@@ -109,7 +127,10 @@ export const useDragAndDrop = (
     proposedX: number,
     proposedY: number
   ): { x: number; y: number } => {
-    if (!isSnapModeEnabled) {
+    // Use snap mode if it's enabled globally OR Alt key is pressed
+    const shouldSnap = isSnapModeEnabled || isAltKeyPressed;
+    
+    if (!shouldSnap) {
       setNearestSnapEdge({ x: null, y: null, type: null });
       return { x: proposedX, y: proposedY };
     }
@@ -128,6 +149,10 @@ export const useDragAndDrop = (
     let closestSnapEdgeX = null;
     let closestSnapEdgeY = null;
 
+    // Flag to track if we found any snap points
+    let didSnapX = false;
+    let didSnapY = false;
+
     // Check for snapping to plate edges
     // Snap to left edge
     const leftEdgeDist = Math.abs(proposedX);
@@ -135,6 +160,7 @@ export const useDragAndDrop = (
       closestSnapDistanceX = leftEdgeDist;
       closestSnapEdgeX = 0;
       snappedX = 0;
+      didSnapX = true;
       console.log(`Snapped to left edge: ${snappedX}`);
     }
     
@@ -144,6 +170,7 @@ export const useDragAndDrop = (
       closestSnapDistanceY = topEdgeDist;
       closestSnapEdgeY = 0;
       snappedY = 0;
+      didSnapY = true;
       console.log(`Snapped to top edge: ${snappedY}`);
     }
     
@@ -153,6 +180,7 @@ export const useDragAndDrop = (
       closestSnapDistanceX = rightEdgeDist;
       closestSnapEdgeX = plateSize.width;
       snappedX = plateSize.width - draggedItem.width;
+      didSnapX = true;
       console.log(`Snapped to right edge: ${snappedX}`);
     }
     
@@ -162,6 +190,7 @@ export const useDragAndDrop = (
       closestSnapDistanceY = bottomEdgeDist;
       closestSnapEdgeY = plateSize.height;
       snappedY = plateSize.height - draggedItem.height;
+      didSnapY = true;
       console.log(`Snapped to bottom edge: ${snappedY}`);
     }
 
@@ -179,6 +208,7 @@ export const useDragAndDrop = (
         closestSnapDistanceX = leftToRightDist;
         closestSnapEdgeX = otherRight;
         snappedX = otherRight;
+        didSnapX = true;
         console.log(`Snapped left to right: ${snappedX}`);
       }
       
@@ -188,6 +218,7 @@ export const useDragAndDrop = (
         closestSnapDistanceX = rightToLeftDist;
         closestSnapEdgeX = otherItem.x;
         snappedX = otherItem.x - draggedItem.width;
+        didSnapX = true;
         console.log(`Snapped right to left: ${snappedX}`);
       }
       
@@ -197,6 +228,7 @@ export const useDragAndDrop = (
         closestSnapDistanceY = topToBottomDist;
         closestSnapEdgeY = otherBottom;
         snappedY = otherBottom;
+        didSnapY = true;
         console.log(`Snapped top to bottom: ${snappedY}`);
       }
       
@@ -206,6 +238,7 @@ export const useDragAndDrop = (
         closestSnapDistanceY = bottomToTopDist;
         closestSnapEdgeY = otherItem.y;
         snappedY = otherItem.y - draggedItem.height;
+        didSnapY = true;
         console.log(`Snapped bottom to top: ${snappedY}`);
       }
       
@@ -215,6 +248,7 @@ export const useDragAndDrop = (
         closestSnapDistanceY = topEdgesAlignDist;
         closestSnapEdgeY = otherItem.y;
         snappedY = otherItem.y;
+        didSnapY = true;
         console.log(`Snapped top edges: ${snappedY}`);
       }
       
@@ -224,6 +258,7 @@ export const useDragAndDrop = (
         closestSnapDistanceY = bottomEdgesAlignDist;
         closestSnapEdgeY = otherBottom - draggedItem.height;
         snappedY = otherBottom - draggedItem.height;
+        didSnapY = true;
         console.log(`Snapped bottom edges: ${snappedY}`);
       }
       
@@ -233,6 +268,7 @@ export const useDragAndDrop = (
         closestSnapDistanceX = leftEdgesAlignDist;
         closestSnapEdgeX = otherItem.x;
         snappedX = otherItem.x;
+        didSnapX = true;
         console.log(`Snapped left edges: ${snappedX}`);
       }
       
@@ -242,6 +278,7 @@ export const useDragAndDrop = (
         closestSnapDistanceX = rightEdgesAlignDist;
         closestSnapEdgeX = otherRight - draggedItem.width;
         snappedX = otherRight - draggedItem.width;
+        didSnapX = true;
         console.log(`Snapped right edges: ${snappedX}`);
       }
     }
@@ -253,12 +290,29 @@ export const useDragAndDrop = (
       type: closestSnapDistanceX < closestSnapDistanceY ? 'vertical' : 'horizontal'
     });
     
-    // If we found any snap points, log them for debugging
-    if (snappedX !== proposedX || snappedY !== proposedY) {
-      console.log(`Snapped to X: ${snappedX}, Y: ${snappedY}`);
+    // If we found any snap points and sticky snap is enabled, display a toast notification
+    if (isStickySnapEnabled && (didSnapX || didSnapY)) {
+      // We only want to show this once when first snapping, not continuously
+      if (!window.snapToastShown) {
+        window.snapToastShown = true;
+        setTimeout(() => {
+          window.snapToastShown = false;
+        }, 1000); // Reset after 1 second to prevent too many toasts
+        
+        // Only show toast if actually snapping (not just when Alt is held)
+        if (isSnapModeEnabled) {
+          // Don't show toast for every minor movement
+          // toast.info("Element eingerastet", { duration: 500 });
+        }
+      }
     }
     
-    return { x: snappedX, y: snappedY };
+    // When sticky mode is active, return the snapped position
+    // When not in sticky mode (or not snapped), return the original position
+    return { 
+      x: (isStickySnapEnabled && didSnapX) ? snappedX : proposedX, 
+      y: (isStickySnapEnabled && didSnapY) ? snappedY : proposedY 
+    };
   };
 
   const handleMouseMove = (e: React.MouseEvent) => {
@@ -271,7 +325,7 @@ export const useDragAndDrop = (
     const newX = (e.clientX - canvasRect.left - dragOffsetX.current) / scale;
     const newY = (e.clientY - canvasRect.top - dragOffsetY.current) / scale;
     
-    // Apply snapping if enabled
+    // Apply snapping if enabled - with sticky behavior
     const { x: snappedX, y: snappedY } = calculateSnapPosition(
       draggedItemIndex,
       newX,
@@ -296,11 +350,17 @@ export const useDragAndDrop = (
     }
   };
 
+  const toggleSnapMode = () => {
+    setIsSnapModeEnabled(prev => !prev);
+  };
+
   return {
     handleDragStart,
     handleMouseMove,
     handleMouseUp,
     isSnapModeEnabled,
-    nearestSnapEdge
+    toggleSnapMode,
+    nearestSnapEdge,
+    isAltKeyPressed
   };
 };

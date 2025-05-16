@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { UploadedFile } from '@/types/fileTypes';
 import { PDFItemType } from '@/components/print-plate/PDFItem';
@@ -25,9 +24,10 @@ export const usePrintPlateItems = (plateSize: PrintPlateSize) => {
           const widthCm = (img.width / dpi) * 2.54;
           const heightCm = (img.height / dpi) * 2.54;
           
-          // Fetch and store the actual PDF binary data
+          // Ensure PDF data is fetched and cached immediately
           let pdfData: Uint8Array | undefined = undefined;
           try {
+            console.log(`Fetching and caching PDF data from: ${file.convertedPdfUrl.substring(0, 50)}...`);
             const response = await fetch(file.convertedPdfUrl);
             if (response.ok) {
               const arrayBuffer = await response.arrayBuffer();
@@ -51,6 +51,7 @@ export const usePrintPlateItems = (plateSize: PrintPlateSize) => {
         img.onerror = async () => {
           // If image fails to load, try to fetch the PDF directly to get its data
           try {
+            console.log(`Image load failed, trying direct PDF fetch: ${file.convertedPdfUrl.substring(0, 50)}...`);
             const response = await fetch(file.convertedPdfUrl);
             if (response.ok) {
               const arrayBuffer = await response.arrayBuffer();
@@ -159,11 +160,62 @@ export const usePrintPlateItems = (plateSize: PrintPlateSize) => {
     toast.info("Druckplatte geleert");
   };
 
+  // Rotate item and ensure PDF data is preserved
+  const handleRotateItem = (index: number) => {
+    const updatedItems = [...items];
+    const item = { ...updatedItems[index] };
+    
+    // Rotate by 90 degrees clockwise each time
+    item.rotation = (item.rotation + 90) % 360;
+    
+    // For 90° and 270° rotations, we need to adjust position to keep it centered
+    if ((item.rotation === 90 || item.rotation === 270) && 
+        (updatedItems[index].rotation === 0 || updatedItems[index].rotation === 180)) {
+      // Calculate the center point before rotation
+      const centerX = item.x + (item.width / 2);
+      const centerY = item.y + (item.height / 2);
+      
+      // For 90° and 270° we need to swap width and height for proper positioning
+      const tempWidth = item.width;
+      
+      // Adjust position to keep the center point the same after rotation
+      item.x = centerX - (item.height / 2);
+      item.y = centerY - (tempWidth / 2);
+    } 
+    // For 0° and 180° rotations after being at 90° or 270°
+    else if ((item.rotation === 0 || item.rotation === 180) && 
+             (updatedItems[index].rotation === 90 || updatedItems[index].rotation === 270)) {
+      // Calculate the center point before rotation
+      const centerX = item.x + (item.width / 2);
+      const centerY = item.y + (item.height / 2);
+      
+      // Re-adjust position to account for swapping back
+      item.x = centerX - (item.width / 2);
+      item.y = centerY - (item.height / 2);
+    }
+    
+    updatedItems[index] = item;
+    setItems(updatedItems);
+    
+    toast.info(`Element um 90° gedreht (${item.rotation}°)`);
+    console.log(`Rotated item to ${item.rotation}°, position: x=${item.x}, y=${item.y}, width=${item.width}, height=${item.height}`);
+  };
+  
+  // Remove item
+  const handleRemoveItem = (index: number) => {
+    const updatedItems = [...items];
+    updatedItems.splice(index, 1);
+    setItems(updatedItems);
+    toast.info("Element von der Druckplatte entfernt");
+  };
+
   return {
     items,
     setItems,
     handleAddPDF,
     handleFitToPlate,
-    handleClearPlate
+    handleClearPlate,
+    handleRotateItem,
+    handleRemoveItem
   };
 };

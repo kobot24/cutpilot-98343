@@ -12,7 +12,6 @@ type PDFItemProps = {
   onDragStart: (index: number, e: React.MouseEvent) => void;
   onRotate: (index: number) => void;
   onRemove: (index: number) => void;
-  onFitToPlate?: (index: number) => void;
 };
 
 export type PDFItemType = {
@@ -29,7 +28,7 @@ export type PDFItemType = {
   dpi?: number;
 };
 
-export const PDFItem = ({ item, index, scale, onDragStart, onRotate, onRemove, onFitToPlate }: PDFItemProps) => {
+export const PDFItem = ({ item, index, scale, onDragStart, onRotate, onRemove }: PDFItemProps) => {
   const [isHovered, setIsHovered] = useState(false);
   const [showDebug, setShowDebug] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -122,38 +121,13 @@ export const PDFItem = ({ item, index, scale, onDragStart, onRotate, onRemove, o
         
         {isHovered && (
           <div className="absolute bottom-1 right-1 flex space-x-1 z-10">
-            {onFitToPlate && (
-              <button 
-                className="bg-white/80 rounded p-1 shadow-sm"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onFitToPlate(index);
-                }}
-                title="An Plattengröße anpassen"
-              >
-                <svg 
-                  xmlns="http://www.w3.org/2000/svg" 
-                  className="h-3 w-3 text-gray-600" 
-                  fill="none" 
-                  viewBox="0 0 24 24" 
-                  stroke="currentColor"
-                >
-                  <path 
-                    strokeLinecap="round" 
-                    strokeLinejoin="round" 
-                    strokeWidth={2} 
-                    d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5v-4m0 4h-4m4 0l-5-5" 
-                  />
-                </svg>
-              </button>
-            )}
             <button 
               className="bg-white/80 rounded p-1 shadow-sm"
               onClick={(e) => {
                 e.stopPropagation();
                 onRotate(index);
               }}
-              title="Drehen"
+              title="Um 90° drehen"
             >
               <svg 
                 xmlns="http://www.w3.org/2000/svg" 

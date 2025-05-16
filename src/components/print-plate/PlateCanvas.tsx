@@ -7,6 +7,7 @@ import { PlateGrid } from './components/PlateGrid';
 import { PlateDimensions } from './components/PlateDimensions';
 import { useDragAndDrop } from './hooks/useDragAndDrop';
 import { usePlateItems } from './hooks/usePlateItems';
+import { Button } from '../ui/button';
 
 // Define a fixed scale factor (pixels per cm)
 // This needs to be consistent across the app for accurate dimensions
@@ -37,7 +38,9 @@ export const PlateCanvas = ({ items, onItemsChange, plateSize, onFitToPlate }: P
     handleMouseMove,
     handleMouseUp,
     isSnapModeEnabled,
-    nearestSnapEdge
+    toggleSnapMode,
+    nearestSnapEdge,
+    isAltKeyPressed
   } = useDragAndDrop(
     items, 
     onItemsChange, 
@@ -53,45 +56,30 @@ export const PlateCanvas = ({ items, onItemsChange, plateSize, onFitToPlate }: P
 
   // Calculate approximate scale ratio for display (1:X)
   const scaleRatio = Math.round(100 / PIXELS_PER_CM);
-  
-  // State for snap visual feedback
-  const [snapActivated, setSnapActivated] = useState(false);
-  
-  // Monitor Alt key for explicit visual feedback
-  useEffect(() => {
-    const handleAltDown = (e: KeyboardEvent) => {
-      if (e.key === 'Alt' || e.code === 'AltLeft' || e.code === 'AltRight') {
-        setSnapActivated(true);
-      }
-    };
-    
-    const handleAltUp = (e: KeyboardEvent) => {
-      if (e.key === 'Alt' || e.code === 'AltLeft' || e.code === 'AltRight') {
-        setSnapActivated(false);
-      }
-    };
-    
-    window.addEventListener('keydown', handleAltDown);
-    window.addEventListener('keyup', handleAltUp);
-    
-    return () => {
-      window.removeEventListener('keydown', handleAltDown);
-      window.removeEventListener('keyup', handleAltUp);
-    };
-  }, []);
 
   return (
     <div className="print-plate-container">
       <div className="flex flex-col">
-        {/* Scale indicator */}
-        <div className="text-xs text-gray-500 mb-1 self-end">
-          Maßstab ca. 1:{scaleRatio}
+        {/* Control bar with snap toggle */}
+        <div className="flex justify-between items-center mb-2">
+          <Button 
+            variant={isSnapModeEnabled ? "default" : "outline"}
+            size="sm"
+            onClick={toggleSnapMode}
+            className="text-xs"
+          >
+            {isSnapModeEnabled ? "Snap-Modus: An" : "Snap-Modus: Aus"}
+          </Button>
+          
+          <div className="text-xs text-gray-500 self-end">
+            Maßstab ca. 1:{scaleRatio}
+          </div>
         </div>
         
         <PlateDimensions 
           plateSize={plateSize} 
           canvasHeight={canvasHeight}
-          isSnapModeEnabled={isSnapModeEnabled || snapActivated}
+          isSnapModeEnabled={isSnapModeEnabled || isAltKeyPressed}
         />
 
         <div className="flex">
@@ -113,7 +101,7 @@ export const PlateCanvas = ({ items, onItemsChange, plateSize, onFitToPlate }: P
             <PlateGrid plateSize={plateSize} scale={getScale()} />
 
             {/* Snap guidelines - make them more visible */}
-            {(isSnapModeEnabled || snapActivated) && nearestSnapEdge.type === 'vertical' && nearestSnapEdge.x !== null && (
+            {(isSnapModeEnabled || isAltKeyPressed) && nearestSnapEdge.type === 'vertical' && nearestSnapEdge.x !== null && (
               <div 
                 className="absolute top-0 bottom-0 w-0.5 bg-green-500 z-20 pointer-events-none"
                 style={{ 
@@ -123,7 +111,7 @@ export const PlateCanvas = ({ items, onItemsChange, plateSize, onFitToPlate }: P
               />
             )}
             
-            {(isSnapModeEnabled || snapActivated) && nearestSnapEdge.type === 'horizontal' && nearestSnapEdge.y !== null && (
+            {(isSnapModeEnabled || isAltKeyPressed) && nearestSnapEdge.type === 'horizontal' && nearestSnapEdge.y !== null && (
               <div 
                 className="absolute left-0 right-0 h-0.5 bg-green-500 z-20 pointer-events-none"
                 style={{ 
@@ -134,9 +122,13 @@ export const PlateCanvas = ({ items, onItemsChange, plateSize, onFitToPlate }: P
             )}
 
             {/* Enhanced snap mode visual feedback */}
-            {isSnapModeEnabled || snapActivated ? (
+            {isSnapModeEnabled ? (
               <div className="absolute top-2 right-2 bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full z-30">
                 Snap-Modus aktiv
+              </div>
+            ) : isAltKeyPressed ? (
+              <div className="absolute top-2 right-2 bg-amber-100 text-amber-800 text-xs px-2 py-1 rounded-full z-30">
+                Snap (temporär)
               </div>
             ) : null}
 
@@ -150,7 +142,6 @@ export const PlateCanvas = ({ items, onItemsChange, plateSize, onFitToPlate }: P
                 onDragStart={handleDragStart}
                 onRotate={handleRotateItem}
                 onRemove={handleRemoveItem}
-                onFitToPlate={onFitToPlate}
               />
             ))}
             
@@ -161,8 +152,8 @@ export const PlateCanvas = ({ items, onItemsChange, plateSize, onFitToPlate }: P
       
       {/* Keyboard shortcut info */}
       <div className="mt-2 text-xs text-gray-500">
-        <p>Halte die <kbd className="px-1 py-0.5 bg-gray-100 border rounded">Alt</kbd>-Taste gedrückt für den Snap-Modus</p>
-        <p className="mt-0.5">Alternative: Drücke <kbd className="px-1 py-0.5 bg-gray-100 border rounded">F2</kbd> zum Ein/Ausschalten des Snap-Modus</p>
+        <p>Drücke <kbd className="px-1 py-0.5 bg-gray-100 border rounded">F2</kbd> oder den Button oben, um den Snap-Modus ein/auszuschalten</p>
+        <p className="mt-0.5">Temporärer Snap-Modus: Halte die <kbd className="px-1 py-0.5 bg-gray-100 border rounded">Alt</kbd>-Taste gedrückt</p>
       </div>
     </div>
   );

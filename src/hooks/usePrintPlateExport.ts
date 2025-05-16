@@ -21,10 +21,16 @@ export const usePrintPlateExport = (items: PDFItemType[], plateSize: PrintPlateS
       console.log(`Starting PDF export of ${items.length} items`);
       console.log(`Plate size: ${plateSize.width}x${plateSize.height} cm`);
       
-      // Log if we have cached PDF data for items
+      // Log if we have cached PDF data and rotation for items
       items.forEach((item, index) => {
-        console.log(`Item ${index}: ${item.id} - Has cached PDF data: ${item.pdfData ? 'Yes' : 'No'}`);
+        console.log(`Item ${index}: ${item.id} - Has cached PDF data: ${item.pdfData ? 'Yes' : 'No'}, Rotation: ${item.rotation}°`);
       });
+      
+      // Check for items with rotations
+      const hasRotatedItems = items.some(item => item.rotation !== 0);
+      if (hasRotatedItems) {
+        toast.info("Exportiere gedrehte Elemente...");
+      }
       
       const pdfBytes = await exportPrintPlateToPDF(items, plateSize);
       
@@ -38,7 +44,19 @@ export const usePrintPlateExport = (items: PDFItemType[], plateSize: PrintPlateS
       }
     } catch (error) {
       console.error("Error exporting print plate:", error);
-      toast.error("Fehler beim Exportieren: " + (error instanceof Error ? error.message : "Unbekannter Fehler"));
+      
+      // More specific error messages
+      let errorMessage = "Unbekannter Fehler";
+      if (error instanceof Error) {
+        errorMessage = error.message;
+        
+        // Check for common PDF-related errors
+        if (error.message.includes("rotation") || error.message.includes("dreh")) {
+          errorMessage = "Problem beim Exportieren von gedrehten Elementen";
+        }
+      }
+      
+      toast.error("Fehler beim Exportieren: " + errorMessage);
     } finally {
       setIsExporting(false);
     }
