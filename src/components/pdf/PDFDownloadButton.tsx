@@ -12,6 +12,7 @@ type PDFDownloadButtonProps = {
   size?: "default" | "sm" | "lg" | "icon";
   className?: string;
   disabled?: boolean;
+  iconOnly?: boolean; // Added the missing iconOnly prop
   children?: React.ReactNode;
 };
 
@@ -22,6 +23,7 @@ export const PDFDownloadButton = ({
   size = "default",
   className = "",
   disabled = false,
+  iconOnly = false, // Add default value
   children
 }: PDFDownloadButtonProps) => {
   const [isDownloading, setIsDownloading] = useState(false);
@@ -144,7 +146,7 @@ export const PDFDownloadButton = ({
       <Button
         variant={variant}
         size={size}
-        className={`w-full ${className}`}
+        className={`${iconOnly ? 'px-2' : 'w-full'} ${className}`}
         onClick={handleDownload}
         disabled={disabled || !pdfUrl || isDownloading}
       >
@@ -154,12 +156,12 @@ export const PDFDownloadButton = ({
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
             </svg>
-            Herunterladen...
+            {!iconOnly && "Herunterladen..."}
           </span>
         ) : children || (
           <>
             <Download className="h-4 w-4 mr-2" />
-            Herunterladen
+            {!iconOnly && "Herunterladen"}
           </>
         )}
       </Button>
@@ -174,4 +176,3 @@ export const PDFDownloadButton = ({
     </div>
   );
 };
-

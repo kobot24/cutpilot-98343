@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { toast } from '@/components/ui/use-toast';
 import { UploadedFile } from '@/types/fileTypes';
@@ -124,6 +125,9 @@ export const ConversionPanel = ({
         onRemoveFile={onRemoveFile}
         onBatchConvert={handleBatchConvert}
         settings={settings}
+        onConvertToPdf={onConvertToPdf} // Added missing prop
+        isLoading={isLoading} // Added missing prop
+        conversionProgress={conversionProgress} // Added missing prop
       />
 
       {selectedFile && (
