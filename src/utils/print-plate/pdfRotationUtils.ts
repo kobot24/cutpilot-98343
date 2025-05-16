@@ -19,6 +19,12 @@ export const createRotatedPDF = async (
   console.log(`PDF Rotation - Creating rotated PDF for ${rotation}° rotation`);
   console.log(`PDF Rotation - Original dimensions: width=${itemWidth}, height=${itemHeight}`);
   
+  // If no rotation, return original PDF
+  if (rotation === 0) {
+    console.log(`PDF Rotation - No rotation needed, returning original PDF`);
+    return pdfBytes;
+  }
+  
   // Create a temporary PDF that will hold our rotated content
   const tempPdf = await PDFDocument.create();
   
@@ -72,30 +78,78 @@ const applyRotationToPage = (
   console.log(`PDF Rotation - Target dimensions: w=${width}, h=${height}`);
   console.log(`PDF Rotation - Original dimensions: w=${originalWidth}, h=${originalHeight}`);
   
-  // Calculate the transformation for the given rotation
-  // For PDF coordinates, origin (0,0) is at the bottom left
-  // For center-preserving rotation, we'll calculate based on the center of the page
-  
-  // Calculate center points
+  // Calculate center point
   const centerX = width / 2;
   const centerY = height / 2;
   console.log(`PDF Rotation - Page center: (${centerX}, ${centerY})`);
   
-  // Calculate the transformation
-  const transform = getRotatedTransform(0, 0, originalWidth, originalHeight, rotation);
+  // For PDF coordinates, origin (0,0) is at the bottom left
+  // For center-preserving rotation, we'll calculate based on the center of the page
+  let transform;
+  let drawWidth, drawHeight;
   
-  // Apply the transformation while preserving aspect ratio
-  // For rotations of 90 and 270 degrees, we need to swap the width and height
-  // to ensure proper aspect ratio and prevent distortion
-  page.drawPage(embeddedPage, {
-    x: 0,
-    y: 0,
-    width: transform.swapDimensions ? originalHeight : originalWidth,
-    height: transform.swapDimensions ? originalWidth : originalHeight,
-    transform: {
-      matrix: transform.matrix
-    }
-  });
+  // The important change: only rotate the content, not the cut contour bounds
+  switch (rotation) {
+    case 90:
+      // For 90° rotation
+      drawWidth = originalHeight;
+      drawHeight = originalWidth;
+      // Draw at center, rotated 90°
+      page.drawPage(embeddedPage, {
+        x: 0,
+        y: 0,
+        width: drawWidth,
+        height: drawHeight, 
+        rotate: degrees(90),
+        xSkew: degrees(0),
+        ySkew: degrees(0)
+      });
+      break;
+      
+    case 180:
+      // For 180° rotation
+      drawWidth = originalWidth;
+      drawHeight = originalHeight;
+      // Draw at center, rotated 180°
+      page.drawPage(embeddedPage, {
+        x: 0,
+        y: 0,
+        width: drawWidth,
+        height: drawHeight,
+        rotate: degrees(180),
+        xSkew: degrees(0),
+        ySkew: degrees(0)
+      });
+      break;
+      
+    case 270:
+      // For 270° rotation
+      drawWidth = originalHeight;
+      drawHeight = originalWidth;
+      // Draw at center, rotated 270°
+      page.drawPage(embeddedPage, {
+        x: 0,
+        y: 0,
+        width: drawWidth,
+        height: drawHeight,
+        rotate: degrees(270),
+        xSkew: degrees(0),
+        ySkew: degrees(0)
+      });
+      break;
+      
+    default:
+      // 0° (no rotation)
+      drawWidth = originalWidth;
+      drawHeight = originalHeight;
+      page.drawPage(embeddedPage, {
+        x: 0,
+        y: 0,
+        width: drawWidth,
+        height: drawHeight
+      });
+      break;
+  }
   
-  console.log(`PDF Rotation - Applied ${rotation}° rotation with matrix: [${transform.matrix}]`);
+  console.log(`PDF Rotation - Applied rotation with dimensions: w=${drawWidth}, h=${drawHeight}`);
 };

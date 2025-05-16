@@ -1,4 +1,3 @@
-
 /**
  * Utility functions for PDF transformations, especially rotation
  */
@@ -85,4 +84,35 @@ export const getEffectiveDimensions = (
   }
   // For 0° and 180° rotations, keep original dimensions
   return { width, height };
+};
+
+/**
+ * Get separate transformation matrices for content and cut contour
+ * @param x The x position in points (left)
+ * @param y The y position in points (bottom in PDF coordinates)
+ * @param width The width of the element in points
+ * @param height The height of the element in points
+ * @param rotationAngle The rotation angle in degrees (0, 90, 180, 270)
+ * @returns Both transformation matrices
+ */
+export const getSeparateTransforms = (
+  x: number,
+  y: number, 
+  width: number,
+  height: number,
+  rotationAngle: number
+): { 
+  contentTransform: { matrix: number[], swapDimensions: boolean },
+  cutContourTransform: { matrix: number[], swapDimensions: boolean }
+} => {
+  // Get the rotated transform for content
+  const contentTransform = getRotatedTransform(x, y, width, height, rotationAngle);
+  
+  // For cut contour, we always use non-rotated transform to keep it rectangular
+  const cutContourTransform = getRotatedTransform(x, y, width, height, 0);
+  
+  console.log(`PDF Transform - Content transform: [${contentTransform.matrix}]`);
+  console.log(`PDF Transform - Cut contour transform: [${cutContourTransform.matrix}]`);
+  
+  return { contentTransform, cutContourTransform };
 };

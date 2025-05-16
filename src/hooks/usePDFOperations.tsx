@@ -31,7 +31,12 @@ export const usePDFOperations = (
       // Update file with converted PDF URL
       const updatedFiles = files.map(f => 
         f.id === fileId 
-          ? { ...f, convertedPdfUrl: pdfUrl }
+          ? {
+              ...f,
+              convertedPdfUrl: pdfUrl,
+              // Store the original file information for proper rotation handling
+              originalFormat: file.type?.includes('image') ? 'image' : 'pdf'
+            }
           : f
       );
       
@@ -39,7 +44,11 @@ export const usePDFOperations = (
       
       // Update selected file if it's the one we just converted
       if (selectedFile?.id === fileId) {
-        setSelectedFile({ ...selectedFile, convertedPdfUrl: pdfUrl });
+        setSelectedFile({
+          ...selectedFile,
+          convertedPdfUrl: pdfUrl,
+          originalFormat: file.type?.includes('image') ? 'image' : 'pdf'
+        });
       }
       
       return pdfUrl;

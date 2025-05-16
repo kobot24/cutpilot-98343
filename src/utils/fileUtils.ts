@@ -25,10 +25,16 @@ export const readFileAsDataURL = (file: File): Promise<string> => {
 };
 
 /**
- * Generates a random ID
+ * Generates a unique ID that's more collision-resistant
  */
 export const generateId = (): string => {
-  return Date.now().toString(36) + Math.random().toString(36).substring(2);
+  // Improved ID generation to avoid collisions
+  const timestamp = Date.now().toString(36);
+  const randomPart = Math.random().toString(36).substring(2, 10);
+  const secondRandom = Math.random().toString(36).substring(2, 6);
+  
+  // Combine parts for better uniqueness
+  return `${timestamp}-${randomPart}-${secondRandom}`;
 };
 
 /**
@@ -39,4 +45,3 @@ export const revokeBlobUrl = (url?: string): void => {
     URL.revokeObjectURL(url);
   }
 };
-
