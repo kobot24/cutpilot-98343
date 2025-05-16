@@ -9,7 +9,9 @@ import { useDragAndDrop } from './hooks/useDragAndDrop';
 import { usePlateItems } from './hooks/usePlateItems';
 
 // Define a fixed scale factor (pixels per cm)
-const PIXELS_PER_CM = 3.7; // Based on 1120px ÷ 300cm example
+// Update scale factor to fit more items on the plate (was 3.7)
+// For a 300cm plate width to properly fit 3x ~90cm items, we need a smaller scale
+const PIXELS_PER_CM = 2.5;
 
 type PlateCanvasProps = {
   items: PDFItemType[];

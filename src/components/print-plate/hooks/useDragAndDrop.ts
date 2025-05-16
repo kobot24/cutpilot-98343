@@ -15,7 +15,7 @@ export const useDragAndDrop = (
   const [isSnapModeEnabled, setIsSnapModeEnabled] = useState(false);
   const dragOffsetX = useRef(0);
   const dragOffsetY = useRef(0);
-  const snapThresholdCm = 0.5; // Snap threshold in cm
+  const snapThresholdCm = 0.2; // Reduce snap threshold to make snapping tighter (was 0.5)
 
   // Track Option/Alt key press for snap mode
   useEffect(() => {
@@ -67,7 +67,7 @@ export const useDragAndDrop = (
     }
 
     const draggedItem = items[itemIndex];
-    const snapThresholdPx = snapThresholdCm;
+    const snapThresholdPx = snapThresholdCm; // Using cm value directly (scale is handled in handleMouseMove)
     let snappedX = proposedX;
     let snappedY = proposedY;
 
@@ -97,7 +97,7 @@ export const useDragAndDrop = (
       snappedY = plateSize.height - draggedItem.height;
     }
 
-    // Check against other items for snapping
+    // Check against other items for snapping - now with tighter snapping
     for (let i = 0; i < items.length; i++) {
       if (i === itemIndex) continue; // Skip the item being dragged
       
@@ -105,22 +105,22 @@ export const useDragAndDrop = (
       const otherRight = otherItem.x + otherItem.width;
       const otherBottom = otherItem.y + otherItem.height;
       
-      // Snap left edge to right edge
+      // Snap left edge to right edge (tight snapping)
       if (Math.abs(proposedX - otherRight) < snapThresholdPx) {
         snappedX = otherRight;
       }
       
-      // Snap right edge to left edge
+      // Snap right edge to left edge (tight snapping)
       if (Math.abs(draggedRight - otherItem.x) < snapThresholdPx) {
         snappedX = otherItem.x - draggedItem.width;
       }
       
-      // Snap top edge to bottom edge
+      // Snap top edge to bottom edge (tight snapping)
       if (Math.abs(proposedY - otherBottom) < snapThresholdPx) {
         snappedY = otherBottom;
       }
       
-      // Snap bottom edge to top edge
+      // Snap bottom edge to top edge (tight snapping)
       if (Math.abs(draggedBottom - otherItem.y) < snapThresholdPx) {
         snappedY = otherItem.y - draggedItem.height;
       }

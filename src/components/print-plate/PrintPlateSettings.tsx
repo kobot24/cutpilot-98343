@@ -11,9 +11,10 @@ export type PrintPlateSize = {
   height: number; // in cm
 };
 
+// Update default size to match usePrintPlateState
 const DEFAULT_SIZE: PrintPlateSize = {
-  width: 60,
-  height: 40
+  width: 300,
+  height: 200
 };
 
 type PrintPlateSettingsProps = {

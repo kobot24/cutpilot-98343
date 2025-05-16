@@ -4,9 +4,10 @@ import { PrintPlateSize } from '@/components/print-plate/PrintPlateSettings';
 
 const STORAGE_KEY = 'printPlateSettings';
 
+// Update default plate size to 300x200
 const DEFAULT_PLATE_SIZE: PrintPlateSize = {
-  width: 60,
-  height: 40
+  width: 300,
+  height: 200
 };
 
 export const usePrintPlateState = () => {

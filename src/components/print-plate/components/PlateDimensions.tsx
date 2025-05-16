@@ -33,7 +33,7 @@ export const PlateDimensions = ({
       <div className="absolute bottom-2 right-2 bg-white/80 text-xs px-2 py-1 rounded text-gray-500 z-10">
         <span className="font-medium">{plateSize.width} × {plateSize.height} cm</span>
         <span className="block mt-0.5 text-[10px] text-gray-400">
-          Einheit: 1 cm = 3.7 px
+          Einheit: 1 cm = 2.5 px
         </span>
         
         {/* Snap mode indicator with improved visibility */}
