@@ -61,24 +61,21 @@ const processItemWithRotation = async (
           throw new Error("Failed to embed PDF");
         }
         
-        // Get original dimensions
-        const originalW = itemPosition.width;
-        const originalH = itemPosition.height;
-        
-        // Calculate the center point of the original unrotated item
-        const centerX = itemPosition.x + (originalW / 2);
-        const centerY = itemPosition.y + (originalH / 2);
+        // Calculate the center point of the original unrotated item in points
+        const centerX = itemPosition.x + (itemPosition.width / 2);
+        const centerY = itemPosition.y + (itemPosition.height / 2);
         console.log(`PDF Processing - Item center point: (${centerX}, ${centerY})`);
 
-        // Set rotation values based on the rotation angle
-        let rotatedW = originalW;
-        let rotatedH = originalH;
+        // For 90° and 270° rotations, we need to swap width and height
+        // to maintain the correct aspect ratio
+        let rotatedWidth = itemPosition.width;
+        let rotatedHeight = itemPosition.height;
         let rotationAngle = 0;
         
         switch (item.rotation) {
           case 90:
-            rotatedW = originalH;
-            rotatedH = originalW;
+            rotatedWidth = itemPosition.height;
+            rotatedHeight = itemPosition.width;
             rotationAngle = 90;
             break;
             
@@ -87,24 +84,24 @@ const processItemWithRotation = async (
             break;
             
           case 270:
-            rotatedW = originalH;
-            rotatedH = originalW;
+            rotatedWidth = itemPosition.height;
+            rotatedHeight = itemPosition.width;
             rotationAngle = 270;
             break;
         }
         
-        // Calculate the corrected position to maintain the center point
-        const correctedX = centerX - (rotatedW / 2);
-        const correctedY = centerY - (rotatedH / 2);
+        // Calculate the new position to maintain the center point
+        const correctedX = centerX - (rotatedWidth / 2);
+        const correctedY = centerY - (rotatedHeight / 2);
         
-        console.log(`PDF Processing - Corrected position: x=${correctedX}, y=${correctedY}, width=${rotatedW}, height=${rotatedH}, angle=${rotationAngle}°`);
+        console.log(`PDF Processing - Corrected position: x=${correctedX}, y=${correctedY}, width=${rotatedWidth}, height=${rotatedHeight}, angle=${rotationAngle}°`);
         
         // Draw the page with proper dimensions and rotation
         page.drawPage(embeddedPdf[0], {
           x: correctedX,
           y: correctedY,
-          width: rotatedW,
-          height: rotatedH,
+          width: rotatedWidth,
+          height: rotatedHeight,
           rotate: degrees(rotationAngle)
         });
         

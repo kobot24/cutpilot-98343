@@ -30,7 +30,6 @@ export const usePDFOperations = (
       
       // Determine if the original file was an image or PDF
       const isImage = file.type.startsWith('image/');
-      const fileFormat = isImage ? "image" as const : "pdf" as const;
       
       // Update file with converted PDF URL
       const updatedFiles = files.map(f => 
@@ -38,7 +37,7 @@ export const usePDFOperations = (
           ? { 
               ...f, 
               convertedPdfUrl: pdfUrl, 
-              originalFormat: fileFormat
+              originalFormat: isImage ? "image" : "pdf" 
             }
           : f
       );
@@ -50,7 +49,7 @@ export const usePDFOperations = (
         setSelectedFile({ 
           ...selectedFile, 
           convertedPdfUrl: pdfUrl, 
-          originalFormat: fileFormat
+          originalFormat: isImage ? "image" : "pdf"
         });
       }
       
