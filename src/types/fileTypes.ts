@@ -8,4 +8,5 @@ export type UploadedFile = {
   createdAt: Date;
   convertedPdfUrl?: string;
   convertedPdfData?: string;
+  originalFormat?: "image" | "pdf";
 };
