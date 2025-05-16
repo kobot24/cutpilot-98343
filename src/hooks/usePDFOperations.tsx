@@ -44,14 +44,11 @@ export const usePDFOperations = (
       
       // Update selected file if it's the one we just converted
       if (selectedFile?.id === fileId) {
-        // Create a new object with the updated properties
-        const updatedSelectedFile = {
+        setSelectedFile({
           ...selectedFile,
           convertedPdfUrl: pdfUrl,
           originalFormat: file.type?.includes('image') ? 'image' : 'pdf'
-        };
-        
-        setSelectedFile(updatedSelectedFile);
+        });
       }
       
       return pdfUrl;
