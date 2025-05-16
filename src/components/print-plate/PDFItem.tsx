@@ -1,17 +1,20 @@
 
 import { useState, useEffect, useRef } from 'react';
-import { Document, Page } from 'react-pdf';
+import { Document, Page, pdfjs } from 'react-pdf';
 import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
 import 'react-pdf/dist/esm/Page/TextLayer.css';
 import { usePDFLoader } from '@/hooks/usePDFLoader';
 import { PrintPlateSize } from './PrintPlateSettings';
 import { getEffectiveDimensions } from '@/utils/print-plate/pdfTransformUtils';
 
+// Initialize PDF.js worker
+pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
+
 type PDFItemProps = {
   item: PDFItemType;
   index: number;
   scale: number;
-  plateSize: PrintPlateSize; // Add plateSize prop
+  plateSize: PrintPlateSize;
   onDragStart: (index: number, e: React.MouseEvent) => void;
   onRotate: (index: number) => void;
   onRemove: (index: number) => void;
@@ -34,8 +37,8 @@ export type PDFItemType = {
 export const PDFItem = ({ item, index, scale, plateSize, onDragStart, onRotate, onRemove }: PDFItemProps) => {
   const [isHovered, setIsHovered] = useState(false);
   const [showDebug, setShowDebug] = useState(false);
+  const [errorLoading, setErrorLoading] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
-  const { handleDocumentLoadSuccess } = usePDFLoader({ pdfUrl: item.pdfUrl });
   
   // Convert item dimensions from percentages to pixels using the scale
   const pixelWidth = item.width * scale;
@@ -74,6 +77,16 @@ export const PDFItem = ({ item, index, scale, plateSize, onDragStart, onRotate, 
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
   
+  const handleDocumentLoadSuccess = () => {
+    console.log(`PDF item ${item.id} loaded successfully`);
+    setErrorLoading(false);
+  };
+
+  const handleDocumentLoadError = (error: Error) => {
+    console.error(`Error loading PDF item ${item.id}:`, error);
+    setErrorLoading(true);
+  };
+
   return (
     <div
       ref={containerRef}
@@ -91,31 +104,45 @@ export const PDFItem = ({ item, index, scale, plateSize, onDragStart, onRotate, 
       onMouseLeave={() => setIsHovered(false)}
     >
       <div className="relative flex-1 overflow-hidden">
-        <Document
-          file={item.pdfUrl}
-          onLoadSuccess={handleDocumentLoadSuccess}
-          loading={
-            <div className="flex items-center justify-center w-full h-full">
-              <div className="animate-pulse text-xs text-gray-400">Lädt...</div>
-            </div>
-          }
-          error={
-            <div className="flex items-center justify-center w-full h-full">
-              <div className="text-xs text-red-400">Fehler</div>
-            </div>
-          }
-          className="w-full h-full"
-        >
-          <Page
-            pageNumber={1}
-            width={pixelWidth}
-            height={pixelHeight}
-            renderTextLayer={false}
-            renderAnnotationLayer={false}
-            className="pdf-page"
-            scale={1}
+        {item.pdfUrl ? (
+          <Document
+            file={item.pdfUrl}
+            onLoadSuccess={handleDocumentLoadSuccess}
+            onError={handleDocumentLoadError}
+            loading={
+              <div className="flex items-center justify-center w-full h-full">
+                <div className="animate-pulse text-xs text-gray-400">Lädt...</div>
+              </div>
+            }
+            error={
+              <div className="flex items-center justify-center w-full h-full">
+                <div className="text-xs text-red-400">Fehler</div>
+              </div>
+            }
+            className="w-full h-full"
+          >
+            <Page
+              pageNumber={1}
+              width={pixelWidth}
+              height={pixelHeight}
+              renderTextLayer={false}
+              renderAnnotationLayer={false}
+              className="pdf-page"
+            />
+          </Document>
+        ) : item.thumbnail ? (
+          // Fallback to thumbnail if PDF URL is not available
+          <img 
+            src={item.thumbnail} 
+            alt="PDF preview" 
+            className="w-full h-full object-contain"
           />
-        </Document>
+        ) : (
+          // No preview available
+          <div className="flex items-center justify-center w-full h-full bg-gray-100">
+            <div className="text-xs text-gray-400">Keine Vorschau</div>
+          </div>
+        )}
         
         {/* Darkened overlay areas for parts that extend beyond plate boundaries */}
         {exceedsBoundaries && (

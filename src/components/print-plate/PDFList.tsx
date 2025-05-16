@@ -1,8 +1,11 @@
 
 import { UploadedFile } from '@/types/fileTypes';
 import { Button } from '@/components/ui/button';
-import { Document, Page } from 'react-pdf';
+import { Document, Page, pdfjs } from 'react-pdf';
 import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
+
+// Initialize PDF.js worker
+pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
 
 type PDFListProps = {
   pdfFiles: UploadedFile[];
