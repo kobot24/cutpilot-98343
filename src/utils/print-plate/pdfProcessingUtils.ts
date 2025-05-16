@@ -1,4 +1,3 @@
-
 import { PDFDocument } from 'pdf-lib';
 import { getPDFDataFromItem } from './pdfDataUtils';
 import { calculateItemPositionInPoints } from './pdfCoordinateUtils';
@@ -65,27 +64,33 @@ const processItemWithRotation = async (
         
         const x = itemPosition.x;
         const y = itemPosition.y;
+        const width = itemPosition.width;
+        const height = itemPosition.height;
         
-        const originalW = itemPosition.width;
-        const originalH = itemPosition.height;
+        // Calculate center point of the original item
+        const centerX = x + width / 2;
+        const centerY = y + height / 2;
         
-        // Correction for 90° rotation - Add the original width to y position
-        // This ensures the rotated item appears in the correct position
-        const correctedX = x;
-        const correctedY = y + originalW; // y + original width (shifts up after rotation)
+        // Calculate new dimensions after rotation (swapped)
+        const newWidth = height;
+        const newHeight = width;
         
-        console.log(`PDF Processing - Drawing 90° rotated page with corrected position`);
-        console.log(`PDF Processing - Original position: x=${x}, y=${y}`);
-        console.log(`PDF Processing - Corrected position: x=${correctedX}, y=${correctedY}`);
-        console.log(`PDF Processing - Using swapped dimensions: width=${originalH}, height=${originalW}`);
+        // Calculate corrected position to maintain the center point
+        const correctedX = centerX - newWidth / 2;
+        const correctedY = centerY - newHeight / 2;
         
-        // Draw the rotated page with swapped dimensions, rotation, and corrected position
+        console.log(`PDF Processing - Original dimensions: width=${width}, height=${height}`);
+        console.log(`PDF Processing - Original center point: (${centerX}, ${centerY})`);
+        console.log(`PDF Processing - New dimensions: width=${newWidth}, height=${newHeight}`);
+        console.log(`PDF Processing - Corrected position: (${correctedX}, ${correctedY})`);
+        
+        // Draw the rotated page with swapped dimensions, rotation, and center-preserving position
         page.drawPage(rotatedPage, {
           x: correctedX,
           y: correctedY,
-          width: originalH,     // swap dimensions (width becomes height)
-          height: originalW,     // swap dimensions (height becomes width)
-          rotate: degrees(90)    // 90° clockwise rotation
+          width: newWidth,     // swapped width (original height)
+          height: newHeight,   // swapped height (original width)
+          rotate: degrees(90)  // 90° clockwise rotation
         });
         
         console.log(`PDF Processing - Successfully added 90° rotated item ${item.id}`);
@@ -107,45 +112,74 @@ const processItemWithRotation = async (
         }
       }
     } else if (item.rotation !== 0) {
-      // Other rotations - use existing logic
+      // Other rotations - apply similar center-preserving logic for consistency
       console.log(`PDF Processing - Processing rotation: ${item.rotation}°`);
       
       try {
         // Embed the original PDF
-        const originalPdfEmbed = await pdfDoc.embedPdf(pdfBytes);
+        const embeddedPdf = await pdfDoc.embedPdf(pdfBytes);
         
-        if (originalPdfEmbed.length === 0) {
+        if (embeddedPdf.length === 0) {
           throw new Error("Failed to embed original PDF");
         }
         
+        const x = itemPosition.x;
+        const y = itemPosition.y;
+        const width = itemPosition.width;
+        const height = itemPosition.height;
+        
+        // Calculate center point of the original item
+        const centerX = x + width / 2;
+        const centerY = y + height / 2;
+        
         // Get the effective dimensions based on rotation
-        const effectiveDimensions = getEffectiveDimensions(
-          itemPosition.width,
-          itemPosition.height,
-          item.rotation
-        );
+        const effectiveDimensions = getEffectiveDimensions(width, height, item.rotation);
+        const newWidth = effectiveDimensions.width;
+        const newHeight = effectiveDimensions.height;
         
-        console.log(`PDF Processing - Effective dimensions for rotation: width=${effectiveDimensions.width}, height=${effectiveDimensions.height}`);
+        // Calculate corrected position to maintain the center point
+        const correctedX = centerX - newWidth / 2;
+        const correctedY = centerY - newHeight / 2;
         
-        // Get the transformation matrix
-        const transform = getRotatedTransform(
-          itemPosition.x, 
-          itemPosition.y, 
-          itemPosition.width, 
-          itemPosition.height, 
-          item.rotation
-        );
+        console.log(`PDF Processing - Effective dimensions for ${item.rotation}° rotation: width=${newWidth}, height=${newHeight}`);
+        console.log(`PDF Processing - Center-preserving position: (${correctedX}, ${correctedY})`);
         
-        console.log(`PDF Processing - Using transformation matrix: [${transform.matrix}]`);
-        
-        // Draw the page with transformation
-        page.drawPage(originalPdfEmbed[0], {
-          width: itemPosition.width,
-          height: itemPosition.height,
-          transform: {
-            matrix: transform.matrix
-          }
-        });
+        if (item.rotation === 180) {
+          // For 180° rotation, we can use direct drawing with the corrected position
+          page.drawPage(embeddedPdf[0], {
+            x: correctedX,
+            y: correctedY,
+            width: width,
+            height: height,
+            rotate: degrees(180)
+          });
+        } else if (item.rotation === 270) {
+          // For 270° rotation, use swapped dimensions like with 90°
+          page.drawPage(embeddedPdf[0], {
+            x: correctedX,
+            y: correctedY,
+            width: newWidth,
+            height: newHeight,
+            rotate: degrees(270)
+          });
+        } else {
+          // Try using the transformation matrix as a fallback for other angles
+          const transform = getRotatedTransform(
+            correctedX, 
+            correctedY, 
+            width, 
+            height, 
+            item.rotation
+          );
+          
+          page.drawPage(embeddedPdf[0], {
+            width: width,
+            height: height,
+            transform: {
+              matrix: transform.matrix
+            }
+          });
+        }
         
         console.log(`PDF Processing - Successfully added rotated item ${item.id}`);
       } catch (error) {

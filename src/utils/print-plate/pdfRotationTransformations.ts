@@ -24,15 +24,26 @@ export const applyRotationToPage = (
   console.log(`PDF Rotation - Target dimensions: w=${width}, h=${height}`);
   console.log(`PDF Rotation - Original dimensions: w=${originalWidth}, h=${originalHeight}`);
   
+  // Calculate center point for consistent placement
+  const centerX = width / 2;
+  const centerY = height / 2;
+  
   // Apply rotation and transformation based on rotation angle
   switch (rotation) {
     case 90:
-      // 90° clockwise - use consistent approach with the main PDF processing
+      // 90° clockwise with center-preserving position
+      // For 90° rotation, we swap width and height
+      // Calculate the corrected position to maintain center point
+      const correctedX90 = centerX - originalHeight / 2;
+      const correctedY90 = centerY - originalWidth / 2;
+      
+      console.log(`PDF Rotation - Center-preserving position for 90°: (${correctedX90}, ${correctedY90})`);
+      
       page.drawPage(embeddedPage, {
-        x: 0,
-        y: originalWidth, // Shift by original width to maintain position
-        width: height,
-        height: width,
+        x: correctedX90,
+        y: correctedY90,
+        width: originalHeight,
+        height: originalWidth,
         rotate: degrees(90),
         xSkew: degrees(0),
         ySkew: degrees(0)
@@ -40,10 +51,15 @@ export const applyRotationToPage = (
       break;
       
     case 180:
-      // 180° im Uhrzeigersinn
+      // 180° rotation with center-preserving position
+      const correctedX180 = centerX - originalWidth / 2;
+      const correctedY180 = centerY - originalHeight / 2;
+      
+      console.log(`PDF Rotation - Center-preserving position for 180°: (${correctedX180}, ${correctedY180})`);
+      
       page.drawPage(embeddedPage, {
-        x: 0,
-        y: 0,
+        x: correctedX180,
+        y: correctedY180,
         width: originalWidth,
         height: originalHeight,
         rotate: degrees(180),
@@ -53,12 +69,18 @@ export const applyRotationToPage = (
       break;
       
     case 270:
-      // 270° im Uhrzeigersinn - korrigierte Implementierung
+      // 270° rotation with center-preserving position
+      // For 270° rotation, we swap width and height
+      const correctedX270 = centerX - originalHeight / 2;
+      const correctedY270 = centerY - originalWidth / 2;
+      
+      console.log(`PDF Rotation - Center-preserving position for 270°: (${correctedX270}, ${correctedY270})`);
+      
       page.drawPage(embeddedPage, {
-        x: 0,
-        y: 0,
-        width: width,
-        height: height,
+        x: correctedX270,
+        y: correctedY270,
+        width: originalHeight,
+        height: originalWidth,
         rotate: degrees(270),
         xSkew: degrees(0),
         ySkew: degrees(0)
@@ -66,10 +88,15 @@ export const applyRotationToPage = (
       break;
       
     default:
-      // Keine Rotation (0°)
+      // No rotation (0°) with center-preserving position
+      const correctedX0 = centerX - originalWidth / 2;
+      const correctedY0 = centerY - originalHeight / 2;
+      
+      console.log(`PDF Rotation - Center-preserving position for 0°: (${correctedX0}, ${correctedY0})`);
+      
       page.drawPage(embeddedPage, {
-        x: 0,
-        y: 0,
+        x: correctedX0,
+        y: correctedY0,
         width: originalWidth,
         height: originalHeight
       });
@@ -78,3 +105,4 @@ export const applyRotationToPage = (
   
   console.log(`PDF Rotation - Applied ${rotation}° rotation successfully`);
 };
+
