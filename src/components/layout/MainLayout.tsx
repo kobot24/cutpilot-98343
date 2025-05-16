@@ -6,6 +6,8 @@ import { ContentRenderer } from '@/components/layout/ContentRenderer';
 import { UploadedFile } from '@/types/fileTypes';
 import { UserSettings } from '@/hooks/useSettings';
 import { ConversionProgress } from '@/hooks/usePDFConverter';
+import { Button } from '@/components/ui/button';
+import { Trash2 } from 'lucide-react';
 
 type MainLayoutProps = {
   activeSection: string;
@@ -48,9 +50,23 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
         <AppSidebar activeSection={activeSection} onNavigate={onNavigate} />
         
         <SidebarInset className="flex-1">
-          <header className="h-16 border-b flex items-center px-6 bg-white">
-            <SidebarTrigger className="mr-4" />
-            <h1 className="text-xl font-semibold capitalize">{activeSection}</h1>
+          <header className="h-16 border-b flex items-center justify-between px-6 bg-white">
+            <div className="flex items-center">
+              <SidebarTrigger className="mr-4" />
+              <h1 className="text-xl font-semibold capitalize">{activeSection}</h1>
+            </div>
+            
+            {activeSection === 'upload' && files.length > 0 && (
+              <Button 
+                variant="outline" 
+                size="sm"
+                className="text-red-500 hover:bg-red-50"
+                onClick={clearAllFiles}
+              >
+                <Trash2 className="h-4 w-4 mr-1" /> 
+                Alle Dateien löschen
+              </Button>
+            )}
           </header>
           
           <main className="flex-1 overflow-auto p-6">

@@ -1,4 +1,3 @@
-
 import React, { useCallback, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -65,16 +64,6 @@ export const UploadArea = ({
         <span className="text-sm text-gray-500">
           {files.length} von {maxFiles} {files.length === 1 ? 'Datei' : 'Dateien'}
         </span>
-        {files.length > 0 && (
-          <Button 
-            variant="outline" 
-            onClick={onClearAllFiles}
-            size="sm"
-            className="text-red-500 hover:bg-red-50"
-          >
-            Alle Dateien löschen
-          </Button>
-        )}
       </div>
       
       <Card
