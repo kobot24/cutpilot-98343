@@ -25,9 +25,10 @@ export const PlateGrid = ({ plateSize, scale }: PlateGridProps) => {
           y1="0" 
           x2={cmToPixels(i * gridStep)} 
           y2="100%" 
-          stroke={i === 0 ? "#cccccc" : "#f0f0f0"} 
+          stroke={i === 0 ? "#F97316" : "#F97316"} 
           strokeWidth={i === 0 ? "1" : "0.5"} 
           strokeDasharray={i === 0 ? "" : "2,2"}
+          opacity={i === 0 ? "0.8" : "0.4"}
         />
       ))}
       
@@ -39,9 +40,10 @@ export const PlateGrid = ({ plateSize, scale }: PlateGridProps) => {
           y1={cmToPixels(i * gridStep)} 
           x2="100%" 
           y2={cmToPixels(i * gridStep)} 
-          stroke={i === 0 ? "#cccccc" : "#f0f0f0"} 
+          stroke={i === 0 ? "#F97316" : "#F97316"} 
           strokeWidth={i === 0 ? "1" : "0.5"}
           strokeDasharray={i === 0 ? "" : "2,2"}
+          opacity={i === 0 ? "0.8" : "0.4"}
         />
       ))}
     </svg>
