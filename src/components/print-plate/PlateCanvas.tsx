@@ -1,5 +1,5 @@
 
-import { useRef, useMemo } from 'react';
+import { useRef, useMemo, useState } from 'react';
 import { PDFItem, PDFItemType } from './PDFItem';
 import { EmptyPlate } from './EmptyPlate';
 import { PrintPlateSize } from './PrintPlateSettings';
@@ -37,13 +37,14 @@ export const PlateCanvas = ({ items, onItemsChange, plateSize, onFitToPlate }: P
     handleDragStart,
     handleMouseMove,
     handleMouseUp,
-    isSnapModeEnabled
+    isSnapModeEnabled,
+    nearestSnapEdge
   } = useDragAndDrop(
     items, 
     onItemsChange, 
     canvasRef, 
     getScale,
-    plateSize  // Pass plateSize to the hook
+    plateSize
   );
   
   const {
@@ -86,6 +87,21 @@ export const PlateCanvas = ({ items, onItemsChange, plateSize, onFitToPlate }: P
             {/* Grid */}
             <PlateGrid plateSize={plateSize} scale={getScale()} />
 
+            {/* Snap guidelines */}
+            {isSnapModeEnabled && nearestSnapEdge.type === 'vertical' && nearestSnapEdge.x !== null && (
+              <div 
+                className="absolute top-0 bottom-0 w-px bg-green-500 z-20 pointer-events-none"
+                style={{ left: `${nearestSnapEdge.x * PIXELS_PER_CM}px` }}
+              />
+            )}
+            
+            {isSnapModeEnabled && nearestSnapEdge.type === 'horizontal' && nearestSnapEdge.y !== null && (
+              <div 
+                className="absolute left-0 right-0 h-px bg-green-500 z-20 pointer-events-none"
+                style={{ top: `${nearestSnapEdge.y * PIXELS_PER_CM}px` }}
+              />
+            )}
+
             {/* PDF Items */}
             {items.map((item, index) => (
               <PDFItem
@@ -103,6 +119,11 @@ export const PlateCanvas = ({ items, onItemsChange, plateSize, onFitToPlate }: P
             {items.length === 0 && <EmptyPlate />}
           </div>
         </div>
+      </div>
+      
+      {/* Keyboard shortcut info */}
+      <div className="mt-2 text-xs text-gray-500">
+        <p>Halte die <kbd className="px-1 py-0.5 bg-gray-100 border rounded">Alt</kbd>-Taste gedrückt für den Snap-Modus</p>
       </div>
     </div>
   );

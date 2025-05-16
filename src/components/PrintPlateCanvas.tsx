@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -12,8 +11,8 @@ import { usePrintPlateState } from '@/hooks/usePrintPlateState';
 import { exportPrintPlateToPDF, downloadPDF } from '@/utils/print-plate/printPlateExporter';
 import { usePDFLoader } from '@/hooks/usePDFLoader';
 
-// Fixed scale factor (pixels per cm)
-const PIXELS_PER_CM = 3.7;
+// Fixed scale factor (pixels per cm) - updated to match PlateCanvas
+const PIXELS_PER_CM = 2.5;
 
 type PrintPlateCanvasProps = {
   files: UploadedFile[];
@@ -214,4 +213,3 @@ export const PrintPlateCanvas = ({ files }: PrintPlateCanvasProps) => {
     </div>
   );
 };
-
