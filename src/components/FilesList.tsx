@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { UploadedFile } from '@/types/fileTypes';
 import { Button } from '@/components/ui/button';
@@ -70,6 +69,17 @@ export const FilesList = ({
     }
   };
 
+  // New function to handle selecting/deselecting all files
+  const handleSelectAll = () => {
+    if (selectedFiles.length === files.length) {
+      // If all files are selected, deselect all
+      setSelectedFiles([]);
+    } else {
+      // Otherwise, select all files
+      setSelectedFiles(files.map(file => file.id));
+    }
+  };
+
   if (files.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center p-6 text-center text-gray-400">
@@ -95,14 +105,39 @@ export const FilesList = ({
 
   return (
     <div className="space-y-4">
-      {selectedFiles.length > 0 && (
-        <div className="flex justify-between items-center mb-2">
+      <div className="flex justify-between items-center mb-2">
+        {/* Display file selection count if files are selected */}
+        {selectedFiles.length > 0 ? (
           <span className="text-sm">{selectedFiles.length} Dateien ausgewählt</span>
-          <Button onClick={handleBatchConvert} className="text-sm" disabled={isLoading}>
-            Ausgewählte zu PDF konvertieren
+        ) : (
+          <span className="text-sm">{files.length} Dateien</span>
+        )}
+        
+        <div className="flex gap-2">
+          {/* New Select All button */}
+          <Button 
+            onClick={handleSelectAll} 
+            variant="outline" 
+            size="sm" 
+            className="text-xs"
+          >
+            {selectedFiles.length === files.length ? "Alle abwählen" : "Alle auswählen"}
           </Button>
+          
+          {/* Show batch convert button only when files are selected */}
+          {selectedFiles.length > 0 && (
+            <Button 
+              onClick={handleBatchConvert} 
+              className="text-sm" 
+              size="sm" 
+              disabled={isLoading}
+            >
+              Ausgewählte zu PDF konvertieren
+            </Button>
+          )}
         </div>
-      )}
+      </div>
+      
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 mt-2">
         {files.map((file) => (
           <Card
