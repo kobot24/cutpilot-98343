@@ -26,7 +26,7 @@ export const PlateCanvasHeader = ({
   return (
     <div className="flex flex-wrap items-center justify-between gap-4">
       <div className="flex items-center gap-4">
-        <h2 className="text-2xl font-semibold">Printplate-Erstellung</h2>
+        <h2 className="text-lg font-medium">Printplate-Erstellung</h2>
         <PrintPlateSettings 
           plateSize={plateSize}
           onSizeChange={onSizeChange}

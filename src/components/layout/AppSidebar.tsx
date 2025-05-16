@@ -11,10 +11,11 @@ import {
   SidebarHeader,
   SidebarFooter,
   SidebarSeparator,
+  SidebarTrigger,
   useSidebar,
 } from "@/components/ui/sidebar";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Upload, Printer, User, Settings, LogOut } from "lucide-react";
+import { Upload, Printer, User, Settings, LogOut, PanelLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { 
   DropdownMenu,
@@ -31,7 +32,7 @@ type AppSidebarProps = {
 };
 
 export const AppSidebar = ({ activeSection, onNavigate }: AppSidebarProps) => {
-  const { state } = useSidebar();
+  const { state, toggleSidebar } = useSidebar();
   const isCollapsed = state === "collapsed";
 
   const sidebarItems = [
@@ -65,11 +66,12 @@ export const AppSidebar = ({ activeSection, onNavigate }: AppSidebarProps) => {
 
   return (
     <Sidebar className="w-64" variant="sidebar" collapsible="icon">
-      <SidebarHeader>
-        <div className="flex items-center gap-2 px-2">
+      <SidebarHeader className="flex items-center justify-between">
+        <div className="px-2">
           {/* Logo display based on sidebar state */}
           {isCollapsed ? <CompactLogo /> : <FullLogo />}
         </div>
+        <SidebarTrigger className="h-7 w-7 mr-2" />
       </SidebarHeader>
       
       <SidebarContent>
@@ -92,8 +94,6 @@ export const AppSidebar = ({ activeSection, onNavigate }: AppSidebarProps) => {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
-
-        {/* Removed the "Info" section with the upgrade to pro content */}
       </SidebarContent>
       
       <SidebarFooter>

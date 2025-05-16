@@ -4,7 +4,7 @@ import { UploadedFile } from '@/types/fileTypes';
 import { UserSettings } from '@/hooks/useSettings';
 import { AppSidebar } from '@/components/layout/AppSidebar';
 import { ContentRenderer } from '@/components/layout/ContentRenderer';
-import { Sidebar, SidebarProvider } from '@/components/ui/sidebar';
+import { SidebarProvider, SidebarRail } from '@/components/ui/sidebar';
 import { ConversionProgress } from '@/hooks/usePDFConverter';
 
 type MainLayoutProps = {
@@ -30,14 +30,10 @@ export const MainLayout = (props: MainLayoutProps) => {
   const { activeSection, onNavigate } = props;
   
   return (
-    <SidebarProvider>
+    <SidebarProvider defaultOpen={true}>
       <div className="flex min-h-screen w-full">
-        <Sidebar
-          className="w-60"
-          collapsible="icon"
-        >
-          <AppSidebar activeSection={activeSection} onNavigate={onNavigate} />
-        </Sidebar>
+        <AppSidebar activeSection={activeSection} onNavigate={onNavigate} />
+        <SidebarRail />
         
         <div className="flex-1 p-6 overflow-auto">
           <ContentRenderer {...props} />
