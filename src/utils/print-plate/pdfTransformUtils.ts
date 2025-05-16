@@ -1,3 +1,4 @@
+
 /**
  * Utility functions for PDF transformations, especially rotation
  */
@@ -24,34 +25,35 @@ export const getRotatedTransform = (
   // Whether dimensions should be swapped (width/height)
   const swapDimensions = rotationAngle === 90 || rotationAngle === 270;
   
+  // Calculate center point of the element (critical for center-preserving rotation)
+  const centerX = x + width / 2;
+  const centerY = y + height / 2;
+  console.log(`PDF Transform - Center point: cx=${centerX}, cy=${centerY}`);
+  
   // Calculate transformation matrix based on rotation angle
   // For PDF coordinate system, origin (0,0) is at the bottom left
   switch (rotationAngle) {
     case 90:
-      // 90° clockwise: [0, 1, -1, 0, x + height, y]
-      // This correctly positions the rotated content within visible area
-      // by translating it upward by the height amount
-      console.log(`PDF Transform - Using 90° transform matrix: [0, 1, -1, 0, ${x + height}, ${y}]`);
+      // For 90° rotation: rotate around center, then adjust position
+      console.log(`PDF Transform - Using 90° center-preserving transform`);
       return {
-        matrix: [0, 1, -1, 0, x + height, y],
+        matrix: [0, 1, -1, 0, centerX + (height - width) / 2, centerY - (height - width) / 2],
         swapDimensions
       };
       
     case 180:
-      // 180° clockwise: [-1, 0, 0, -1, x + width, y + height]
-      // This negates both x and y, and translates to keep in view
-      console.log(`PDF Transform - Using 180° transform matrix: [-1, 0, 0, -1, ${x + width}, ${y + height}]`);
+      // For 180° rotation: rotate around center
+      console.log(`PDF Transform - Using 180° center-preserving transform`);
       return {
-        matrix: [-1, 0, 0, -1, x + width, y + height],
+        matrix: [-1, 0, 0, -1, 2 * centerX, 2 * centerY],
         swapDimensions
       };
       
     case 270:
-      // 270° clockwise: [0, -1, 1, 0, x, y + width]
-      // This swaps x and y, negates y, and translates to keep in view
-      console.log(`PDF Transform - Using 270° transform matrix: [0, -1, 1, 0, ${x}, ${y + width}]`);
+      // For 270° rotation: rotate around center, then adjust position
+      console.log(`PDF Transform - Using 270° center-preserving transform`);
       return {
-        matrix: [0, -1, 1, 0, x, y + width],
+        matrix: [0, -1, 1, 0, centerX - (height - width) / 2, centerY + (height - width) / 2],
         swapDimensions
       };
       

@@ -74,9 +74,19 @@ const applyRotationToPage = (
   
   // Calculate the transformation for the given rotation
   // For PDF coordinates, origin (0,0) is at the bottom left
+  // For center-preserving rotation, we'll calculate based on the center of the page
+  
+  // Calculate center points
+  const centerX = width / 2;
+  const centerY = height / 2;
+  console.log(`PDF Rotation - Page center: (${centerX}, ${centerY})`);
+  
+  // Calculate the transformation
   const transform = getRotatedTransform(0, 0, originalWidth, originalHeight, rotation);
   
   // Apply the transformation while preserving aspect ratio
+  // For rotations of 90 and 270 degrees, we need to swap the width and height
+  // to ensure proper aspect ratio and prevent distortion
   page.drawPage(embeddedPage, {
     x: 0,
     y: 0,
