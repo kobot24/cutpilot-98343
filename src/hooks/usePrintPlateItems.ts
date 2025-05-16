@@ -13,10 +13,10 @@ export const usePrintPlateItems = (plateSize: PrintPlateSize) => {
     
     try {
       // Create a temporary PDF loader to get dimensions
-      const pdfLoader = new Promise<{ width: number, height: number, dpi: number }>((resolve) => {
+      const pdfLoader = new Promise<{ width: number, height: number, dpi: number, pdfData?: Uint8Array }>((resolve) => {
         // Load the PDF to get its dimensions
         const img = new Image();
-        img.onload = () => {
+        img.onload = async () => {
           // Default DPI - can be overridden if we detect actual DPI
           let dpi = 100; // Assuming 100 DPI as mentioned by the user
           
@@ -25,27 +25,69 @@ export const usePrintPlateItems = (plateSize: PrintPlateSize) => {
           const widthCm = (img.width / dpi) * 2.54;
           const heightCm = (img.height / dpi) * 2.54;
           
+          // Fetch and store the actual PDF binary data
+          let pdfData: Uint8Array | undefined = undefined;
+          try {
+            const response = await fetch(file.convertedPdfUrl);
+            if (response.ok) {
+              const arrayBuffer = await response.arrayBuffer();
+              pdfData = new Uint8Array(arrayBuffer);
+              console.log(`PDF data cached successfully: ${pdfData.byteLength} bytes`);
+            } else {
+              console.error("Failed to fetch PDF data for caching:", response.status);
+            }
+          } catch (error) {
+            console.error("Error caching PDF data:", error);
+          }
+          
           resolve({
             width: widthCm,
             height: heightCm,
-            dpi: dpi
+            dpi: dpi,
+            pdfData
           });
         };
         
-        img.onerror = () => {
-          // If we can't get dimensions, use defaults
-          resolve({
-            width: 20,
-            height: 15,
-            dpi: 72
-          });
+        img.onerror = async () => {
+          // If image fails to load, try to fetch the PDF directly to get its data
+          try {
+            const response = await fetch(file.convertedPdfUrl);
+            if (response.ok) {
+              const arrayBuffer = await response.arrayBuffer();
+              const pdfData = new Uint8Array(arrayBuffer);
+              console.log(`PDF data cached despite image load failure: ${pdfData.byteLength} bytes`);
+              
+              // Use default dimensions
+              resolve({
+                width: 20,
+                height: 15,
+                dpi: 72,
+                pdfData
+              });
+            } else {
+              // If fetch fails too, use defaults without PDF data
+              console.error("Failed to fetch PDF after image load error:", response.status);
+              resolve({
+                width: 20,
+                height: 15,
+                dpi: 72
+              });
+            }
+          } catch (error) {
+            console.error("Error fetching PDF after image load error:", error);
+            resolve({
+              width: 20,
+              height: 15,
+              dpi: 72
+            });
+          }
         };
         
         // Use the file.url instead of pdfUrl 
         img.src = file.url;
       });
       
-      const { width, height, dpi } = await pdfLoader;
+      const { width, height, dpi, pdfData } = await pdfLoader;
       
       // Position the item in the center of the plate
       const centerX = Math.max(0, (plateSize.width - width) / 2);
@@ -55,6 +97,7 @@ export const usePrintPlateItems = (plateSize: PrintPlateSize) => {
       const newItem: PDFItemType = {
         id: file.id,
         pdfUrl: file.convertedPdfUrl,
+        pdfData, // Store the PDF binary data with the item
         x: centerX, // Center position in cm
         y: centerY, // Center position in cm
         width, // Width in cm

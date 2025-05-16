@@ -15,15 +15,26 @@ export const usePrintPlateExport = (items: PDFItemType[], plateSize: PrintPlateS
     }
     
     setIsExporting(true);
+    toast.info("Exportiere Druckplatte als PDF...");
     
     try {
+      console.log(`Starting PDF export of ${items.length} items`);
+      console.log(`Plate size: ${plateSize.width}x${plateSize.height} cm`);
+      
+      // Log if we have cached PDF data for items
+      items.forEach((item, index) => {
+        console.log(`Item ${index}: ${item.id} - Has cached PDF data: ${item.pdfData ? 'Yes' : 'No'}`);
+      });
+      
       const pdfBytes = await exportPrintPlateToPDF(items, plateSize);
       
-      if (pdfBytes) {
+      if (pdfBytes && pdfBytes.length > 0) {
+        console.log(`PDF export successful: ${pdfBytes.byteLength} bytes`);
         downloadPDF(pdfBytes, "druckplatte.pdf");
         toast.success("Druckplatte als PDF exportiert");
       } else {
-        toast.error("Fehler beim Exportieren der Druckplatte");
+        console.error("PDF export failed: No PDF bytes returned");
+        toast.error("Fehler beim Exportieren der Druckplatte - PDF konnte nicht erzeugt werden");
       }
     } catch (error) {
       console.error("Error exporting print plate:", error);

@@ -23,35 +23,74 @@ export const exportPrintPlateToPDF = async (
 
     console.log(`PDF Export - Creating plate: ${plateSize.width}x${plateSize.height} cm`);
     console.log(`PDF Export - Page created with dimensions: ${pageWidth}x${pageHeight} points`);
+    console.log(`PDF Export - Processing ${items.length} items`);
 
     // For each PDF item on the plate
     for (const item of items) {
-      if (!item.pdfUrl) {
-        console.log(`PDF Export - Skipping item with no PDF URL: ${item.id}`);
+      if (!item.pdfUrl && !item.pdfData) {
+        console.log(`PDF Export - Skipping item with no PDF URL or data: ${item.id}`);
         continue;
       }
       
       try {
         console.log(`PDF Export - Processing item: ${item.id}`);
         console.log(`PDF Export - Item position: x=${item.x}, y=${item.y}, width=${item.width}, height=${item.height}, rotation=${item.rotation}`);
+        console.log(`PDF Export - Has cached PDF data: ${item.pdfData ? 'Yes, ' + item.pdfData.byteLength + ' bytes' : 'No'}`);
         
-        // Check if the pdfUrl is a blob URL or a data URL
+        // Get the PDF bytes - preferring cached data if available
         let pdfBytes: Uint8Array;
         
-        if (item.pdfUrl.startsWith('blob:') || item.pdfUrl.startsWith('data:')) {
-          // Fetch the PDF data from the URL
-          const response = await fetch(item.pdfUrl);
-          const arrayBuffer = await response.arrayBuffer();
-          pdfBytes = new Uint8Array(arrayBuffer);
+        if (item.pdfData) {
+          // Use the cached PDF data if available
+          console.log(`PDF Export - Using cached PDF data: ${item.pdfData.byteLength} bytes`);
+          pdfBytes = item.pdfData;
+        } else if (item.pdfUrl.startsWith('blob:') || item.pdfUrl.startsWith('data:')) {
+          // Fetch the PDF data from the URL with explicit error handling
+          console.log(`PDF Export - Fetching PDF from URL: ${item.pdfUrl.substring(0, 50)}...`);
+          try {
+            const response = await fetch(item.pdfUrl);
+            if (!response.ok) {
+              throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const arrayBuffer = await response.arrayBuffer();
+            pdfBytes = new Uint8Array(arrayBuffer);
+            console.log(`PDF Export - Successfully fetched PDF: ${pdfBytes.byteLength} bytes`);
+          } catch (error) {
+            console.error(`PDF Export - Failed to fetch PDF from URL:`, error);
+            throw error; // Re-throw to be caught by outer try-catch
+          }
         } else {
-          // If it's a regular URL, fetch it
-          const response = await fetch(item.pdfUrl);
-          const arrayBuffer = await response.arrayBuffer();
-          pdfBytes = new Uint8Array(arrayBuffer);
+          // If it's a regular URL, fetch it with explicit error handling
+          console.log(`PDF Export - Fetching PDF from regular URL`);
+          try {
+            const response = await fetch(item.pdfUrl);
+            if (!response.ok) {
+              throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const arrayBuffer = await response.arrayBuffer();
+            pdfBytes = new Uint8Array(arrayBuffer);
+            console.log(`PDF Export - Successfully fetched PDF: ${pdfBytes.byteLength} bytes`);
+          } catch (error) {
+            console.error(`PDF Export - Failed to fetch PDF from URL:`, error);
+            throw error;
+          }
         }
         
-        // Embed the PDF document
-        const embedPdf = await pdfDoc.embedPdf(pdfBytes);
+        // Check if we have valid PDF bytes before proceeding
+        if (!pdfBytes || pdfBytes.length === 0) {
+          console.error(`PDF Export - No valid PDF data for item: ${item.id}`);
+          continue;
+        }
+        
+        // Try to embed the PDF document with explicit error handling
+        let embedPdf;
+        try {
+          embedPdf = await pdfDoc.embedPdf(pdfBytes);
+          console.log(`PDF Export - Successfully embedded PDF with ${embedPdf.length} pages`);
+        } catch (error) {
+          console.error(`PDF Export - Failed to embed PDF for item ${item.id}:`, error);
+          continue; // Skip this item and try the next one
+        }
         
         if (embedPdf.length === 0) {
           console.log(`PDF Export - No pages in embedded PDF for item: ${item.id}`);
@@ -83,61 +122,87 @@ export const exportPrintPlateToPDF = async (
 
         // For items with rotation, we need to use the PDFPage.drawPage with the proper parameters
         if (item.rotation !== 0) {
-          // Create a two-step approach for rotation that correctly preserves position
-          // Step 1: Create a temporary PDF with the content
-          const tempPdf = await PDFDocument.create();
-          const tempPage = tempPdf.addPage([width, height]);
-          
-          // Draw the embedded page on the temporary page
-          tempPage.drawPage(embeddedPage, {
-            x: 0,
-            y: 0,
-            width: width,
-            height: height,
-          });
-          
-          // Save the temporary PDF
-          const tempPdfBytes = await tempPdf.save();
-          
-          // Step 2: Re-embed the temporary PDF into our main document
-          const rotatedPdfEmbed = await pdfDoc.embedPdf(tempPdfBytes);
-          
-          if (rotatedPdfEmbed.length === 0) {
-            console.log(`PDF Export - Failed to create rotated PDF for item: ${item.id}`);
-            continue;
+          try {
+            // Create a two-step approach for rotation that correctly preserves position
+            // Step 1: Create a temporary PDF with the content
+            const tempPdf = await PDFDocument.create();
+            const tempPage = tempPdf.addPage([width, height]);
+            
+            // Draw the embedded page on the temporary page
+            tempPage.drawPage(embeddedPage, {
+              x: 0,
+              y: 0,
+              width: width,
+              height: height,
+            });
+            
+            // Save the temporary PDF
+            const tempPdfBytes = await tempPdf.save();
+            
+            // Step 2: Re-embed the temporary PDF into our main document
+            const rotatedPdfEmbed = await pdfDoc.embedPdf(tempPdfBytes);
+            
+            if (rotatedPdfEmbed.length === 0) {
+              console.log(`PDF Export - Failed to create rotated PDF for item: ${item.id}`);
+              continue;
+            }
+            
+            // Important fix: The coordinate system needs to be adjusted for rotation
+            // For 90° rotations, we need to swap width and height in positioning
+            let drawX = centerX - (width / 2);
+            let drawY = centerY - (height / 2);
+            
+            // For 90° and 270° rotations, we need more precise positioning
+            if (item.rotation === 90 || item.rotation === 270) {
+              // Adjust the position to account for dimension swapping in rotated state
+              // This ensures the object stays centered at its original position
+              const rotationAdjustmentX = (width - height) / 2;
+              const rotationAdjustmentY = (height - width) / 2;
+              
+              drawX = centerX - (height / 2);
+              drawY = centerY - (width / 2);
+              
+              console.log(`PDF Export - Rotation adjustments: adjustX=${rotationAdjustmentX}, adjustY=${rotationAdjustmentY}`);
+            }
+            
+            console.log(`PDF Export - Drawing rotated item at: x=${drawX}, y=${drawY} with rotation=${item.rotation}`);
+            
+            // Draw the rotated PDF with precise positioning
+            page.drawPage(rotatedPdfEmbed[0], {
+              x: drawX,
+              y: drawY,
+              width: width,
+              height: height,
+              rotate: degrees(item.rotation),
+            });
+          } catch (error) {
+            console.error(`PDF Export - Error processing rotation for item ${item.id}:`, error);
+            
+            // Fallback: try to draw the item without rotation if rotation failed
+            try {
+              console.log(`PDF Export - Attempting to draw item ${item.id} without rotation as fallback`);
+              page.drawPage(embeddedPage, {
+                x,
+                y,
+                width,
+                height,
+              });
+            } catch (fallbackError) {
+              console.error(`PDF Export - Fallback drawing also failed for item ${item.id}:`, fallbackError);
+            }
           }
-          
-          // Important fix: The coordinate system needs to be adjusted for rotation
-          // For 90° rotations, we need to swap width and height in positioning
-          let drawX = centerX - (width / 2);
-          let drawY = centerY - (height / 2);
-          
-          // For 90° and 270° rotations, we need more precise positioning
-          if (item.rotation === 90 || item.rotation === 270) {
-            // Adjust the position to account for dimension swapping in rotated state
-            // This ensures the object stays centered at its original position
-            drawX = centerX - (height / 2);
-            drawY = centerY - (width / 2);
-          }
-          
-          console.log(`PDF Export - Drawing rotated item at: x=${drawX}, y=${drawY} with rotation=${item.rotation}`);
-          
-          // Draw the rotated PDF with precise positioning
-          page.drawPage(rotatedPdfEmbed[0], {
-            x: drawX,
-            y: drawY,
-            width: width,
-            height: height,
-            rotate: degrees(item.rotation),
-          });
         } else {
           // For non-rotated items, drawing is straightforward
-          page.drawPage(embeddedPage, {
-            x,
-            y,
-            width,
-            height,
-          });
+          try {
+            page.drawPage(embeddedPage, {
+              x,
+              y,
+              width,
+              height,
+            });
+          } catch (error) {
+            console.error(`PDF Export - Error drawing non-rotated item ${item.id}:`, error);
+          }
         }
         
         console.log(`PDF Export - Successfully added item ${item.id} to PDF`);

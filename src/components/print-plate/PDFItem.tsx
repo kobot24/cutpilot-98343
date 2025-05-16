@@ -18,6 +18,7 @@ type PDFItemProps = {
 export type PDFItemType = {
   id: string;
   pdfUrl: string;
+  pdfData?: Uint8Array; // Added field to store actual PDF binary data
   x: number;
   y: number;
   width: number;
