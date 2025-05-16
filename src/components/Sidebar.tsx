@@ -20,6 +20,8 @@ const sidebarItems: SidebarItem[] = [
   { id: 'printplate', title: 'Printplate-Erstellung' },
 ];
 
+// This component is kept for backward compatibility but is no longer used directly.
+// The main UI now uses AppSidebar.tsx instead.
 export const Sidebar = ({ onNavigate, activeSection }: SidebarProps) => {
   return (
     <div className="w-64 bg-gray-50 border-r border-gray-200 h-screen p-4">

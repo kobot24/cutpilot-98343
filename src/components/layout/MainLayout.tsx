@@ -1,6 +1,7 @@
 
 import React from 'react';
-import { Sidebar } from '@/components/Sidebar';
+import { SidebarProvider, SidebarTrigger, SidebarInset } from "@/components/ui/sidebar";
+import { AppSidebar } from './AppSidebar';
 import { ContentRenderer } from '@/components/layout/ContentRenderer';
 import { UploadedFile } from '@/types/fileTypes';
 import { UserSettings } from '@/hooks/useSettings';
@@ -42,26 +43,36 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
   updateSettings
 }) => {
   return (
-    <div className="flex h-screen overflow-hidden bg-gray-50">
-      <Sidebar onNavigate={onNavigate} activeSection={activeSection} />
-      <main className="flex-1 overflow-auto p-6">
-        <ContentRenderer 
-          activeSection={activeSection}
-          files={files}
-          selectedFile={selectedFile}
-          isLoading={isLoading}
-          settings={settings}
-          conversionProgress={conversionProgress}
-          maxFiles={maxFiles}
-          maxFileSizeMB={maxFileSizeMB}
-          addFiles={addFiles}
-          removeFile={removeFile}
-          selectFile={selectFile}
-          convertToPdf={convertToPdf}
-          clearAllFiles={clearAllFiles}
-          updateSettings={updateSettings}
-        />
-      </main>
-    </div>
+    <SidebarProvider>
+      <div className="flex h-screen overflow-hidden bg-gray-50 w-full">
+        <AppSidebar activeSection={activeSection} onNavigate={onNavigate} />
+        
+        <SidebarInset className="flex-1">
+          <header className="h-16 border-b flex items-center px-6 bg-white">
+            <SidebarTrigger className="mr-4" />
+            <h1 className="text-xl font-semibold capitalize">{activeSection}</h1>
+          </header>
+          
+          <main className="flex-1 overflow-auto p-6">
+            <ContentRenderer 
+              activeSection={activeSection}
+              files={files}
+              selectedFile={selectedFile}
+              isLoading={isLoading}
+              settings={settings}
+              conversionProgress={conversionProgress}
+              maxFiles={maxFiles}
+              maxFileSizeMB={maxFileSizeMB}
+              addFiles={addFiles}
+              removeFile={removeFile}
+              selectFile={selectFile}
+              convertToPdf={convertToPdf}
+              clearAllFiles={clearAllFiles}
+              updateSettings={updateSettings}
+            />
+          </main>
+        </SidebarInset>
+      </div>
+    </SidebarProvider>
   );
 };
