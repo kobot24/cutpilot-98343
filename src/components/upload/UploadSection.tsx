@@ -30,31 +30,19 @@ export const UploadSection: React.FC<UploadSectionProps> = ({
 }) => {
   return (
     <>
-      <div className="flex justify-between mb-4">
-        <div></div> {/* Empty div for spacing */}
-        {files.length > 0 && (
-          <Button 
-            variant="outline" 
-            onClick={onClearAllFiles}
-            size="sm"
-            className="text-red-500 hover:bg-red-50"
-          >
-            Alle Dateien löschen
-          </Button>
-        )}
-      </div>
       <UploadArea 
         onFilesAdded={onFilesAdded} 
         isLoading={isLoading} 
         files={files}
         maxFiles={maxFiles}
         maxFileSizeMB={maxFileSizeMB}
+        onClearAllFiles={onClearAllFiles}
       />
       <FilesList 
         files={files} 
         selectedFileId={selectedFileId} 
         onSelectFile={onSelectFile} 
-        onRemoveFile={onRemoveFile}
+        onRemoveFile={onRemoveFile} 
       />
     </>
   );

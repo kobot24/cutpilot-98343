@@ -1,3 +1,4 @@
+
 import React, { useCallback, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -10,6 +11,7 @@ type UploadAreaProps = {
   files: UploadedFile[];
   maxFiles?: number;
   maxFileSizeMB?: number;
+  onClearAllFiles: () => void;
 };
 
 export const UploadArea = ({ 
@@ -17,7 +19,8 @@ export const UploadArea = ({
   isLoading, 
   files,
   maxFiles = 10,
-  maxFileSizeMB = 2
+  maxFileSizeMB = 2,
+  onClearAllFiles
 }: UploadAreaProps) => {
   const [isDragging, setIsDragging] = useState(false);
   
@@ -57,12 +60,21 @@ export const UploadArea = ({
   const filesRemaining = maxFiles - files.length;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-semibold">Dateien hochladen</h2>
         <span className="text-sm text-gray-500">
           {files.length} von {maxFiles} {files.length === 1 ? 'Datei' : 'Dateien'}
         </span>
+        {files.length > 0 && (
+          <Button 
+            variant="outline" 
+            onClick={onClearAllFiles}
+            size="sm"
+            className="text-red-500 hover:bg-red-50"
+          >
+            Alle Dateien löschen
+          </Button>
+        )}
       </div>
       
       <Card
@@ -73,7 +85,7 @@ export const UploadArea = ({
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
       >
-        <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+        <CardContent className="flex flex-col items-center justify-center py-8 text-center">
           <div className="mb-4 rounded-full bg-blue-100 p-3">
             <svg 
               xmlns="http://www.w3.org/2000/svg" 
@@ -91,9 +103,8 @@ export const UploadArea = ({
             </svg>
           </div>
           
-          <h3 className="mb-2 text-xl font-medium">JPG-Dateien hier ablegen</h3>
           <p className="mb-4 text-sm text-gray-500">
-            oder klicken Sie zum Auswählen
+            JPG-Dateien hier ablegen oder klicken Sie zum Auswählen
           </p>
           
           <div className="flex items-center gap-2">

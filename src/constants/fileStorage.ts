@@ -1,7 +1,7 @@
 
 // Constants for file storage limits
 export const FILE_STORAGE_LIMITS = {
-  MAX_FILES: 10,
+  MAX_FILES: 50,
   MAX_FILE_SIZE_MB: 50,
   MAX_FILE_SIZE_BYTES: 50 * 1024 * 1024, // 50MB in bytes
   MAX_IMAGE_MEGAPIXELS: 20, // ~4500x4500 pixels (reduziert von 25)
