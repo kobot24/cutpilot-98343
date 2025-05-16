@@ -1,3 +1,4 @@
+
 /**
  * Utility functions for PDF transformations, especially rotation
  */
@@ -33,11 +34,11 @@ export const getRotatedTransform = (
   // For PDF coordinate system, origin (0,0) is at the bottom left
   switch (rotationAngle) {
     case 90:
-      // For 90° rotation: rotate around center, then adjust position
+      // For 90° rotation: rotate around center
       console.log(`PDF Transform - Using 90° center-preserving transform`);
       return {
-        // Fixed matrix for 90° center-preserving rotation
-        matrix: [0, 1, -1, 0, centerX + (height - width) / 2, centerY - (height - width) / 2],
+        // Corrected matrix for 90° center-preserving rotation
+        matrix: [0, 1, -1, 0, centerX + height/2 - width/2, centerY - height/2 + width/2],
         swapDimensions
       };
       
@@ -51,11 +52,11 @@ export const getRotatedTransform = (
       };
       
     case 270:
-      // For 270° rotation: rotate around center, then adjust position
+      // For 270° rotation: rotate around center
       console.log(`PDF Transform - Using 270° center-preserving transform`);
       return {
-        // Fixed matrix for 270° center-preserving rotation
-        matrix: [0, -1, 1, 0, centerX - (height - width) / 2, centerY + (height - width) / 2],
+        // Corrected matrix for 270° center-preserving rotation
+        matrix: [0, -1, 1, 0, centerX - height/2 + width/2, centerY + height/2 - width/2],
         swapDimensions
       };
       

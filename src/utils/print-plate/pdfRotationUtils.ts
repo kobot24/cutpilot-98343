@@ -1,4 +1,3 @@
-
 import { PDFDocument, degrees, PDFPage } from 'pdf-lib';
 import { getRotatedTransform } from './pdfTransformUtils';
 
@@ -111,59 +110,58 @@ const applyImageRotation = async (
       }
     }
     
-    // Calculate center point
+    // Calculate center point of the target page
     const centerX = width / 2;
     const centerY = height / 2;
+    console.log(`PDF Rotation - Page center: (${centerX}, ${centerY})`);
     
     // For PDF, (0,0) is at bottom-left corner
-    // We'll position and rotate the image correctly based on rotation angle
+    // Apply the appropriate rotation based on angle
     switch (rotation) {
       case 90:
-        // For 90° rotation - rotate around center
+        // For 90° rotation - centered and rotated
+        console.log(`PDF Rotation - Applying 90° rotation to image at (${centerX - originalHeight/2}, ${centerY - originalWidth/2})`);
         page.drawImage(image, {
-          x: 0,
-          y: 0,
-          width: height,  // Swap dimensions for 90° rotation
-          height: width,
+          x: centerX - originalHeight/2,
+          y: centerY - originalWidth/2,
+          width: originalHeight,  // Swap for 90° rotation
+          height: originalWidth,
           rotate: degrees(90),
-          xSkew: degrees(0),
-          ySkew: degrees(0)
         });
         break;
         
       case 180:
-        // For 180° rotation - rotate around center
+        // For 180° rotation - centered and rotated
+        console.log(`PDF Rotation - Applying 180° rotation to image at (${centerX - originalWidth/2}, ${centerY - originalHeight/2})`);
         page.drawImage(image, {
-          x: 0,
-          y: 0,
-          width,
-          height,
+          x: centerX - originalWidth/2,
+          y: centerY - originalHeight/2,
+          width: originalWidth,
+          height: originalHeight,
           rotate: degrees(180),
-          xSkew: degrees(0),
-          ySkew: degrees(0)
         });
         break;
         
       case 270:
-        // For 270° rotation - rotate around center
+        // For 270° rotation - centered and rotated
+        console.log(`PDF Rotation - Applying 270° rotation to image at (${centerX - originalHeight/2}, ${centerY - originalWidth/2})`);
         page.drawImage(image, {
-          x: 0,
-          y: 0,
-          width: height,  // Swap dimensions for 270° rotation
-          height: width,
+          x: centerX - originalHeight/2,
+          y: centerY - originalWidth/2,
+          width: originalHeight,  // Swap for 270° rotation
+          height: originalWidth,
           rotate: degrees(270),
-          xSkew: degrees(0),
-          ySkew: degrees(0)
         });
         break;
         
       default:
         // No rotation (0°)
+        console.log(`PDF Rotation - No rotation applied to image at (${centerX - originalWidth/2}, ${centerY - originalHeight/2})`);
         page.drawImage(image, {
-          x: 0,
-          y: 0,
-          width,
-          height
+          x: centerX - originalWidth/2,
+          y: centerY - originalHeight/2,
+          width: originalWidth,
+          height: originalHeight,
         });
     }
     
@@ -199,7 +197,6 @@ const applyRotationToPage = (
   
   // Calculate the transformation for the given rotation
   // For PDF coordinates, origin (0,0) is at the bottom left
-  // For center-preserving rotation, we'll calculate based on the center of the page
   
   // Calculate center points
   const centerX = width / 2;
@@ -207,20 +204,43 @@ const applyRotationToPage = (
   console.log(`PDF Rotation - Page center: (${centerX}, ${centerY})`);
   
   // Calculate the transformation
+  // For consistent rotation, we'll use (0,0) as the base position
+  // and then calculate the offset to keep the content centered
   const transform = getRotatedTransform(0, 0, originalWidth, originalHeight, rotation);
   
-  // Apply the transformation while preserving aspect ratio
-  // For rotations of 90 and 270 degrees, we need to swap the width and height
-  // to ensure proper aspect ratio and prevent distortion
+  // Position so that the content is centered on the page
+  let posX = 0;
+  let posY = 0;
+  
+  // Calculate position to center the content after rotation
+  if (rotation === 0) {
+    // For no rotation, simply center the content
+    posX = (width - originalWidth) / 2;
+    posY = (height - originalHeight) / 2;
+  } else if (rotation === 90) {
+    // For 90° rotation
+    posX = (width - originalHeight) / 2;
+    posY = (height - originalWidth) / 2;
+  } else if (rotation === 180) {
+    // For 180° rotation
+    posX = (width - originalWidth) / 2;
+    posY = (height - originalHeight) / 2;
+  } else if (rotation === 270) {
+    // For 270° rotation
+    posX = (width - originalHeight) / 2;
+    posY = (height - originalWidth) / 2;
+  }
+  
+  console.log(`PDF Rotation - Centering content at: (${posX}, ${posY})`);
+  
+  // Apply the transformation
   page.drawPage(embeddedPage, {
-    x: 0,
-    y: 0,
+    x: posX,
+    y: posY,
     width: transform.swapDimensions ? originalHeight : originalWidth,
     height: transform.swapDimensions ? originalWidth : originalHeight,
-    transform: {
-      matrix: transform.matrix
-    }
+    rotate: degrees(rotation),
   });
   
-  console.log(`PDF Rotation - Applied ${rotation}° rotation with matrix: [${transform.matrix}]`);
+  console.log(`PDF Rotation - Applied ${rotation}° rotation centered at (${centerX}, ${centerY})`);
 };
