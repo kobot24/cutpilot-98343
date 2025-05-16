@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { toast } from '@/components/ui/sonner';
@@ -7,6 +7,9 @@ import { UploadedFile } from '@/types/fileTypes';
 import { PlateCanvas } from '@/components/print-plate/PlateCanvas';
 import { PDFList } from '@/components/print-plate/PDFList';
 import { PDFItemType } from '@/components/print-plate/PDFItem';
+import { PrintPlateSettings } from '@/components/print-plate/PrintPlateSettings';
+import { usePrintPlateState } from '@/hooks/usePrintPlateState';
+import { exportPrintPlateToPDF, downloadPDF } from '@/utils/print-plate/printPlateExporter';
 
 type PrintPlateCanvasProps = {
   files: UploadedFile[];
@@ -14,12 +17,23 @@ type PrintPlateCanvasProps = {
 
 export const PrintPlateCanvas = ({ files }: PrintPlateCanvasProps) => {
   const [items, setItems] = useState<PDFItemType[]>([]);
+  const { plateSize, setPlateSize } = usePrintPlateState();
+  const [isExporting, setIsExporting] = useState(false);
   
   // Filter files that have been converted to PDFs
   const pdfFiles = files.filter(file => file.convertedPdfUrl);
   
+  // Estimate a good initial size for PDF items based on the plate size
+  const getInitialItemSize = () => {
+    const maxWidth = 100; // Some reasonable default in pixels
+    const maxHeight = 150; // Some reasonable default in pixels
+    return { width: maxWidth, height: maxHeight };
+  };
+  
   const handleAddPDF = (file: UploadedFile) => {
     if (!file.convertedPdfUrl) return;
+    
+    const { width, height } = getInitialItemSize();
     
     // Create a new PDF item
     const newItem: PDFItemType = {
@@ -27,18 +41,40 @@ export const PrintPlateCanvas = ({ files }: PrintPlateCanvasProps) => {
       pdfUrl: file.convertedPdfUrl,
       x: 20,
       y: 20,
-      width: 100,
-      height: 150,
+      width,
+      height,
       rotation: 0,
+      thumbnail: file.convertedPdfUrl,
+      aspectRatio: 0.707 // Default A4 aspect ratio (width/height)
     };
     
     setItems([...items, newItem]);
     toast.success(`${file.name} zur Druckplatte hinzugefügt`);
   };
   
-  const handleExportPlate = () => {
-    // In a real app, this would create a PDF
-    toast.success("Druckplatte als PDF exportiert");
+  const handleExportPlate = async () => {
+    if (items.length === 0) {
+      toast.error("Keine Elemente auf der Druckplatte");
+      return;
+    }
+    
+    setIsExporting(true);
+    
+    try {
+      const pdfBytes = await exportPrintPlateToPDF(items, plateSize);
+      
+      if (pdfBytes) {
+        downloadPDF(pdfBytes, "druckplatte.pdf");
+        toast.success("Druckplatte als PDF exportiert");
+      } else {
+        toast.error("Fehler beim Exportieren der Druckplatte");
+      }
+    } catch (error) {
+      console.error("Error exporting print plate:", error);
+      toast.error("Fehler beim Exportieren: " + (error instanceof Error ? error.message : "Unbekannter Fehler"));
+    } finally {
+      setIsExporting(false);
+    }
   };
   
   const handleClearPlate = () => {
@@ -54,23 +90,32 @@ export const PrintPlateCanvas = ({ files }: PrintPlateCanvasProps) => {
           <Button 
             variant="outline"
             onClick={handleClearPlate}
-            disabled={items.length === 0}
+            disabled={items.length === 0 || isExporting}
           >
             Leeren
           </Button>
           <Button
             onClick={handleExportPlate}
-            disabled={items.length === 0}
+            disabled={items.length === 0 || isExporting}
           >
-            Als PDF exportieren
+            {isExporting ? "Exportiere..." : "Als PDF exportieren"}
           </Button>
         </div>
       </div>
 
+      <PrintPlateSettings 
+        plateSize={plateSize}
+        onSizeChange={setPlateSize}
+      />
+
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         <div className="lg:col-span-3">
           <Card className="p-3 h-full">
-            <PlateCanvas items={items} onItemsChange={setItems} />
+            <PlateCanvas 
+              items={items} 
+              onItemsChange={setItems} 
+              plateSize={plateSize}
+            />
           </Card>
         </div>
         

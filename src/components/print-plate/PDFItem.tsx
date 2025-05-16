@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 type PDFItemProps = {
   item: PDFItemType;
@@ -17,6 +17,8 @@ export type PDFItemType = {
   width: number;
   height: number;
   rotation: number;
+  aspectRatio?: number;
+  thumbnail?: string;
 };
 
 export const PDFItem = ({ item, index, onDragStart, onRotate, onRemove }: PDFItemProps) => {
@@ -38,7 +40,7 @@ export const PDFItem = ({ item, index, onDragStart, onRotate, onRemove }: PDFIte
     >
       <div className="relative flex-1">
         <img 
-          src={item.pdfUrl} 
+          src={item.thumbnail || item.pdfUrl} 
           alt={`PDF ${index}`} 
           className="w-full h-full object-contain"
         />

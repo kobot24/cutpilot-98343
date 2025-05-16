@@ -24,21 +24,29 @@ export const PDFList = ({ pdfFiles, onAddPDF }: PDFListProps) => {
               key={file.id} 
               className="flex items-center space-x-2 p-2 border rounded-md hover:bg-gray-50"
             >
-              <div className="w-8 h-8 bg-red-100 rounded flex items-center justify-center">
-                <svg 
-                  xmlns="http://www.w3.org/2000/svg" 
-                  className="h-4 w-4 text-red-600" 
-                  fill="none" 
-                  viewBox="0 0 24 24" 
-                  stroke="currentColor"
-                >
-                  <path 
-                    strokeLinecap="round" 
-                    strokeLinejoin="round" 
-                    strokeWidth={2} 
-                    d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" 
+              <div className="w-12 h-16 bg-gray-50 rounded flex items-center justify-center overflow-hidden">
+                {file.convertedPdfUrl ? (
+                  <img 
+                    src={file.convertedPdfUrl} 
+                    alt={file.name} 
+                    className="object-contain w-full h-full"
                   />
-                </svg>
+                ) : (
+                  <svg 
+                    xmlns="http://www.w3.org/2000/svg" 
+                    className="h-4 w-4 text-red-600" 
+                    fill="none" 
+                    viewBox="0 0 24 24" 
+                    stroke="currentColor"
+                  >
+                    <path 
+                      strokeLinecap="round" 
+                      strokeLinejoin="round" 
+                      strokeWidth={2} 
+                      d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" 
+                    />
+                  </svg>
+                )}
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium truncate">
