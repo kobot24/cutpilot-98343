@@ -1,4 +1,3 @@
-
 import { PDFDocument, degrees } from 'pdf-lib';
 import { getRotatedTransform } from './pdfTransformUtils';
 
@@ -75,12 +74,12 @@ const applyRotationToPage = (
   // Apply rotation and transformation based on rotation angle
   switch (rotation) {
     case 90:
-      // 90° im Uhrzeigersinn - korrigierte Implementierung
+      // 90° clockwise - use consistent approach with the main PDF processing
       page.drawPage(embeddedPage, {
         x: 0,
-        y: 0,
-        width: width,
-        height: height,
+        y: originalWidth, // Shift by original width to maintain position
+        width: height,
+        height: width,
         rotate: degrees(90),
         xSkew: degrees(0),
         ySkew: degrees(0)
@@ -126,4 +125,3 @@ const applyRotationToPage = (
   
   console.log(`PDF Rotation - Applied ${rotation}° rotation successfully`);
 };
-

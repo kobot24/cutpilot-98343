@@ -1,3 +1,4 @@
+
 import { PDFDocument } from 'pdf-lib';
 import { getPDFDataFromItem } from './pdfDataUtils';
 import { calculateItemPositionInPoints } from './pdfCoordinateUtils';
@@ -60,16 +61,31 @@ const processItemWithRotation = async (
           throw new Error("Failed to embed original PDF");
         }
         
-        console.log(`PDF Processing - Drawing 90° rotated page at x=${itemPosition.x}, y=${itemPosition.y}`);
-        console.log(`PDF Processing - Using swapped dimensions: width=${itemPosition.height}, height=${itemPosition.width}`);
+        const rotatedPage = embeddedPdf[0];
         
-        // Draw the rotated page with swapped dimensions and rotation
-        page.drawPage(embeddedPdf[0], {
-          x: itemPosition.x,
-          y: itemPosition.y,
-          width: itemPosition.height,   // swap dimensions
-          height: itemPosition.width,
-          rotate: degrees(90)           // 90° clockwise rotation
+        const x = itemPosition.x;
+        const y = itemPosition.y;
+        
+        const originalW = itemPosition.width;
+        const originalH = itemPosition.height;
+        
+        // Correction for 90° rotation - Add the original width to y position
+        // This ensures the rotated item appears in the correct position
+        const correctedX = x;
+        const correctedY = y + originalW; // y + original width (shifts up after rotation)
+        
+        console.log(`PDF Processing - Drawing 90° rotated page with corrected position`);
+        console.log(`PDF Processing - Original position: x=${x}, y=${y}`);
+        console.log(`PDF Processing - Corrected position: x=${correctedX}, y=${correctedY}`);
+        console.log(`PDF Processing - Using swapped dimensions: width=${originalH}, height=${originalW}`);
+        
+        // Draw the rotated page with swapped dimensions, rotation, and corrected position
+        page.drawPage(rotatedPage, {
+          x: correctedX,
+          y: correctedY,
+          width: originalH,     // swap dimensions (width becomes height)
+          height: originalW,     // swap dimensions (height becomes width)
+          rotate: degrees(90)    // 90° clockwise rotation
         });
         
         console.log(`PDF Processing - Successfully added 90° rotated item ${item.id}`);
