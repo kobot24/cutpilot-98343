@@ -24,6 +24,13 @@ export const usePrintPlateExport = (items: PDFItemType[], plateSize: PrintPlateS
     try {
       console.log(`Starting PDF export of ${items.length} items`);
       console.log(`Plate size: ${plateSize.width}x${plateSize.height} cm`);
+      console.log(`Item IDs: ${items.map(item => item.id).join(', ')}`);
+      
+      // Verify all items have unique IDs
+      const uniqueIds = new Set(items.map(item => item.id));
+      if (uniqueIds.size !== items.length) {
+        console.warn(`Warning: Found duplicate item IDs! Only ${uniqueIds.size} unique IDs for ${items.length} items.`);
+      }
       
       // Export the PDF using the utility function
       const pdfBytes = await exportPrintPlateToPDF(items, plateSize);

@@ -1,4 +1,3 @@
-
 import { useRef, useMemo, useState, useEffect, useCallback } from 'react';
 import { PDFItem, PDFItemType } from './PDFItem';
 import { EmptyPlate } from './EmptyPlate';
@@ -164,10 +163,10 @@ export const PlateCanvas = ({ items, onItemsChange, plateSize, onFitToPlate }: P
               </div>
             )}
 
-            {/* PDF Items - Now passing isDragging flag to items */}
+            {/* PDF Items - Ensure each has a truly unique key */}
             {items.map((item, index) => (
               <PDFItem
-                key={item.id || index}
+                key={item.id || `pdf-item-${index}`}
                 item={item}
                 index={index}
                 scale={PIXELS_PER_CM}

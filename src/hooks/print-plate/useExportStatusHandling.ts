@@ -13,6 +13,7 @@ export const useExportStatusHandling = () => {
     
     // Log export start
     console.log(`Starting PDF export of ${items.length} items`);
+    console.log(`Item IDs: ${items.map(item => item.id).join(', ')}`);
     
     // Warn about large exports
     if (items.length > 10) {
@@ -27,7 +28,7 @@ export const useExportStatusHandling = () => {
         missingUrlCount++;
         console.log(`Item ${index}: ${item.id} - Missing PDF URL, cannot export properly`);
       } else {
-        console.log(`Item ${index}: ${item.id} - Has PDF URL, Rotation: ${item.rotation}°`);
+        console.log(`Item ${index}: ${item.id} - Has PDF URL, Position: (${item.x.toFixed(1)}, ${item.y.toFixed(1)}), Rotation: ${item.rotation}°`);
       }
     });
     

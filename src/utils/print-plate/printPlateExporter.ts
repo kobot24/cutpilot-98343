@@ -27,7 +27,10 @@ export const exportPrintPlateToPDF = async (
     console.log(`PDF Export - Processing ${items.length} items`);
 
     // Process each PDF item on the plate
-    for (const item of items) {
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      console.log(`PDF Export - Processing item ${i+1}/${items.length} with ID: ${item.id}`);
+      
       if (!item.pdfUrl) {
         console.log(`PDF Export - Skipping item with no PDF URL: ${item.id}`);
         continue;
@@ -38,7 +41,7 @@ export const exportPrintPlateToPDF = async (
     
     // Serialize the PDF to bytes
     const pdfBytes = await pdfDoc.save();
-    console.log(`PDF Export - Successfully created PDF: ${pdfBytes.byteLength} bytes`);
+    console.log(`PDF Export - Successfully created PDF: ${pdfBytes.byteLength} bytes with ${items.length} items`);
     return pdfBytes;
   } catch (error) {
     console.error('Error creating Print Plate PDF:', error);

@@ -18,9 +18,9 @@ export const processPDFItem = async (
   item: PDFItemType, 
   pageHeight: number
 ): Promise<void> => {
-  console.log(`PDF Processing - Processing item: ${item.id}`);
+  console.log(`PDF Processing - Processing item: ${item.id}, fileId: ${item.fileId || 'none'}`);
   console.log(`PDF Processing - Item position: x=${item.x}, y=${item.y}, width=${item.width}, height=${item.height}, rotation=${item.rotation}`);
-  console.log(`PDF Processing - Using URL: ${item.pdfUrl ? 'Yes' : 'No'}`);
+  console.log(`PDF Processing - Using URL: ${item.pdfUrl}`);
   
   try {
     // Get the PDF bytes from the URL
@@ -32,6 +32,7 @@ export const processPDFItem = async (
     
     // Process based on rotation
     await processItemWithRotation(pdfDoc, page, pdfBytes, item, itemPosition);
+    console.log(`PDF Processing - Successfully processed item: ${item.id}`);
     
   } catch (error) {
     console.error(`PDF Processing - Error processing item ${item.id}:`, error);

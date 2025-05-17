@@ -1,8 +1,16 @@
+
 import { useState, useCallback } from 'react';
 import { UploadedFile } from '@/types/fileTypes';
-import { PDFItemType } from '@/components/print-plate/PDFItem';
+import { PDFItemType } from '@/components/print-plate/pdf-item/PDFItemType';
 import { PrintPlateSize } from '@/components/print-plate/PrintPlateSettings';
 import { toast } from '@/components/ui/sonner';
+
+/**
+ * Generate a unique ID for PDF items
+ */
+const generateUniqueItemId = (fileId: string): string => {
+  return `${fileId}-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+};
 
 /**
  * Hook for adding PDFs to the print plate with optimized performance
@@ -21,7 +29,7 @@ export const usePDFAddition = (
       return;
     }
     
-    // Prevent duplicate loads
+    // Prevent duplicate loads of the same file simultaneously
     if (loadingItems.has(file.id)) {
       console.log(`Already loading ${file.id}, ignoring duplicate request`);
       return;
@@ -74,9 +82,13 @@ export const usePDFAddition = (
       const centerX = Math.max(0, (plateSize.width - width) / 2);
       const centerY = Math.max(0, (plateSize.height - height) / 2);
       
+      // Generate a unique ID for this specific item placement
+      const uniqueItemId = generateUniqueItemId(file.id);
+      
       // Create a new PDF item with dimensions in cm
       const newItem: PDFItemType = {
-        id: file.id,
+        id: uniqueItemId,
+        fileId: file.id, // Store original file ID for reference
         pdfUrl: file.convertedPdfUrl,
         x: centerX, // Center position in cm
         y: centerY, // Center position in cm

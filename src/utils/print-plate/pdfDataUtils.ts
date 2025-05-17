@@ -34,6 +34,7 @@ export const fetchPDFDataFromUrl = async (url: string): Promise<Uint8Array> => {
   }
   
   try {
+    console.log(`PDF Data - Fetching data from URL: ${url.substring(0, 30)}...`);
     const response = await fetch(url);
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
@@ -41,6 +42,8 @@ export const fetchPDFDataFromUrl = async (url: string): Promise<Uint8Array> => {
     
     const arrayBuffer = await response.arrayBuffer();
     const pdfBytes = new Uint8Array(arrayBuffer);
+    
+    console.log(`PDF Data - Successfully fetched ${pdfBytes.byteLength} bytes`);
     
     // Store in cache
     pdfDataCache.set(url, pdfBytes);
@@ -56,11 +59,12 @@ export const fetchPDFDataFromUrl = async (url: string): Promise<Uint8Array> => {
 /**
  * Get PDF data for an item - optimized to prevent unnecessary fetches
  */
-export const getPDFDataFromItem = async (item: any): Promise<Uint8Array> => {
+export const getPDFDataFromItem = async (item: PDFItemType): Promise<Uint8Array> => {
   if (!item.pdfUrl) {
     throw new Error(`No PDF URL available for item: ${item.id}`);
   }
   
+  console.log(`PDF Data - Getting data for item: ${item.id}`);
   return await fetchPDFDataFromUrl(item.pdfUrl);
 };
 
