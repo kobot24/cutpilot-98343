@@ -28,8 +28,8 @@ export const exportPrintPlateToPDF = async (
 
     // Process each PDF item on the plate
     for (const item of items) {
-      if (!item.pdfUrl && !item.pdfData) {
-        console.log(`PDF Export - Skipping item with no PDF URL or data: ${item.id}`);
+      if (!item.pdfUrl) {
+        console.log(`PDF Export - Skipping item with no PDF URL: ${item.id}`);
         continue;
       }
       

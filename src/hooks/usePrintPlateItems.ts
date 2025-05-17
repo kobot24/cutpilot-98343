@@ -1,7 +1,7 @@
 
 import { useState, useCallback } from 'react';
 import { UploadedFile } from '@/types/fileTypes';
-import { PDFItemType } from '@/components/print-plate/PDFItem';
+import { PDFItemType } from '@/components/print-plate/pdf-item/PDFItemType';
 import { PrintPlateSize } from '@/components/print-plate/PrintPlateSettings';
 import { usePDFItemOperations } from './print-plate/usePDFItemOperations';
 import { usePDFAddition } from './print-plate/usePDFAddition';

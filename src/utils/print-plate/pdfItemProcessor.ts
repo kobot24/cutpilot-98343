@@ -20,10 +20,10 @@ export const processPDFItem = async (
 ): Promise<void> => {
   console.log(`PDF Processing - Processing item: ${item.id}`);
   console.log(`PDF Processing - Item position: x=${item.x}, y=${item.y}, width=${item.width}, height=${item.height}, rotation=${item.rotation}`);
-  console.log(`PDF Processing - Has cached PDF data: ${item.pdfData ? 'Yes, ' + item.pdfData.byteLength + ' bytes' : 'No'}`);
+  console.log(`PDF Processing - Using URL: ${item.pdfUrl ? 'Yes' : 'No'}`);
   
   try {
-    // Get the PDF bytes - preferring cached data if available
+    // Get the PDF bytes from the URL
     const pdfBytes = await getPDFDataFromItem(item);
     
     // Calculate position and dimensions in PDF points

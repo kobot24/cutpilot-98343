@@ -1,6 +1,6 @@
 
 import { useState } from 'react';
-import { PDFItemType } from '@/components/print-plate/PDFItem';
+import { PDFItemType } from '@/components/print-plate/pdf-item/PDFItemType';
 import { PrintPlateSize } from '@/components/print-plate/PrintPlateSettings';
 import { toast } from '@/components/ui/sonner';
 import { exportPrintPlateToPDF, downloadPDF } from '@/utils/print-plate/printPlateExporter';

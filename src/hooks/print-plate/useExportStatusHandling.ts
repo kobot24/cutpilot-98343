@@ -1,5 +1,5 @@
 
-import { PDFItemType } from '@/components/print-plate/PDFItem';
+import { PDFItemType } from '@/components/print-plate/pdf-item/PDFItemType';
 import { toast } from '@/components/ui/sonner';
 
 /**
@@ -23,19 +23,19 @@ export const useExportStatusHandling = () => {
       });
     }
     
-    // Log if we have cached PDF data for each item
-    let missingPdfDataCount = 0;
+    // Log item details for debugging purposes
+    let missingUrlCount = 0;
     items.forEach((item, index) => {
-      if (!item.pdfData) {
-        missingPdfDataCount++;
-        console.log(`Item ${index}: ${item.id} - Missing cached PDF data, will fetch during export`);
+      if (!item.pdfUrl) {
+        missingUrlCount++;
+        console.log(`Item ${index}: ${item.id} - Missing PDF URL, cannot export properly`);
       } else {
-        console.log(`Item ${index}: ${item.id} - Has cached PDF data (${item.pdfData.byteLength} bytes), Rotation: ${item.rotation}°`);
+        console.log(`Item ${index}: ${item.id} - Has PDF URL, Rotation: ${item.rotation}°`);
       }
     });
     
-    if (missingPdfDataCount > 0) {
-      console.log(`Warning: ${missingPdfDataCount} items missing cached PDF data. Will fetch during export.`);
+    if (missingUrlCount > 0) {
+      console.log(`Warning: ${missingUrlCount} items missing PDF URLs. Export may be incomplete.`);
     }
   };
   
