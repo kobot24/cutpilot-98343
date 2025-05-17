@@ -65,10 +65,14 @@ export const exportPrintPlateToPDF = async (
       }
       
       // Small delay between processing items to reduce memory pressure
-      if (i < items.length - 1) {
-        await new Promise(r => setTimeout(r, 50));
-      }
+      // Apply delay for ALL items including the last one
+      await new Promise(r => setTimeout(r, 100));
     }
+    
+    // Add extra delay after processing all items to ensure everything is complete
+    // This helps with the last item issue
+    console.log('PDF Export - Adding final delay to ensure all items are processed');
+    await new Promise(r => setTimeout(r, 300));
     
     // Check if any items were processed successfully
     if (successfulItems.length === 0) {

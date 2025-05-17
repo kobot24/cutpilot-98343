@@ -1,3 +1,4 @@
+
 import { useRef, useMemo, useState, useEffect, useCallback } from 'react';
 import { PDFItem, PDFItemType } from './PDFItem';
 import { EmptyPlate } from './EmptyPlate';
@@ -17,9 +18,16 @@ type PlateCanvasProps = {
   onItemsChange: (items: PDFItemType[]) => void;
   plateSize: PrintPlateSize;
   onFitToPlate?: (index: number) => void;
+  exportMode?: boolean; // New prop to control export mode
 };
 
-export const PlateCanvas = ({ items, onItemsChange, plateSize, onFitToPlate }: PlateCanvasProps) => {
+export const PlateCanvas = ({ 
+  items, 
+  onItemsChange, 
+  plateSize, 
+  onFitToPlate,
+  exportMode = false // Default to false 
+}: PlateCanvasProps) => {
   const canvasRef = useRef<HTMLDivElement>(null);
 
   // Calculate dimensions in pixels based on the fixed scale factor
@@ -74,6 +82,39 @@ export const PlateCanvas = ({ items, onItemsChange, plateSize, onFitToPlate }: P
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
+  // Don't render UI controls in export mode
+  if (exportMode) {
+    return (
+      <div className="print-plate-container">
+        <div className="flex flex-col">
+          <div 
+            className="bg-white print-plate relative border-0"
+            style={{ 
+              width: `${canvasWidth}px`, 
+              height: `${canvasHeight}px`
+            }}
+          >
+            {/* Only render PDF Items in export mode */}
+            {items.map((item, index) => (
+              <PDFItem
+                key={item.id || `pdf-item-${index}`}
+                item={item}
+                index={index}
+                scale={PIXELS_PER_CM}
+                plateSize={plateSize}
+                onDragStart={() => {}}
+                onRotate={() => {}}
+                onRemove={() => {}}
+                isDragging={false}
+                exportMode={true}
+              />
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="print-plate-container">
       <div className="flex flex-col">
@@ -114,8 +155,8 @@ export const PlateCanvas = ({ items, onItemsChange, plateSize, onFitToPlate }: P
             onMouseUp={handleMouseUp}
             onMouseLeave={handleMouseUp}
           >
-            {/* Grid */}
-            <PlateGrid plateSize={plateSize} scale={getScale()} />
+            {/* Grid - pass exportMode prop */}
+            <PlateGrid plateSize={plateSize} scale={getScale()} exportMode={exportMode} />
 
             {/* Snap guidelines - make them more visible */}
             {(isSnapModeEnabled || isAltKeyPressed) && nearestSnapEdge.type === 'vertical' && nearestSnapEdge.x !== null && (

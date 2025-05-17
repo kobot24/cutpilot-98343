@@ -4,9 +4,15 @@ import { PrintPlateSize } from '../PrintPlateSettings';
 type PlateGridProps = {
   plateSize: PrintPlateSize;
   scale: number;
+  exportMode?: boolean; // New prop to control visibility during exports
 };
 
-export const PlateGrid = ({ plateSize, scale }: PlateGridProps) => {
+export const PlateGrid = ({ plateSize, scale, exportMode = false }: PlateGridProps) => {
+  // Exit early if in export mode - don't render the grid at all
+  if (exportMode) {
+    return null;
+  }
+  
   // Convert from cm to pixels using the provided scale
   const cmToPixels = (cm: number): number => {
     return cm * scale;

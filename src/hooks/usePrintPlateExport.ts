@@ -41,6 +41,17 @@ export const usePrintPlateExport = (items: PDFItemType[], plateSize: PrintPlateS
       // Clear the cache before export to ensure fresh data
       clearPDFDataCache();
       
+      // Special attention to the last item
+      if (items.length > 0) {
+        const lastItem = items[items.length - 1];
+        console.log(`Last item to be exported - ID: ${lastItem.id}, Position: (${lastItem.x.toFixed(1)}, ${lastItem.y.toFixed(1)})`);
+        
+        // Ensure the last item's PDF URL is valid before proceeding
+        if (!lastItem.pdfUrl) {
+          console.error(`Last item (${lastItem.id}) has no PDF URL - export may be incomplete`);
+        }
+      }
+      
       // Export the PDF using the utility function
       const pdfBytes = await exportPrintPlateToPDF(items, plateSize);
       

@@ -37,12 +37,16 @@ export const processPDFItem = async (
       throw new Error(`Empty PDF data for item ${item.id}`);
     }
     
+    console.log(`PDF Processing - Received PDF data for item ${item.id}, size: ${pdfBytes.byteLength} bytes`);
+    
     // Calculate position and dimensions in PDF points
     const itemPosition = calculateItemPositionInPoints(item, pageHeight);
     console.log(`PDF Processing - Item position in points: x=${itemPosition.x}, y=${itemPosition.y}, width=${itemPosition.width}, height=${itemPosition.height}`);
     
     // Process based on rotation
     await processItemWithRotation(pdfDoc, page, pdfBytes, item, itemPosition);
+    
+    // Verify the item was added to the document
     console.log(`PDF Processing - Successfully processed item: ${item.id}`);
     return true;
     

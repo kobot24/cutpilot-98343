@@ -44,6 +44,12 @@ export const useExportStatusHandling = () => {
       }
     });
     
+    // Special attention to the last item
+    if (items.length > 0) {
+      const lastItem = items[items.length - 1];
+      console.log(`Export Status - Last item details - ID: ${lastItem.id}, Position: (${lastItem.x.toFixed(1)}, ${lastItem.y.toFixed(1)}), Has URL: ${!!lastItem.pdfUrl}`);
+    }
+    
     if (missingUrlCount > 0) {
       console.log(`Warning: ${missingUrlCount} items missing PDF URLs. Export may be incomplete.`);
     }

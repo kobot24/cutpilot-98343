@@ -24,6 +24,7 @@ type PDFItemProps = {
   onRotate: (index: number) => void;
   onRemove: (index: number) => void;
   isDragging?: boolean;
+  exportMode?: boolean; // New prop to control export mode
 };
 
 export type { PDFItemType } from './pdf-item/PDFItemType';
@@ -37,7 +38,8 @@ export const PDFItem = memo(({
   onDragStart, 
   onRotate, 
   onRemove,
-  isDragging = false
+  isDragging = false,
+  exportMode = false // Default to false
 }: PDFItemProps) => {
   const [isHovered, setIsHovered] = useState(false);
   const [showDebug, setShowDebug] = useState(false);
@@ -101,7 +103,13 @@ export const PDFItem = memo(({
   };
 
   // Use optimized CSS classes to improve rendering performance
-  let itemClassNames = "pdf-item absolute flex flex-col cursor-move";
+  let itemClassNames = "pdf-item absolute flex flex-col";
+  
+  // In export mode, remove cursor and other UI-related styles
+  if (!exportMode) {
+    itemClassNames += " cursor-move";
+  }
+  
   if (isDragging) {
     itemClassNames += " will-change-transform";
   }
@@ -119,9 +127,9 @@ export const PDFItem = memo(({
         transformOrigin: 'center center', // Make sure rotation is around center
         transition: isDragging ? 'none' : 'transform 0.1s ease-out', // Only add transition when not dragging
       }}
-      onMouseDown={(e) => onDragStart(index, e)}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
+      onMouseDown={!exportMode ? (e) => onDragStart(index, e) : undefined}
+      onMouseEnter={!exportMode ? () => setIsHovered(true) : undefined}
+      onMouseLeave={!exportMode ? () => setIsHovered(false) : undefined}
     >
       <div className="relative flex-1 overflow-hidden">
         <OptimizedPDFDocumentRenderer
@@ -134,42 +142,47 @@ export const PDFItem = memo(({
           onLoadError={handleDocumentLoadError}
         />
         
-        {/* Boundary overlay areas */}
-        <PDFBoundaryOverlay
-          exceedsBoundaries={exceedsBoundaries}
-          exceedsLeft={exceedsLeft}
-          exceedsTop={exceedsTop}
-          exceedsRight={exceedsRight}
-          exceedsBottom={exceedsBottom}
-          clipLeft={clipLeft}
-          clipTop={clipTop}
-          clipRight={clipRight}
-          clipBottom={clipBottom}
-        />
-        
-        {/* Debug center marker */}
-        <PDFDebugMarker showDebug={showDebug} />
-        
-        {/* Item info display */}
-        <PDFItemInfo
-          isHovered={isHovered}
-          showDebug={showDebug}
-          width={item.width}
-          height={item.height}
-          rotation={item.rotation}
-          dpi={item.dpi}
-          x={item.x}
-          y={item.y}
-          exceedsBoundaries={exceedsBoundaries}
-        />
-        
-        {/* Item controls - only show when not dragging */}
-        {!isDragging && (
-          <PDFItemControls
-            isHovered={isHovered}
-            onRotate={handleRotateClick}
-            onRemove={handleRemoveClick}
-          />
+        {/* In export mode, don't show any overlays or controls */}
+        {!exportMode && (
+          <>
+            {/* Boundary overlay areas */}
+            <PDFBoundaryOverlay
+              exceedsBoundaries={exceedsBoundaries}
+              exceedsLeft={exceedsLeft}
+              exceedsTop={exceedsTop}
+              exceedsRight={exceedsRight}
+              exceedsBottom={exceedsBottom}
+              clipLeft={clipLeft}
+              clipTop={clipTop}
+              clipRight={clipRight}
+              clipBottom={clipBottom}
+            />
+            
+            {/* Debug center marker */}
+            <PDFDebugMarker showDebug={showDebug} />
+            
+            {/* Item info display */}
+            <PDFItemInfo
+              isHovered={isHovered}
+              showDebug={showDebug}
+              width={item.width}
+              height={item.height}
+              rotation={item.rotation}
+              dpi={item.dpi}
+              x={item.x}
+              y={item.y}
+              exceedsBoundaries={exceedsBoundaries}
+            />
+            
+            {/* Item controls - only show when not dragging */}
+            {!isDragging && (
+              <PDFItemControls
+                isHovered={isHovered}
+                onRotate={handleRotateClick}
+                onRemove={handleRemoveClick}
+              />
+            )}
+          </>
         )}
       </div>
     </div>
@@ -187,5 +200,6 @@ export const PDFItem = memo(({
   return itemsEqual && 
          prevProps.scale === nextProps.scale &&
          prevProps.isDragging === nextProps.isDragging && 
+         prevProps.exportMode === nextProps.exportMode && 
          prevProps.index === nextProps.index;
 });
