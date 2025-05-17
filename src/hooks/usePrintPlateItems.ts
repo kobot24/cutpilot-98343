@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { UploadedFile } from '@/types/fileTypes';
 import { PDFItemType } from '@/components/print-plate/PDFItem';
 import { PrintPlateSize } from '@/components/print-plate/PrintPlateSettings';
@@ -7,15 +7,17 @@ import { usePDFItemOperations } from './print-plate/usePDFItemOperations';
 import { usePDFAddition } from './print-plate/usePDFAddition';
 import { useAutoPosition } from './print-plate/useAutoPosition';
 import { toast } from '@/components/ui/sonner';
+import { prefetchPDFData } from '@/utils/print-plate/pdfDataUtils';
 
 /**
- * Main hook for managing print plate items
+ * Main hook for managing print plate items with performance optimizations
  */
 export const usePrintPlateItems = (plateSize: PrintPlateSize) => {
   const [items, setItems] = useState<PDFItemType[]>([]);
   
   // Use specialized hooks for different operations
   const { handleAddPDF } = usePDFAddition(items, setItems, plateSize);
+  
   const { 
     handleFitToPlate, 
     handleRotateItem, 
@@ -27,7 +29,7 @@ export const usePrintPlateItems = (plateSize: PrintPlateSize) => {
   const { autoPositionItems } = useAutoPosition();
   
   // Auto-position all items on the plate with optimal spacing
-  const handleAutoPositionItems = () => {
+  const handleAutoPositionItems = useCallback(() => {
     if (items.length === 0) {
       toast.error("Keine Elemente auf der Druckplatte");
       return;
@@ -35,7 +37,15 @@ export const usePrintPlateItems = (plateSize: PrintPlateSize) => {
     
     const positionedItems = autoPositionItems(items, plateSize);
     setItems(positionedItems);
-  };
+    toast.success("Elemente automatisch positioniert");
+  }, [items, plateSize, autoPositionItems]);
+
+  // Prefetch PDF data for optimal performance
+  const handlePrefetchPDFData = useCallback(async (file: UploadedFile) => {
+    if (file.convertedPdfUrl) {
+      await prefetchPDFData(file.convertedPdfUrl);
+    }
+  }, []);
 
   return {
     items,
@@ -45,6 +55,7 @@ export const usePrintPlateItems = (plateSize: PrintPlateSize) => {
     handleClearPlate,
     handleRotateItem,
     handleRemoveItem,
-    handleAutoPositionItems
+    handleAutoPositionItems,
+    handlePrefetchPDFData
   };
 };

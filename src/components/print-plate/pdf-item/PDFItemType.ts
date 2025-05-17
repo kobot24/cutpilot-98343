@@ -3,7 +3,7 @@
 export type PDFItemType = {
   id: string;
   pdfUrl: string;
-  pdfData?: Uint8Array; // Added field to store actual PDF binary data
+  // Removed pdfData field to improve memory management
   x: number;
   y: number;
   width: number;

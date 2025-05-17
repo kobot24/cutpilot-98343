@@ -1,5 +1,5 @@
 
-import { useRef, useMemo, useState, useEffect } from 'react';
+import { useRef, useMemo, useState, useEffect, useCallback } from 'react';
 import { PDFItem, PDFItemType } from './PDFItem';
 import { EmptyPlate } from './EmptyPlate';
 import { PrintPlateSize } from './PrintPlateSettings';
@@ -27,10 +27,10 @@ export const PlateCanvas = ({ items, onItemsChange, plateSize, onFitToPlate }: P
   const canvasWidth = useMemo(() => plateSize.width * PIXELS_PER_CM, [plateSize.width]);
   const canvasHeight = useMemo(() => plateSize.height * PIXELS_PER_CM, [plateSize.height]);
   
-  // Calculate scale (pixels per cm) for child components
-  const getScale = (): number => {
+  // Calculate scale (pixels per cm) for child components - memoize this function
+  const getScale = useCallback((): number => {
     return PIXELS_PER_CM;
-  };
+  }, []);
   
   // Use the custom hooks for drag-and-drop and item management
   const { 
@@ -40,7 +40,9 @@ export const PlateCanvas = ({ items, onItemsChange, plateSize, onFitToPlate }: P
     isSnapModeEnabled,
     toggleSnapMode,
     nearestSnapEdge,
-    isAltKeyPressed
+    isAltKeyPressed,
+    draggedItemIndex,
+    isDragging
   } = useDragAndDrop(
     items, 
     onItemsChange, 
@@ -55,7 +57,7 @@ export const PlateCanvas = ({ items, onItemsChange, plateSize, onFitToPlate }: P
   } = usePlateItems(items, onItemsChange, plateSize, () => canvasHeight);
 
   // Calculate approximate scale ratio for display (1:X)
-  const scaleRatio = Math.round(100 / PIXELS_PER_CM);
+  const scaleRatio = useMemo(() => Math.round(100 / PIXELS_PER_CM), []);
 
   // Add debug mode for development
   const [showDebugInfo, setShowDebugInfo] = useState(false);
@@ -162,7 +164,7 @@ export const PlateCanvas = ({ items, onItemsChange, plateSize, onFitToPlate }: P
               </div>
             )}
 
-            {/* PDF Items - Now passing plateSize to each item */}
+            {/* PDF Items - Now passing isDragging flag to items */}
             {items.map((item, index) => (
               <PDFItem
                 key={item.id || index}
@@ -173,6 +175,7 @@ export const PlateCanvas = ({ items, onItemsChange, plateSize, onFitToPlate }: P
                 onDragStart={handleDragStart}
                 onRotate={handleRotateItem}
                 onRemove={handleRemoveItem}
+                isDragging={isDragging && draggedItemIndex === index}
               />
             ))}
             

@@ -1,12 +1,12 @@
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, memo } from 'react';
 import { pdfjs } from 'react-pdf';
 import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
 import 'react-pdf/dist/esm/Page/TextLayer.css';
 import { getEffectiveDimensions } from '@/utils/print-plate/pdfTransformUtils';
 import { PrintPlateSize } from './PrintPlateSettings';
 import { PDFItemType } from './pdf-item/PDFItemType';
-import { PDFDocumentRenderer } from './pdf-item/PDFDocumentRenderer';
+import OptimizedPDFDocumentRenderer from './pdf-item/OptimizedPDFDocumentRenderer';
 import { PDFBoundaryOverlay } from './pdf-item/PDFBoundaryOverlay';
 import { PDFItemControls } from './pdf-item/PDFItemControls';
 import { PDFItemInfo } from './pdf-item/PDFItemInfo';
@@ -23,11 +23,22 @@ type PDFItemProps = {
   onDragStart: (index: number, e: React.MouseEvent) => void;
   onRotate: (index: number) => void;
   onRemove: (index: number) => void;
+  isDragging?: boolean;
 };
 
 export type { PDFItemType } from './pdf-item/PDFItemType';
 
-export const PDFItem = ({ item, index, scale, plateSize, onDragStart, onRotate, onRemove }: PDFItemProps) => {
+// Use memo to prevent unnecessary re-renders
+export const PDFItem = memo(({ 
+  item, 
+  index, 
+  scale, 
+  plateSize, 
+  onDragStart, 
+  onRotate, 
+  onRemove,
+  isDragging = false
+}: PDFItemProps) => {
   const [isHovered, setIsHovered] = useState(false);
   const [showDebug, setShowDebug] = useState(false);
   const [errorLoading, setErrorLoading] = useState(false);
@@ -71,7 +82,6 @@ export const PDFItem = ({ item, index, scale, plateSize, onDragStart, onRotate, 
   }, []);
   
   const handleDocumentLoadSuccess = () => {
-    console.log(`PDF item ${item.id} loaded successfully`);
     setErrorLoading(false);
   };
 
@@ -90,10 +100,16 @@ export const PDFItem = ({ item, index, scale, plateSize, onDragStart, onRotate, 
     onRemove(index);
   };
 
+  // Use optimized CSS classes to improve rendering performance
+  let itemClassNames = "pdf-item absolute flex flex-col cursor-move";
+  if (isDragging) {
+    itemClassNames += " will-change-transform";
+  }
+
   return (
     <div
       ref={containerRef}
-      className="pdf-item absolute flex flex-col cursor-move"
+      className={itemClassNames}
       style={{
         left: `${pixelX}px`,
         top: `${pixelY}px`,
@@ -101,17 +117,19 @@ export const PDFItem = ({ item, index, scale, plateSize, onDragStart, onRotate, 
         height: `${pixelHeight}px`,
         transform: `rotate(${item.rotation}deg)`,
         transformOrigin: 'center center', // Make sure rotation is around center
+        transition: isDragging ? 'none' : 'transform 0.1s ease-out', // Only add transition when not dragging
       }}
       onMouseDown={(e) => onDragStart(index, e)}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
       <div className="relative flex-1 overflow-hidden">
-        <PDFDocumentRenderer
+        <OptimizedPDFDocumentRenderer
           pdfUrl={item.pdfUrl}
           thumbnail={item.thumbnail}
           pixelWidth={pixelWidth}
           pixelHeight={pixelHeight}
+          isDragging={isDragging}
           onLoadSuccess={handleDocumentLoadSuccess}
           onLoadError={handleDocumentLoadError}
         />
@@ -145,13 +163,29 @@ export const PDFItem = ({ item, index, scale, plateSize, onDragStart, onRotate, 
           exceedsBoundaries={exceedsBoundaries}
         />
         
-        {/* Item controls */}
-        <PDFItemControls
-          isHovered={isHovered}
-          onRotate={handleRotateClick}
-          onRemove={handleRemoveClick}
-        />
+        {/* Item controls - only show when not dragging */}
+        {!isDragging && (
+          <PDFItemControls
+            isHovered={isHovered}
+            onRotate={handleRotateClick}
+            onRemove={handleRemoveClick}
+          />
+        )}
       </div>
     </div>
   );
-};
+}, (prevProps, nextProps) => {
+  // Custom comparison function to prevent unnecessary re-renders
+  // Only re-render if important props have changed
+  const itemsEqual = prevProps.item.id === nextProps.item.id &&
+                    prevProps.item.rotation === nextProps.item.rotation &&
+                    Math.abs(prevProps.item.x - nextProps.item.x) < 0.01 &&
+                    Math.abs(prevProps.item.y - nextProps.item.y) < 0.01 &&
+                    Math.abs(prevProps.item.width - nextProps.item.width) < 0.01 &&
+                    Math.abs(prevProps.item.height - nextProps.item.height) < 0.01;
+                    
+  return itemsEqual && 
+         prevProps.scale === nextProps.scale &&
+         prevProps.isDragging === nextProps.isDragging && 
+         prevProps.index === nextProps.index;
+});
