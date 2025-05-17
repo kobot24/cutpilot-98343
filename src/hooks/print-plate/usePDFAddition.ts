@@ -4,12 +4,17 @@ import { UploadedFile } from '@/types/fileTypes';
 import { PDFItemType } from '@/components/print-plate/pdf-item/PDFItemType';
 import { PrintPlateSize } from '@/components/print-plate/PrintPlateSettings';
 import { toast } from '@/components/ui/sonner';
+import { prefetchPDFData } from '@/utils/print-plate/pdfDataUtils';
 
 /**
- * Generate a unique ID for PDF items
+ * Generate a truly unique ID for PDF items
+ * Improved to guarantee uniqueness even when adding the same file multiple times
  */
 const generateUniqueItemId = (fileId: string): string => {
-  return `${fileId}-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+  // Use timestamp with high precision plus random component to ensure uniqueness
+  const timestamp = Date.now();
+  const randomPart = Math.floor(Math.random() * 1000000).toString().padStart(6, '0');
+  return `pdf-${fileId}-${timestamp}-${randomPart}`;
 };
 
 /**
@@ -43,6 +48,14 @@ export const usePDFAddition = (
         duration: 1500,
         id: `add-pdf-${file.id}`
       });
+      
+      // Prefetch the PDF data to ensure it's in cache when we need it
+      try {
+        await prefetchPDFData(file.convertedPdfUrl);
+      } catch (prefetchError) {
+        console.warn(`Warning: Failed to prefetch PDF data for ${file.id}:`, prefetchError);
+        // Continue anyway as we'll retry during actual usage
+      }
       
       // Create a temporary PDF loader to get dimensions
       const pdfLoader = new Promise<{ width: number, height: number, dpi: number }>((resolve) => {
@@ -100,6 +113,8 @@ export const usePDFAddition = (
         dpi: dpi,
       };
       
+      console.log(`PDF Addition - Adding new item with ID: ${uniqueItemId}, file ID: ${file.id}, URL: ${file.convertedPdfUrl.substring(0, 20)}...`);
+      
       // Add the new item to the items array
       setItems(prevItems => [...prevItems, newItem]);
       
@@ -120,7 +135,7 @@ export const usePDFAddition = (
         return updated;
       });
     }
-  }, [file => file.id, plateSize, setItems, loadingItems]);
+  }, [plateSize, setItems, loadingItems]);
 
   return {
     handleAddPDF

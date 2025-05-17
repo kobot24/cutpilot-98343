@@ -5,6 +5,7 @@ import { PrintPlateSize } from '@/components/print-plate/PrintPlateSettings';
 import { toast } from '@/components/ui/sonner';
 import { exportPrintPlateToPDF, downloadPDF } from '@/utils/print-plate/printPlateExporter';
 import { useExportStatusHandling } from './print-plate/useExportStatusHandling';
+import { clearPDFDataCache } from '@/utils/print-plate/pdfDataUtils';
 
 export const usePrintPlateExport = (items: PDFItemType[], plateSize: PrintPlateSize) => {
   const [isExporting, setIsExporting] = useState(false);
@@ -24,13 +25,15 @@ export const usePrintPlateExport = (items: PDFItemType[], plateSize: PrintPlateS
     try {
       console.log(`Starting PDF export of ${items.length} items`);
       console.log(`Plate size: ${plateSize.width}x${plateSize.height} cm`);
-      console.log(`Item IDs: ${items.map(item => item.id).join(', ')}`);
       
       // Verify all items have unique IDs
       const uniqueIds = new Set(items.map(item => item.id));
       if (uniqueIds.size !== items.length) {
         console.warn(`Warning: Found duplicate item IDs! Only ${uniqueIds.size} unique IDs for ${items.length} items.`);
       }
+      
+      // Clear the cache before export to ensure fresh data
+      clearPDFDataCache();
       
       // Export the PDF using the utility function
       const pdfBytes = await exportPrintPlateToPDF(items, plateSize);

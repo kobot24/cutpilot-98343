@@ -13,7 +13,12 @@ export const useExportStatusHandling = () => {
     
     // Log export start
     console.log(`Starting PDF export of ${items.length} items`);
-    console.log(`Item IDs: ${items.map(item => item.id).join(', ')}`);
+    
+    // Verify unique IDs
+    const uniqueIds = new Set(items.map(item => item.id));
+    if (uniqueIds.size !== items.length) {
+      console.warn(`Export Status - WARNING: Found ${items.length - uniqueIds.size} duplicate item IDs in ${items.length} total items`);
+    }
     
     // Warn about large exports
     if (items.length > 10) {
@@ -28,7 +33,7 @@ export const useExportStatusHandling = () => {
         missingUrlCount++;
         console.log(`Item ${index}: ${item.id} - Missing PDF URL, cannot export properly`);
       } else {
-        console.log(`Item ${index}: ${item.id} - Has PDF URL, Position: (${item.x.toFixed(1)}, ${item.y.toFixed(1)}), Rotation: ${item.rotation}°`);
+        console.log(`Item ${index}: ${item.id} - Has PDF URL: ${item.pdfUrl.substring(0, 20)}..., Position: (${item.x.toFixed(1)}, ${item.y.toFixed(1)}), Rotation: ${item.rotation}°`);
       }
     });
     

@@ -1,4 +1,7 @@
 
+// Import PDFItemType at the top of the file
+import { PDFItemType } from '@/components/print-plate/pdf-item/PDFItemType';
+
 // Cache for PDF data to prevent repeated fetches of the same PDF
 const pdfDataCache = new Map<string, Uint8Array>();
 
@@ -22,7 +25,7 @@ const checkAndCleanCache = () => {
 };
 
 /**
- * Fetch PDF data from a URL with caching
+ * Fetch PDF data from a URL with improved caching and reliability
  * @param url The URL to fetch PDF data from
  * @returns The PDF data as Uint8Array
  */
@@ -35,19 +38,49 @@ export const fetchPDFDataFromUrl = async (url: string): Promise<Uint8Array> => {
   
   try {
     console.log(`PDF Data - Fetching data from URL: ${url.substring(0, 30)}...`);
-    const response = await fetch(url);
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+    
+    // Add retry logic for more reliable fetching
+    let response;
+    let retryCount = 0;
+    const maxRetries = 3;
+    
+    while (retryCount < maxRetries) {
+      try {
+        response = await fetch(url, { 
+          cache: 'no-store', // Ensure fresh data
+          headers: { 'Cache-Control': 'no-cache' }
+        });
+        
+        if (response.ok) break;
+        
+        console.log(`PDF Data - Retry ${retryCount + 1}/${maxRetries} for ${url.substring(0, 20)}...`);
+        retryCount++;
+        await new Promise(r => setTimeout(r, 500 * retryCount)); // Exponential backoff
+      } catch (fetchError) {
+        console.error(`PDF Data - Fetch error (attempt ${retryCount + 1}):`, fetchError);
+        retryCount++;
+        if (retryCount >= maxRetries) throw fetchError;
+        await new Promise(r => setTimeout(r, 500 * retryCount));
+      }
+    }
+    
+    if (!response || !response.ok) {
+      throw new Error(`HTTP error! status: ${response?.status || 'unknown'}`);
     }
     
     const arrayBuffer = await response.arrayBuffer();
     const pdfBytes = new Uint8Array(arrayBuffer);
     
-    console.log(`PDF Data - Successfully fetched ${pdfBytes.byteLength} bytes`);
+    console.log(`PDF Data - Successfully fetched ${pdfBytes.byteLength} bytes for ${url.substring(0, 20)}...`);
     
-    // Store in cache
-    pdfDataCache.set(url, pdfBytes);
-    checkAndCleanCache();
+    // Store in cache with validation check
+    if (pdfBytes.byteLength > 0) {
+      pdfDataCache.set(url, pdfBytes);
+      checkAndCleanCache();
+    } else {
+      console.error(`PDF Data - Zero-length PDF data received for ${url}`);
+      throw new Error("Received empty PDF data");
+    }
     
     return pdfBytes;
   } catch (error) {
@@ -56,19 +89,23 @@ export const fetchPDFDataFromUrl = async (url: string): Promise<Uint8Array> => {
   }
 };
 
-// Import PDFItemType to fix the error
-import { PDFItemType } from '@/components/print-plate/pdf-item/PDFItemType';
-
 /**
  * Get PDF data for an item - optimized to prevent unnecessary fetches
+ * with improved reliability and error handling
  */
 export const getPDFDataFromItem = async (item: PDFItemType): Promise<Uint8Array> => {
   if (!item.pdfUrl) {
     throw new Error(`No PDF URL available for item: ${item.id}`);
   }
   
-  console.log(`PDF Data - Getting data for item: ${item.id}`);
-  return await fetchPDFDataFromUrl(item.pdfUrl);
+  console.log(`PDF Data - Getting data for item: ${item.id} with URL: ${item.pdfUrl.substring(0, 20)}...`);
+  
+  try {
+    return await fetchPDFDataFromUrl(item.pdfUrl);
+  } catch (error) {
+    console.error(`PDF Data - Error getting PDF data for item ${item.id}:`, error);
+    throw error;
+  }
 };
 
 /**
