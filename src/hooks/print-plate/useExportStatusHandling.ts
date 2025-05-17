@@ -3,24 +3,21 @@ import { PDFItemType } from '@/components/print-plate/pdf-item/PDFItemType';
 import { toast } from '@/components/ui/sonner';
 
 /**
- * Hook for managing export status and providing user feedback
+ * Hook for handling export status and providing feedback to the user
  */
 export const useExportStatusHandling = () => {
-  /**
-   * Handle the start of an export operation
-   */
+  
   const handleExportStart = (items: PDFItemType[]) => {
-    toast.info("Exportiere Druckplatte als PDF...");
+    // Start export process with user feedback
+    toast.info(`Exportiere ${items.length} Element${items.length !== 1 ? 'e' : ''}`);
     
-    // Check for rotated items and give additional feedback
-    const hasRotatedItems = items.some(item => item.rotation !== 0);
-    const rotatedItemsCount = items.filter(item => item.rotation !== 0).length;
+    // Log export start
+    console.log(`Starting PDF export of ${items.length} items`);
     
-    if (hasRotatedItems) {
-      console.log(`Found ${rotatedItemsCount} rotated items`);
-      toast.info(`Exportiere ${rotatedItemsCount} gedrehte Elemente...`, {
-        duration: 3000,
-      });
+    // Warn about large exports
+    if (items.length > 10) {
+      console.log('Warning: Exporting a large number of items may take some time');
+      toast.info(`Großer Export - dies kann einen Moment dauern`);
     }
     
     // Log item details for debugging purposes
@@ -39,34 +36,14 @@ export const useExportStatusHandling = () => {
     }
   };
   
-  /**
-   * Handle successful export completion
-   */
   const handleExportSuccess = () => {
-    toast.success("Druckplatte als PDF exportiert");
+    toast.success('Export erfolgreich');
+    console.log('PDF export completed successfully');
   };
   
-  /**
-   * Handle export errors with specific user feedback
-   */
   const handleExportError = (error: Error) => {
-    // More specific error messages for better user feedback
-    let errorMessage = "Unbekannter Fehler";
-    
-    if (error) {
-      errorMessage = error.message;
-      
-      // Check for common PDF-related errors
-      if (error.message.includes("rotation") || error.message.includes("dreh")) {
-        errorMessage = "Problem beim Exportieren von gedrehten Elementen";
-      } else if (error.message.includes("memory") || error.message.includes("allocation")) {
-        errorMessage = "Nicht genügend Speicher für den PDF-Export";
-      } else if (error.message.includes("network") || error.message.includes("fetch")) {
-        errorMessage = "Netzwerkproblem beim Laden der PDF-Daten";
-      }
-    }
-    
-    toast.error("Fehler beim Exportieren: " + errorMessage);
+    toast.error(`Export fehlgeschlagen: ${error.message}`);
+    console.error('PDF export failed:', error);
   };
   
   return {
