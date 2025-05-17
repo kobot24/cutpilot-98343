@@ -64,6 +64,57 @@ export const saveFilesToDB = async (files: UploadedFile[]): Promise<void> => {
   }
 };
 
+// New function to update a single file without clearing the store
+export const updateFileInDB = async (file: UploadedFile): Promise<void> => {
+  try {
+    console.log(`IndexedDB: Updating single file ${file.id} with name ${file.name}`);
+    
+    const db = await openDB();
+    const transaction = db.transaction(FILE_STORE, "readwrite");
+    const store = transaction.objectStore(FILE_STORE);
+
+    // First check if the file exists
+    const getRequest = store.get(file.id);
+    
+    return new Promise((resolve, reject) => {
+      getRequest.onsuccess = () => {
+        // Create a clean copy of the file object
+        const cleanFile = {
+          ...file,
+          convertedPdfUrl: file.convertedPdfUrl || null
+        };
+        
+        // Put (update) or add the file
+        const putRequest = store.put(cleanFile);
+        
+        putRequest.onsuccess = () => {
+          console.log(`IndexedDB: Successfully updated file ${file.id}`);
+          resolve();
+        };
+        
+        putRequest.onerror = (event) => {
+          console.error(`IndexedDB: Error updating file ${file.id}:`, event);
+          reject(new Error(`Failed to update file ${file.id} in IndexedDB`));
+        };
+      };
+      
+      getRequest.onerror = (event) => {
+        console.error(`IndexedDB: Error retrieving file ${file.id}:`, event);
+        reject(new Error(`Failed to retrieve file ${file.id} from IndexedDB`));
+      };
+      
+      transaction.oncomplete = () => resolve();
+      transaction.onerror = (event) => {
+        console.error("IndexedDB transaction error:", event);
+        reject(new Error("Failed to complete IndexedDB transaction"));
+      };
+    });
+  } catch (error) {
+    console.error(`Error updating file ${file.id} in IndexedDB:`, error);
+    throw error;
+  }
+};
+
 // Load files from IndexedDB
 export const loadFilesFromDB = async (): Promise<UploadedFile[]> => {
   try {

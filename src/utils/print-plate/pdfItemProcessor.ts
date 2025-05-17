@@ -21,6 +21,12 @@ export const processPDFItem = async (
 ): Promise<boolean> => {
   console.log(`PDF Processing - Processing item: ${item.id}, fileId: ${item.fileId || 'none'}`);
   console.log(`PDF Processing - Item position: x=${item.x}, y=${item.y}, width=${item.width}, height=${item.height}, rotation=${item.rotation}`);
+  
+  if (!item.pdfUrl) {
+    console.error(`PDF Processing - Item ${item.id} has no PDF URL`);
+    return false;
+  }
+  
   console.log(`PDF Processing - Using URL: ${item.pdfUrl.substring(0, 30)}...`);
   
   try {

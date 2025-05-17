@@ -27,7 +27,7 @@ export const useFileStorage = () => {
   // Use the PDF operations hook
   const {
     convertToPdf,
-    batchConvertToPdf, // Added new batch function
+    batchConvertToPdf,
     isConverting,
     conversionProgress,
     batchProgress,
@@ -36,8 +36,8 @@ export const useFileStorage = () => {
     endBatchConversion
   } = usePDFOperations(files, setFiles, selectedFile, setSelectedFile, setIsLoading);
   
-  // Use the storage sync hook
-  useFileStorageSync(
+  // Use the storage sync hook with the new functions
+  const { setBatchMode, updateSingleFile } = useFileStorageSync(
     files,
     setFiles,
     setSelectedFile,
@@ -45,6 +45,24 @@ export const useFileStorage = () => {
     setIsInitialized,
     isInitialized
   );
+  
+  // Enhanced batch convert that coordinates with file storage sync
+  const handleBatchConvertToPdf = async (fileIds: string[]) => {
+    if (fileIds.length === 0) return;
+    
+    console.log(`FileStorage: Starting enhanced batch conversion of ${fileIds.length} files`);
+    
+    // Tell the storage sync we're starting batch mode
+    setBatchMode(true);
+    
+    // Run the batch conversion
+    const result = await batchConvertToPdf(fileIds);
+    
+    // Tell the storage sync we're done with batch mode
+    setBatchMode(false);
+    
+    return result;
+  };
 
   return {
     files,
@@ -56,11 +74,12 @@ export const useFileStorage = () => {
     removeFile,
     selectFile,
     convertToPdf,
-    batchConvertToPdf, // Expose the batch function
+    batchConvertToPdf: handleBatchConvertToPdf, // Use our enhanced version
     clearAllFiles,
     startBatchConversion,
     updateBatchProgress,
     endBatchConversion,
+    updateSingleFile, // Expose the new function
     MAX_FILE_SIZE_MB: FILE_STORAGE_LIMITS.MAX_FILE_SIZE_MB,
     MAX_FILES: FILE_STORAGE_LIMITS.MAX_FILES
   };

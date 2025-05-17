@@ -32,6 +32,12 @@ export const usePrintPlateExport = (items: PDFItemType[], plateSize: PrintPlateS
         console.warn(`Warning: Found duplicate item IDs! Only ${uniqueIds.size} unique IDs for ${items.length} items.`);
       }
       
+      // Verify all URLs are valid
+      const invalidItems = items.filter(item => !item.pdfUrl).length;
+      if (invalidItems > 0) {
+        console.warn(`Warning: Found ${invalidItems} items with missing PDF URLs!`);
+      }
+      
       // Clear the cache before export to ensure fresh data
       clearPDFDataCache();
       

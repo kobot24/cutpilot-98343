@@ -1,7 +1,7 @@
-
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { UploadedFile } from '../types/fileTypes';
 import { usePDFConverter } from './usePDFConverter';
+import { updateFileInDB } from '../utils/indexedDBUtils';
 
 export const usePDFOperations = (
   files: UploadedFile[],
@@ -19,6 +19,11 @@ export const usePDFOperations = (
     updateBatchProgress,
     endBatchConversion
   } = usePDFConverter();
+  
+  // Ref to store the list of files that have been successfully converted
+  // This will help us keep track during batch operations
+  const convertedFilesRef = useRef<{[id: string]: string}>({});
+  const isBatchProcessingRef = useRef<boolean>(false);
 
   const handleConvertToPdf = async (fileId: string) => {
     console.log(`PDF Operations: Converting file ${fileId} to PDF`);
@@ -42,13 +47,27 @@ export const usePDFOperations = (
       console.log(`PDF Operations: Successfully converted file ${fileId} to PDF`);
       
       // Update file with converted PDF URL
-      const updatedFiles = files.map(f => 
-        f.id === fileId 
-          ? { ...f, convertedPdfUrl: pdfUrl }
-          : f
-      );
+      const updatedFile = { ...file, convertedPdfUrl: pdfUrl };
       
-      setFiles(updatedFiles);
+      // Only update the files array if not in batch mode to prevent race conditions
+      if (!isBatchProcessingRef.current) {
+        const updatedFiles = files.map(f => 
+          f.id === fileId 
+            ? updatedFile
+            : f
+        );
+        setFiles(updatedFiles);
+      } else {
+        // In batch mode, save individually to IndexedDB
+        console.log(`PDF Operations: Batch mode active, saving file ${fileId} individually`);
+        try {
+          await updateFileInDB(updatedFile);
+          // Store the converted file URL in our ref
+          convertedFilesRef.current[fileId] = pdfUrl;
+        } catch (error) {
+          console.error(`PDF Operations: Error saving converted file ${fileId} to IndexedDB:`, error);
+        }
+      }
       
       // Update selected file if it's the one we just converted
       if (selectedFile?.id === fileId) {
@@ -70,6 +89,11 @@ export const usePDFOperations = (
     
     console.log(`PDF Operations: Starting batch conversion of ${fileIds.length} files`);
     
+    // Set batch mode flag
+    isBatchProcessingRef.current = true;
+    // Clear the converted files tracking
+    convertedFilesRef.current = {};
+    
     // Initialize batch conversion progress
     if (startBatchConversion && fileIds.length > 0) {
       const firstFile = files.find(f => f.id === fileIds[0]);
@@ -78,6 +102,7 @@ export const usePDFOperations = (
     
     let successCount = 0;
     let failCount = 0;
+    let updatedFiles: UploadedFile[] = [...files];
     
     // IMPORTANT: Process files sequentially to avoid memory issues and track progress properly
     for (let i = 0; i < fileIds.length; i++) {
@@ -103,6 +128,14 @@ export const usePDFOperations = (
         if (result) {
           successCount++;
           console.log(`PDF Operations: Successfully converted ${file.name} to PDF in batch process`);
+          
+          // Update our local copy of the files array
+          updatedFiles = updatedFiles.map(f => 
+            f.id === fileId 
+              ? { ...f, convertedPdfUrl: result }
+              : f
+          );
+          
           if (updateBatchProgress) {
             updateBatchProgress(i + 1, file.name, true);
           }
@@ -114,21 +147,30 @@ export const usePDFOperations = (
         console.error(`PDF Operations: Error in batch converting file ${fileId}:`, error);
         failCount++;
       }
+      
+      // Add a small delay between operations to allow browser to catch up
+      await new Promise(resolve => setTimeout(resolve, 200));
     }
     
     console.log(`PDF Operations: Batch conversion completed: ${successCount} successful, ${failCount} failed`);
+    
+    // Update the files state with all converted files at once
+    setFiles(updatedFiles);
     
     // End batch conversion
     if (endBatchConversion) {
       endBatchConversion();
     }
     
+    // Reset batch mode flag
+    isBatchProcessingRef.current = false;
+    
     return { successCount, failCount };
   };
 
   return {
     convertToPdf: handleConvertToPdf,
-    batchConvertToPdf: handleBatchConvertToPdf, // Adding the new batch function
+    batchConvertToPdf: handleBatchConvertToPdf,
     isConverting,
     conversionProgress,
     batchProgress,

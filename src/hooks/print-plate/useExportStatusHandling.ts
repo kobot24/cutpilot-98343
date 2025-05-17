@@ -20,6 +20,13 @@ export const useExportStatusHandling = () => {
       console.warn(`Export Status - WARNING: Found ${items.length - uniqueIds.size} duplicate item IDs in ${items.length} total items`);
     }
     
+    // Verify all URLs are present
+    const missingUrls = items.filter(item => !item.pdfUrl).length;
+    if (missingUrls > 0) {
+      console.warn(`Export Status - WARNING: Found ${missingUrls} items with missing PDF URLs`);
+      toast.warning(`Warnung: ${missingUrls} Element(e) haben keine PDF-URL`);
+    }
+    
     // Warn about large exports
     if (items.length > 10) {
       console.log('Warning: Exporting a large number of items may take some time');
