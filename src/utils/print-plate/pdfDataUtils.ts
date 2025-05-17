@@ -56,6 +56,9 @@ export const fetchPDFDataFromUrl = async (url: string): Promise<Uint8Array> => {
   }
 };
 
+// Import PDFItemType to fix the error
+import { PDFItemType } from '@/components/print-plate/pdf-item/PDFItemType';
+
 /**
  * Get PDF data for an item - optimized to prevent unnecessary fetches
  */
