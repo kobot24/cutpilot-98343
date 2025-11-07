@@ -5,6 +5,8 @@ import { PrintPlateSize } from '@/components/print-plate/PrintPlateSettings';
 import { CM_TO_POINTS, convertDimensionsToPoints } from './pdfCoordinateUtils';
 import { processPDFItem } from './pdfItemProcessor';
 import { clearPDFDataCache } from './pdfDataUtils';
+import { isTauri } from '../tauri';
+import { saveFileDialog, writeBinaryFile, getDownloadDir } from '../tauriFileDialog';
 
 export const exportPrintPlateToPDF = async (
   items: PDFItemType[],
@@ -103,27 +105,47 @@ export const exportPrintPlateToPDF = async (
 };
 
 // Helper function to download PDF bytes as a file
-export const downloadPDF = (pdfBytes: Uint8Array, fileName: string = 'printplate.pdf') => {
-  // Create a blob from the PDF bytes
-  const blob = new Blob([pdfBytes], { type: 'application/pdf' });
-  
-  // Create a URL for the blob
-  const url = URL.createObjectURL(blob);
-  
-  // Create a link element
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = fileName;
-  
-  // Append to the document body
-  document.body.appendChild(link);
-  
-  // Trigger the download
-  link.click();
-  
-  // Clean up
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
-  
-  console.log(`PDF Export - Download initiated for file: ${fileName} (${pdfBytes.byteLength} bytes)`);
+export const downloadPDF = async (pdfBytes: Uint8Array, fileName: string = 'printplate.pdf') => {
+  // Use Tauri save dialog if running in Tauri
+  if (isTauri()) {
+    try {
+      const downloadDir = await getDownloadDir();
+      const defaultPath = downloadDir ? `${downloadDir}/${fileName}` : fileName;
+
+      const filePath = await saveFileDialog({
+        defaultPath,
+        filters: [
+          {
+            name: 'PDF Files',
+            extensions: ['pdf']
+          }
+        ]
+      });
+
+      if (filePath) {
+        const success = await writeBinaryFile(filePath, pdfBytes);
+        if (success) {
+          console.log(`PDF Export - File saved via Tauri: ${filePath} (${pdfBytes.byteLength} bytes)`);
+        } else {
+          console.error('PDF Export - Failed to write file via Tauri');
+        }
+      } else {
+        console.log('PDF Export - Save cancelled by user');
+      }
+    } catch (error) {
+      console.error('PDF Export - Error saving file via Tauri:', error);
+    }
+  } else {
+    // Browser download (original implementation)
+    const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    console.log(`PDF Export - Download initiated for file: ${fileName} (${pdfBytes.byteLength} bytes)`);
+  }
 };
