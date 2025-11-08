@@ -37,9 +37,6 @@
       "shell": {
         "all": false,
         "open": true
-      },
-      "updater": {
-        "all": true
       }
     },
     "bundle": {
