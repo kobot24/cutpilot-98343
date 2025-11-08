@@ -299,7 +299,8 @@ export const Settings = () => {
           </CardContent>
         </Card>
 
-        {/* Update Section - Only show in Tauri */}
+        {/* Update Section - Disabled until updater is properly configured
+            To enable: Set updater.active = true in tauri.conf.json and configure signing
         {isTauri() && (
           <Card>
             <CardHeader>
@@ -313,6 +314,7 @@ export const Settings = () => {
             </CardContent>
           </Card>
         )}
+        */}
 
         {/* Actions */}
         <Card>

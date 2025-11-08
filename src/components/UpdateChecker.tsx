@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Download, RefreshCw, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
@@ -10,10 +10,12 @@ export const UpdateChecker = () => {
   const [status, setStatus] = useState<UpdateStatus>({ type: 'IDLE' });
   const [currentVersion, setCurrentVersion] = useState<string>('');
 
-  // Load current version on mount
-  useState(() => {
-    getCurrentVersion().then(setCurrentVersion);
-  });
+  // FIX: Load current version on mount using useEffect, not useState
+  useEffect(() => {
+    getCurrentVersion().then(setCurrentVersion).catch((error) => {
+      console.error('Error getting current version:', error);
+    });
+  }, []);
 
   const handleCheckForUpdates = async () => {
     setStatus({ type: 'CHECKING' });

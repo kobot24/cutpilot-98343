@@ -98,14 +98,28 @@ export const useSettings = () => {
       };
 
       const newProfiles = [...settings.iccProfiles, profile];
-      updateSettings({ iccProfiles: newProfiles });
 
+      // FIX: Single updateSettings call to avoid race condition
       // Set as default if it's the first profile
+      const updates: Partial<UserSettings> = {
+        iccProfiles: newProfiles
+      };
+
       if (newProfiles.length === 1) {
-        updateSettings({ defaultICCProfile: profile.fileName });
+        updates.defaultICCProfile = profile.fileName;
       }
+
+      updateSettings(updates);
     } catch (error) {
       console.error('Error adding ICC profile:', error);
+
+      // Better error messages
+      if (error instanceof Error) {
+        if (error.message.includes('quota') || error.message.includes('storage')) {
+          throw new Error('Speicher voll: ICC-Profil ist zu groß. Bitte löschen Sie andere Profile.');
+        }
+      }
+
       throw error;
     }
   };
