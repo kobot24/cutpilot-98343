@@ -62,33 +62,11 @@ jobs:
       - name: Install frontend dependencies
         run: npm ci
 
-      - name: Build Tauri app
-        uses: tauri-apps/tauri-action@v0
+      - name: Build with Tauri CLI
+        run: |
+          npm run tauri build -- --target ${{ matrix.platform.rust_target }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
-          TAURI_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
-        with:
-          tagName: v__VERSION__
-          releaseName: 'CutPilot v__VERSION__'
-          releaseBody: |
-            ## CutPilot Desktop App
-
-            ### Features
-            - PDF Cut Contour Tool für professionelle Druckereien
-            - Native Desktop-Integration für Mac und Windows
-            - Direkter Dateisystem-Zugriff
-            - Schneller PDF-Export mit ICC-Profil-Unterstützung
-
-            ### Installation
-            - **macOS**: Laden Sie die `.dmg` Datei herunter, öffnen Sie sie und ziehen Sie CutPilot in den Programme-Ordner
-            - **Windows**: Laden Sie die `.msi` oder `.exe` Datei herunter und führen Sie den Installer aus
-
-            ### Changelog
-            See commit history for detailed changes.
-          releaseDraft: true
-          prerelease: false
-          args: --target ${{ matrix.platform.rust_target }}
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
