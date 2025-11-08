@@ -80,11 +80,7 @@
       "csp": null
     },
     "updater": {
-      "active": true,
-      "endpoints": [
-        "https://github.com/kobot24/cutpilot-98343/releases/latest/download/latest.json"
-      ],
-      "dialog": false
+      "active": false
     },
     "windows": [
       {
