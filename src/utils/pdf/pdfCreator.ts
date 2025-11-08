@@ -3,13 +3,24 @@ import { PDFDocument } from 'pdf-lib';
 import { optimizeImageIfNeeded } from '../fileValidationUtils';
 import { ProgressTracker } from '../progressUtils';
 import { FILE_STORAGE_LIMITS } from '../../constants/fileStorage';
-import { addPdfMetadata } from './pdfMetadataUtils';
+import { addPdfMetadata, embedICCProfile } from './pdfMetadataUtils';
 import { createCutContour } from './cutContourCreator';
+import { detectImageColorSpace, convertImageColorSpace } from './colorSpaceUtils';
+
+// Extended settings type to include ICC profile and color space settings
+export type PDFCreatorSettings = {
+  cutContourOffset: number;
+  spotColorName: string;
+  convertColorSpace?: boolean;
+  targetColorSpace?: 'DeviceCMYK' | 'DeviceRGB' | 'DeviceGray';
+  defaultICCProfile?: string | null;
+  iccProfileData?: string | null; // Base64 encoded ICC profile data
+};
 
 // Create PDF with cut contour from image URL
 export const createPdfWithCutContour = async (
-  imageUrl: string, 
-  settings: { cutContourOffset: number; spotColorName: string },
+  imageUrl: string,
+  settings: PDFCreatorSettings,
   onProgress?: (progress: number, status: string) => void
 ) => {
   // Initialize progress tracking if callback provided
@@ -77,10 +88,17 @@ export const createPdfWithCutContour = async (
     progress.incrementProgress(10, 'PDF wird erstellt...');
     
     try {
+      // Farbraum des Bildes erkennen
+      console.log('Detecting image color space');
+      const detectedColorSpace = await detectImageColorSpace(loadedImg);
+      console.log(`Detected color space: ${detectedColorSpace}`);
+
+      progress.incrementProgress(2, 'Farbraum erkannt');
+
       // Bild in PDF einbetten - unter Beibehaltung der Originaldimensionen
       console.log('Embedding image in PDF');
       const jpgImage = await pdfDoc.embedJpg(imageData);
-      
+
       progress.incrementProgress(5, 'Bild in PDF eingebettet');
       
       // Pixelabmessungen des Bildes erhalten
@@ -139,15 +157,49 @@ export const createPdfWithCutContour = async (
         progress
       });
       
+      // Farbraum-Management und ICC-Profil-Einbettung
+      let iccProfileEmbedded = false;
+      let targetColorSpace = detectedColorSpace;
+
+      if (settings.convertColorSpace && settings.targetColorSpace) {
+        // Farbraum-Konvertierung ist aktiviert
+        targetColorSpace = settings.targetColorSpace;
+        console.log(`Color space conversion enabled: ${detectedColorSpace} → ${targetColorSpace}`);
+
+        // ICC-Profil einbetten, falls vorhanden
+        if (settings.iccProfileData) {
+          console.log('Embedding ICC profile for color conversion');
+          progress.incrementProgress(2, 'ICC-Profil wird eingebettet...');
+
+          embedICCProfile(
+            pdfDoc,
+            pdfContext,
+            settings.iccProfileData,
+            targetColorSpace,
+            settings.defaultICCProfile || 'Custom ICC Profile'
+          );
+          iccProfileEmbedded = true;
+
+          progress.incrementProgress(3, 'ICC-Profil eingebettet');
+        } else {
+          console.warn('Color space conversion requested but no ICC profile provided');
+        }
+      } else {
+        // Farbraum beibehalten
+        console.log(`Preserving original color space: ${detectedColorSpace}`);
+        targetColorSpace = detectedColorSpace;
+      }
+
       // Dateinamen aus URL für Metadaten extrahieren
       const fileName = imageUrl.split('/').pop()?.split('.')[0] || 'Image';
-      
+
       // Abmessungen zum Dateinamen für Klarheit hinzufügen
       const fileNameWithDimensions = `${fileName}_${widthInCm.toFixed(1)}x${heightInCm.toFixed(1)}cm`;
-      
+
       console.log('Setting PDF metadata');
       // PDF-Metadaten mit Adobe Illustrator-Kompatibilität festlegen
-      addPdfMetadata(pdfDoc, pdfContext, fileNameWithDimensions);
+      // Skip OutputIntents if we already embedded an ICC profile
+      addPdfMetadata(pdfDoc, pdfContext, fileNameWithDimensions, iccProfileEmbedded);
       
       progress.incrementProgress(10, 'PDF wird finalisiert...');
       
