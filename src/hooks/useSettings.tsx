@@ -60,7 +60,32 @@ export const useSettings = () => {
   // Save settings to localStorage whenever they change
   useEffect(() => {
     if (!isLoading) {
-      localStorage.setItem('userSettings', JSON.stringify(settings));
+      try {
+        localStorage.setItem('userSettings', JSON.stringify(settings));
+      } catch (error) {
+        console.error('Error saving settings to localStorage:', error);
+
+        // If quota exceeded, show user-friendly message
+        if (error instanceof Error &&
+            (error.name === 'QuotaExceededError' ||
+             error.message.includes('quota') ||
+             error.message.includes('storage'))) {
+          console.error('localStorage quota exceeded - ICC profiles too large');
+
+          // Revert to previous settings without the failed profile
+          // This prevents the white screen crash
+          const storedSettings = localStorage.getItem('userSettings');
+          if (storedSettings) {
+            try {
+              const previousSettings = JSON.parse(storedSettings);
+              setSettings(previousSettings);
+            } catch (parseError) {
+              // If we can't restore, reset to defaults
+              setSettings(defaultSettings);
+            }
+          }
+        }
+      }
     }
   }, [settings, isLoading]);
 
@@ -99,8 +124,7 @@ export const useSettings = () => {
 
       const newProfiles = [...settings.iccProfiles, profile];
 
-      // FIX: Single updateSettings call to avoid race condition
-      // Set as default if it's the first profile
+      // FIX: Check if new settings will fit in localStorage BEFORE updating
       const updates: Partial<UserSettings> = {
         iccProfiles: newProfiles
       };
@@ -109,14 +133,36 @@ export const useSettings = () => {
         updates.defaultICCProfile = profile.fileName;
       }
 
+      const newSettings = { ...settings, ...updates };
+      const settingsJson = JSON.stringify(newSettings);
+
+      // Check approximate size (localStorage limit is usually 5-10MB)
+      const approximateSize = new Blob([settingsJson]).size;
+      const maxSize = 5 * 1024 * 1024; // 5MB conservative limit
+
+      if (approximateSize > maxSize) {
+        throw new Error(`ICC-Profil ist zu groß (${(approximateSize / 1024 / 1024).toFixed(1)}MB). Maximum: ${(maxSize / 1024 / 1024).toFixed(0)}MB. Bitte verwenden Sie ein kleineres Profil.`);
+      }
+
+      // Try to actually save to localStorage to catch any quota errors
+      try {
+        localStorage.setItem('userSettings_test', settingsJson);
+        localStorage.removeItem('userSettings_test');
+      } catch (storageError) {
+        if (storageError instanceof Error && storageError.name === 'QuotaExceededError') {
+          throw new Error('Speicher voll: ICC-Profil ist zu groß. Bitte löschen Sie andere Profile oder verwenden Sie ein kleineres Profil.');
+        }
+        throw storageError;
+      }
+
       updateSettings(updates);
     } catch (error) {
       console.error('Error adding ICC profile:', error);
 
       // Better error messages
       if (error instanceof Error) {
-        if (error.message.includes('quota') || error.message.includes('storage')) {
-          throw new Error('Speicher voll: ICC-Profil ist zu groß. Bitte löschen Sie andere Profile.');
+        if (error.message.includes('quota') || error.message.includes('storage') || error.message.includes('zu groß')) {
+          throw error; // Re-throw with the message we already created
         }
       }
 
