@@ -41,7 +41,7 @@
     },
     "bundle": {
       "active": true,
-      "category": "Graphics",
+      "category": "GraphicsAndDesign",
       "copyright": "Copyright © 2024 CutPilot",
       "deb": {
         "depends": []
