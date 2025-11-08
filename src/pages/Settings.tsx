@@ -154,11 +154,11 @@ export const Settings = () => {
 
             {/* Cut Contour Name */}
             <div className="space-y-2">
-              <Label htmlFor="cutContourName">Name der Cut-Kontur</Label>
+              <Label htmlFor="spotColorName">Name der Cut-Kontur</Label>
               <Input
-                id="cutContourName"
-                value={settings.cutContourName}
-                onChange={(e) => updateSetting('cutContourName', e.target.value)}
+                id="spotColorName"
+                value={settings.spotColorName}
+                onChange={(e) => updateSetting('spotColorName', e.target.value)}
                 placeholder="CUT"
                 className="max-w-xs"
               />

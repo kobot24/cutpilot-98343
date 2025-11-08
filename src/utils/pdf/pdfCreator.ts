@@ -142,14 +142,14 @@ export const createPdfWithCutContour = async (
       });
       
       const pdfContext = pdfDoc.context;
-      
-      // Immer "CutContour" als Spot-Farbnamen verwenden
-      const spotColorName = "CutContour";
-      
+
+      // Spot-Farbnamen aus den Settings verwenden
+      const spotColorName = settings.spotColorName || "CutContour";
+
       // CutContour zum PDF hinzufügen
       await createCutContour({
         page,
-        pdfContext, 
+        pdfContext,
         pdfPageWidth,
         pdfPageHeight,
         spotColorName,

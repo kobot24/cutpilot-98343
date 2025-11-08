@@ -71,6 +71,11 @@ export const useSettings = () => {
     }));
   };
 
+  // Helper function to update a single setting
+  const updateSetting = <K extends keyof UserSettings>(key: K, value: UserSettings[K]) => {
+    updateSettings({ [key]: value } as Partial<UserSettings>);
+  };
+
   const addICCProfile = async (file: File): Promise<void> => {
     try {
       // Read file as base64
@@ -133,6 +138,7 @@ export const useSettings = () => {
     settings,
     isLoading,
     updateSettings,
+    updateSetting,
     addICCProfile,
     removeICCProfile,
     setDefaultICCProfile,
