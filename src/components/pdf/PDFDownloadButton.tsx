@@ -4,6 +4,8 @@ import { Button } from '@/components/ui/button';
 import { Download } from 'lucide-react';
 import { toast } from '@/components/ui/use-toast';
 import { Progress } from '@/components/ui/progress';
+import { isTauri } from '@/utils/tauri';
+import { saveFileDialog, writeBinaryFile, getDownloadDir } from '@/utils/tauriFileDialog';
 
 type PDFDownloadButtonProps = {
   pdfUrl: string | null | undefined;
@@ -32,8 +34,8 @@ export const PDFDownloadButton = ({
   const handleDownload = async () => {
     if (!pdfUrl) {
       toast({
-        title: "Fehler beim Herunterladen",
-        description: "Keine PDF-Datei zum Herunterladen verfügbar",
+        title: "Fehler beim Speichern",
+        description: "Keine PDF-Datei zum Speichern verfügbar",
         variant: "destructive"
       });
       return;
@@ -42,72 +44,56 @@ export const PDFDownloadButton = ({
     try {
       setIsDownloading(true);
       setDownloadProgress(10);
-      
+
       // Generate proper filename
       const downloadName = fileName.endsWith('.pdf') ? fileName : `${fileName}.pdf`;
-      
-      // Use different approaches based on the URL type
-      if (pdfUrl.startsWith('blob:')) {
-        setDownloadProgress(30);
-        // For blob URLs, attempt to use fetch stream for large files
-        try {
-          const response = await fetch(pdfUrl);
-          if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-          
-          setDownloadProgress(60);
-          const blob = await response.blob();
-          setDownloadProgress(80);
-          
-          const url = URL.createObjectURL(blob);
-          const link = document.createElement('a');
-          link.href = url;
-          link.download = downloadName;
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-          
-          // Clean up blob URL after a short delay
-          setTimeout(() => URL.revokeObjectURL(url), 100);
-          setDownloadProgress(100);
-        } catch (error) {
-          console.error('Error downloading from blob URL:', error);
-          throw error;
-        }
-      } 
-      else if (pdfUrl.startsWith('data:application/pdf')) {
-        // For data URLs, always convert to blob first
-        setDownloadProgress(30);
-        try {
-          const response = await fetch(pdfUrl);
-          setDownloadProgress(60);
-          const blob = await response.blob();
-          setDownloadProgress(80);
-          
-          const url = URL.createObjectURL(blob);
-          const link = document.createElement('a');
-          link.href = url;
-          link.download = downloadName;
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-          
-          // Clean up blob URL after a short delay
-          setTimeout(() => URL.revokeObjectURL(url), 100);
-          setDownloadProgress(100);
-        } catch (error) {
-          console.error('Error downloading from data URL:', error);
-          throw error;
+
+      // Fetch PDF data as ArrayBuffer
+      setDownloadProgress(30);
+      const response = await fetch(pdfUrl);
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+
+      setDownloadProgress(60);
+      const arrayBuffer = await response.arrayBuffer();
+      const uint8Array = new Uint8Array(arrayBuffer);
+      setDownloadProgress(80);
+
+      // Use Tauri save dialog if in desktop mode
+      if (isTauri()) {
+        const downloadDir = await getDownloadDir();
+        const defaultPath = downloadDir ? `${downloadDir}/${downloadName}` : downloadName;
+
+        const filePath = await saveFileDialog({
+          defaultPath,
+          filters: [
+            {
+              name: 'PDF Dateien',
+              extensions: ['pdf']
+            }
+          ]
+        });
+
+        if (filePath) {
+          const success = await writeBinaryFile(filePath, uint8Array);
+          if (success) {
+            setDownloadProgress(100);
+            toast({
+              title: "PDF gespeichert",
+              description: `Datei wurde erfolgreich gespeichert`
+            });
+          } else {
+            throw new Error('Fehler beim Speichern der Datei');
+          }
+        } else {
+          // User cancelled
+          toast({
+            title: "Abgebrochen",
+            description: "Speichern abgebrochen"
+          });
         }
       } else {
-        // For remote URLs
-        setDownloadProgress(30);
-        const response = await fetch(pdfUrl);
-        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-        
-        setDownloadProgress(60);
-        const blob = await response.blob();
-        setDownloadProgress(80);
-        
+        // Browser fallback - direct download
+        const blob = new Blob([uint8Array], { type: 'application/pdf' });
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = url;
@@ -115,21 +101,20 @@ export const PDFDownloadButton = ({
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
-        
-        // Clean up blob URL after a short delay
+
         setTimeout(() => URL.revokeObjectURL(url), 100);
         setDownloadProgress(100);
+
+        toast({
+          title: "Download gestartet",
+          description: `${downloadName} wird heruntergeladen`
+        });
       }
-      
-      toast({
-        title: "Download gestartet",
-        description: `${downloadName} wird heruntergeladen`
-      });
     } catch (error) {
-      console.error('Error downloading PDF:', error);
+      console.error('Error saving PDF:', error);
       toast({
-        title: "Fehler beim Herunterladen",
-        description: error instanceof Error ? error.message : "Unbekannter Fehler beim Herunterladen",
+        title: "Fehler beim Speichern",
+        description: error instanceof Error ? error.message : "Unbekannter Fehler beim Speichern",
         variant: "destructive"
       });
     } finally {
@@ -156,12 +141,12 @@ export const PDFDownloadButton = ({
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
             </svg>
-            {!iconOnly && "Herunterladen..."}
+            {!iconOnly && (isTauri() ? "Speichern..." : "Herunterladen...")}
           </span>
         ) : children || (
           <>
             <Download className="h-4 w-4 mr-2" />
-            {!iconOnly && "Herunterladen"}
+            {!iconOnly && (isTauri() ? "Speichern" : "Herunterladen")}
           </>
         )}
       </Button>
