@@ -11,6 +11,7 @@ import { useSettings } from '@/hooks/useSettings';
 import { Upload, X, Check, Settings as SettingsIcon } from 'lucide-react';
 import { isTauri } from '@/utils/tauri';
 import { openFileDialog, readBinaryFile } from '@/utils/tauriFileDialog';
+import { UpdateChecker } from '@/components/UpdateChecker';
 
 export const Settings = () => {
   const {
@@ -297,6 +298,21 @@ export const Settings = () => {
             )}
           </CardContent>
         </Card>
+
+        {/* Update Section - Only show in Tauri */}
+        {isTauri() && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Software-Updates</CardTitle>
+              <CardDescription>
+                Prüfen Sie auf neue Versionen von CutPilot und installieren Sie Updates
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <UpdateChecker />
+            </CardContent>
+          </Card>
+        )}
 
         {/* Actions */}
         <Card>

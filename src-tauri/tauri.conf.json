@@ -37,6 +37,9 @@
       "shell": {
         "all": false,
         "open": true
+      },
+      "updater": {
+        "all": true
       }
     },
     "bundle": {
@@ -80,7 +83,12 @@
       "csp": null
     },
     "updater": {
-      "active": false
+      "active": true,
+      "endpoints": [
+        "https://github.com/kobot24/cutpilot-98343/releases/latest/download/latest.json"
+      ],
+      "dialog": false,
+      "pubkey": ""
     },
     "windows": [
       {
