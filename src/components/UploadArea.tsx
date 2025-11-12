@@ -37,17 +37,19 @@ export const UploadArea = ({
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
-    
+
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
       const validFiles = Array.from(e.dataTransfer.files).filter(
-        file => file.type.startsWith('image/jpeg') || file.type.startsWith('image/jpg')
+        file => file.type.startsWith('image/jpeg') ||
+                file.type.startsWith('image/jpg') ||
+                file.type === 'application/pdf'
       );
-      
+
       if (validFiles.length === 0) {
-        toast.error('Nur JPG-Dateien werden unterstützt');
+        toast.error('Nur JPG- und PDF-Dateien werden unterstützt');
         return;
       }
-      
+
       onFilesAdded(e.dataTransfer.files);
     }
   }, [onFilesAdded]);
@@ -65,8 +67,8 @@ export const UploadArea = ({
         multiple: true,
         filters: [
           {
-            name: 'Bilder',
-            extensions: ['jpg', 'jpeg', 'png', 'gif', 'bmp']
+            name: 'Bilder und PDFs',
+            extensions: ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'pdf']
           }
         ]
       });
@@ -87,6 +89,7 @@ export const UploadArea = ({
         if (extension === 'png') mimeType = 'image/png';
         else if (extension === 'gif') mimeType = 'image/gif';
         else if (extension === 'bmp') mimeType = 'image/bmp';
+        else if (extension === 'pdf') mimeType = 'application/pdf';
 
         const blob = new Blob([contents], { type: mimeType });
         return new File([blob], fileName, { type: mimeType });
@@ -136,9 +139,9 @@ export const UploadArea = ({
           </div>
           
           <p className="mb-4 text-sm text-gray-500">
-            JPG-Dateien hier ablegen oder klicken Sie zum Auswählen
+            JPG- oder PDF-Dateien hier ablegen oder klicken Sie zum Auswählen
           </p>
-          
+
           <div className="flex items-center gap-2">
             <Button
               variant="outline"
@@ -154,18 +157,18 @@ export const UploadArea = ({
               Dateien auswählen
             </Button>
           </div>
-          
+
           <input
             id="fileInput"
             type="file"
-            accept=".jpg,.jpeg"
+            accept=".jpg,.jpeg,.pdf"
             multiple
             className="hidden"
             onChange={handleFileChange}
           />
-          
+
           <div className="mt-4 space-y-1 text-xs text-gray-400">
-            <p>Unterstützte Formate: JPG, JPEG</p>
+            <p>Unterstützte Formate: JPG, JPEG, PDF</p>
             <p>Maximale Dateigröße: {maxFileSizeMB}MB</p>
           </div>
         </CardContent>
