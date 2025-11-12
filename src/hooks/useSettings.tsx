@@ -21,6 +21,7 @@ export type UserSettings = {
   // Color Space Settings (new)
   convertColorSpace: boolean; // Whether to convert uploaded PDFs
   targetColorSpace: 'DeviceCMYK' | 'DeviceRGB' | 'DeviceGray'; // Target color space
+  iccProfileMode: 'preserve' | 'convert'; // NEW: preserve original ICC or use settings ICC
 };
 
 export const defaultSettings: UserSettings = {
@@ -29,7 +30,8 @@ export const defaultSettings: UserSettings = {
   iccProfiles: [],
   defaultICCProfile: null,
   convertColorSpace: false,
-  targetColorSpace: 'DeviceCMYK'
+  targetColorSpace: 'DeviceCMYK',
+  iccProfileMode: 'preserve' // Default: keep original ICC profile
 };
 
 export const useSettings = () => {

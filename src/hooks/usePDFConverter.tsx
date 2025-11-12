@@ -83,7 +83,8 @@ export const usePDFConverter = () => {
         convertColorSpace: userSettings.convertColorSpace,
         targetColorSpace: userSettings.targetColorSpace,
         defaultICCProfile: userSettings.defaultICCProfile,
-        iccProfileData: iccProfileData
+        iccProfileData: iccProfileData,
+        iccProfileMode: userSettings.iccProfileMode
       };
 
       // Show processing toast only when not in batch mode

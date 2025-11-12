@@ -15,6 +15,7 @@ export type PDFCreatorSettings = {
   targetColorSpace?: 'DeviceCMYK' | 'DeviceRGB' | 'DeviceGray';
   defaultICCProfile?: string | null;
   iccProfileData?: string | null; // Base64 encoded ICC profile data
+  iccProfileMode?: 'preserve' | 'convert'; // NEW: preserve original or convert to new ICC
 };
 
 // Create PDF with cut contour from image URL
@@ -163,30 +164,44 @@ export const createPdfWithCutContour = async (
 
       if (settings.convertColorSpace && settings.targetColorSpace) {
         // Farbraum-Konvertierung ist aktiviert
-        targetColorSpace = settings.targetColorSpace;
-        console.log(`Color space conversion enabled: ${detectedColorSpace} → ${targetColorSpace}`);
+        const iccProfileMode = settings.iccProfileMode || 'preserve';
 
-        // ICC-Profil einbetten, falls vorhanden
-        if (settings.iccProfileData) {
-          console.log('Embedding ICC profile for color conversion');
-          progress.incrementProgress(2, 'ICC-Profil wird eingebettet...');
+        if (iccProfileMode === 'preserve') {
+          // Modus: Original ICC-Profil beibehalten
+          console.log(`ICC Profile Mode: preserve - keeping original color space: ${detectedColorSpace}`);
+          targetColorSpace = detectedColorSpace;
 
-          embedICCProfile(
-            pdfDoc,
-            pdfContext,
-            settings.iccProfileData,
-            targetColorSpace,
-            settings.defaultICCProfile || 'Custom ICC Profile'
-          );
-          iccProfileEmbedded = true;
+          // TODO: Extract and re-embed original ICC profile from source image
+          // This requires complex PDF parsing and is not yet implemented
+          // For now, we only preserve the color space (RGB/CMYK/Gray)
+          console.warn('ICC profile extraction from source not yet implemented - preserving color space only');
+        } else if (iccProfileMode === 'convert') {
+          // Modus: Zu neuem ICC-Profil konvertieren
+          targetColorSpace = settings.targetColorSpace;
+          console.log(`ICC Profile Mode: convert - ${detectedColorSpace} → ${targetColorSpace}`);
 
-          progress.incrementProgress(3, 'ICC-Profil eingebettet');
-        } else {
-          console.warn('Color space conversion requested but no ICC profile provided');
+          // ICC-Profil einbetten, falls vorhanden
+          if (settings.iccProfileData) {
+            console.log('Embedding ICC profile from settings');
+            progress.incrementProgress(2, 'ICC-Profil wird eingebettet...');
+
+            embedICCProfile(
+              pdfDoc,
+              pdfContext,
+              settings.iccProfileData,
+              targetColorSpace,
+              settings.defaultICCProfile || 'Custom ICC Profile'
+            );
+            iccProfileEmbedded = true;
+
+            progress.incrementProgress(3, 'ICC-Profil eingebettet');
+          } else {
+            console.warn('Color space conversion requested but no ICC profile selected in settings');
+          }
         }
       } else {
-        // Farbraum beibehalten
-        console.log(`Preserving original color space: ${detectedColorSpace}`);
+        // Farbraum-Konvertierung deaktiviert - Original beibehalten
+        console.log(`Color space conversion disabled - preserving original: ${detectedColorSpace}`);
         targetColorSpace = detectedColorSpace;
       }
 

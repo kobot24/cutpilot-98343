@@ -272,29 +272,58 @@ export const Settings = () => {
               />
             </div>
 
-            {/* Target Color Space */}
+            {/* ICC Profile Mode */}
             {settings.convertColorSpace && (
-              <div className="space-y-2">
-                <Label htmlFor="targetColorSpace">Ziel-Farbraum</Label>
-                <Select
-                  value={settings.targetColorSpace}
-                  onValueChange={(value) =>
-                    updateSetting('targetColorSpace', value as any)
-                  }
-                >
-                  <SelectTrigger id="targetColorSpace" className="max-w-xs">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="DeviceCMYK">CMYK (DeviceCMYK)</SelectItem>
-                    <SelectItem value="DeviceRGB">RGB (DeviceRGB)</SelectItem>
-                    <SelectItem value="DeviceGray">Graustufen (DeviceGray)</SelectItem>
-                  </SelectContent>
-                </Select>
-                <p className="text-xs text-muted-foreground">
-                  Farbraum für konvertierte PDFs
-                </p>
-              </div>
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="iccProfileMode">ICC-Profil Modus</Label>
+                  <Select
+                    value={settings.iccProfileMode}
+                    onValueChange={(value) =>
+                      updateSetting('iccProfileMode', value as any)
+                    }
+                  >
+                    <SelectTrigger id="iccProfileMode" className="max-w-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="preserve">Original ICC-Profil beibehalten</SelectItem>
+                      <SelectItem value="convert">Zu neuem ICC-Profil konvertieren</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    {settings.iccProfileMode === 'preserve'
+                      ? 'Verwendet das ICC-Profil vom hochgeladenen PDF'
+                      : 'Verwendet das ausgewählte ICC-Profil aus den Einstellungen'
+                    }
+                  </p>
+                </div>
+
+                {/* Target Color Space - only show when converting */}
+                {settings.iccProfileMode === 'convert' && (
+                  <div className="space-y-2">
+                    <Label htmlFor="targetColorSpace">Ziel-Farbraum</Label>
+                    <Select
+                      value={settings.targetColorSpace}
+                      onValueChange={(value) =>
+                        updateSetting('targetColorSpace', value as any)
+                      }
+                    >
+                      <SelectTrigger id="targetColorSpace" className="max-w-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="DeviceCMYK">CMYK (DeviceCMYK)</SelectItem>
+                        <SelectItem value="DeviceRGB">RGB (DeviceRGB)</SelectItem>
+                        <SelectItem value="DeviceGray">Graustufen (DeviceGray)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">
+                      Farbraum für konvertierte PDFs
+                    </p>
+                  </div>
+                )}
+              </>
             )}
           </CardContent>
         </Card>
