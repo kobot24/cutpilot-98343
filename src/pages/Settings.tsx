@@ -57,7 +57,8 @@ export const Settings = () => {
         toast.success(`ICC-Profil "${fileName}" hinzugefügt`);
       } catch (error) {
         console.error('Error uploading ICC profile:', error);
-        toast.error('Fehler beim Hochladen des ICC-Profils');
+        const errorMessage = error instanceof Error ? error.message : 'Fehler beim Hochladen des ICC-Profils';
+        toast.error(errorMessage);
       } finally {
         setIsUploading(false);
       }
@@ -74,7 +75,9 @@ export const Settings = () => {
             await addICCProfile(file);
             toast.success(`ICC-Profil "${file.name}" hinzugefügt`);
           } catch (error) {
-            toast.error('Fehler beim Hochladen des ICC-Profils');
+            console.error('Error uploading ICC profile:', error);
+            const errorMessage = error instanceof Error ? error.message : 'Fehler beim Hochladen des ICC-Profils';
+            toast.error(errorMessage);
           } finally {
             setIsUploading(false);
           }

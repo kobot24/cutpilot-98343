@@ -105,14 +105,29 @@ export const useSettings = () => {
 
   const addICCProfile = async (file: File): Promise<void> => {
     try {
+      // Validate file type
+      if (!file.name.toLowerCase().endsWith('.icc') && !file.name.toLowerCase().endsWith('.icm')) {
+        throw new Error('Ungültiger Dateityp. Bitte wählen Sie eine .icc oder .icm Datei.');
+      }
+
+      // Validate file size (max 10MB for ICC profile)
+      const maxFileSize = 10 * 1024 * 1024; // 10MB
+      if (file.size > maxFileSize) {
+        throw new Error(`ICC-Profil ist zu groß (${(file.size / 1024 / 1024).toFixed(1)}MB). Maximum: ${maxFileSize / 1024 / 1024}MB.`);
+      }
+
       // Read file as base64
       const reader = new FileReader();
       const base64Data = await new Promise<string>((resolve, reject) => {
         reader.onload = () => {
           const result = reader.result as string;
+          if (!result) {
+            reject(new Error('Datei konnte nicht gelesen werden'));
+            return;
+          }
           resolve(result.split(',')[1]); // Remove data URL prefix
         };
-        reader.onerror = reject;
+        reader.onerror = () => reject(new Error('Fehler beim Lesen der Datei'));
         reader.readAsDataURL(file);
       });
 
