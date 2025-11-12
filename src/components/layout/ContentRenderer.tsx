@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { UploadSection } from '@/components/upload/UploadSection';
-import { SettingsPanel } from '@/components/SettingsPanel';
+import { Settings } from '@/pages/Settings';
 import { PrintPlateCanvas } from '@/components/PrintPlateCanvas';
 import { UploadedFile } from '@/types/fileTypes';
 import { UserSettings } from '@/hooks/useSettings';
@@ -71,12 +71,7 @@ export const ContentRenderer: React.FC<ContentRendererProps> = ({
         />
       );
     case 'settings':
-      return (
-        <SettingsPanel 
-          settings={settings} 
-          onUpdateSettings={updateSettings}
-        />
-      );
+      return <Settings />;
     case 'printplate':
       return (
         <PrintPlateCanvas files={files} />

@@ -3,6 +3,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { toast } from 'sonner';
 import { UploadedFile } from '@/types/fileTypes';
+import { isTauri } from '@/utils/tauri';
+import { openFileDialog, readBinaryFile, convertFilePath } from '@/utils/tauriFileDialog';
 
 type UploadAreaProps = {
   onFilesAdded: (files: FileList) => void;
@@ -56,6 +58,55 @@ export const UploadArea = ({
     }
   }, [onFilesAdded]);
 
+  // Tauri native file dialog handler
+  const handleTauriFileSelect = useCallback(async () => {
+    try {
+      const selected = await openFileDialog({
+        multiple: true,
+        filters: [
+          {
+            name: 'Bilder',
+            extensions: ['jpg', 'jpeg', 'png', 'gif', 'bmp']
+          }
+        ]
+      });
+
+      if (!selected) return;
+
+      const filePaths = Array.isArray(selected) ? selected : [selected];
+
+      // Convert file paths to File objects
+      const filePromises = filePaths.map(async (filePath) => {
+        const contents = await readBinaryFile(filePath);
+        if (!contents) return null;
+
+        const fileName = filePath.split('/').pop() || filePath.split('\\').pop() || 'file';
+        const extension = fileName.split('.').pop()?.toLowerCase();
+
+        let mimeType = 'image/jpeg';
+        if (extension === 'png') mimeType = 'image/png';
+        else if (extension === 'gif') mimeType = 'image/gif';
+        else if (extension === 'bmp') mimeType = 'image/bmp';
+
+        const blob = new Blob([contents], { type: mimeType });
+        return new File([blob], fileName, { type: mimeType });
+      });
+
+      const files = await Promise.all(filePromises);
+      const validFiles = files.filter((f): f is File => f !== null);
+
+      if (validFiles.length > 0) {
+        // Create a FileList-like object
+        const dataTransfer = new DataTransfer();
+        validFiles.forEach(file => dataTransfer.items.add(file));
+        onFilesAdded(dataTransfer.files);
+      }
+    } catch (error) {
+      console.error('Error selecting files with Tauri:', error);
+      toast.error('Fehler beim Öffnen der Dateiauswahl');
+    }
+  }, [onFilesAdded]);
+
   return (
     <div className="space-y-4">
       <Card
@@ -89,9 +140,15 @@ export const UploadArea = ({
           </p>
           
           <div className="flex items-center gap-2">
-            <Button 
-              variant="outline" 
-              onClick={() => document.getElementById('fileInput')?.click()}
+            <Button
+              variant="outline"
+              onClick={() => {
+                if (isTauri()) {
+                  handleTauriFileSelect();
+                } else {
+                  document.getElementById('fileInput')?.click();
+                }
+              }}
               disabled={isLoading}
             >
               Dateien auswählen

@@ -7,6 +7,8 @@ import { PDFDimensionsDisplay } from './pdf/PDFDimensionsDisplay';
 import { PDFDocumentView } from './pdf/PDFDocumentView';
 import { PDFErrorDisplay } from './pdf/PDFErrorDisplay';
 import { toast } from '@/components/ui/use-toast';
+import { isTauri } from '@/utils/tauri';
+import { saveFileDialog, writeBinaryFile, getDownloadDir } from '@/utils/tauriFileDialog';
 import 'react-pdf/dist/esm/Page/TextLayer.css';
 import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
 
@@ -31,93 +33,88 @@ export const PDFPreview = ({ pdfUrl, fileName }: PDFPreviewProps) => {
     retryLoading
   } = usePDFLoader({ pdfUrl });
 
-  const handleDownload = () => {
+  const handleDownload = async () => {
     try {
       // Check if this is a data URL or a blob URL
       if (!pdfUrl) {
         toast({
-          title: "Fehler beim Herunterladen",
-          description: "Keine gültige PDF-Datei zum Herunterladen verfügbar",
+          title: "Fehler beim Speichern",
+          description: "Keine gültige PDF-Datei zum Speichern verfügbar",
           variant: "destructive"
         });
         return;
       }
-      
+
       // Generate download filename
       const downloadName = fileName.endsWith('.pdf') ? fileName : `${fileName}.pdf`;
-      
-      // For blob URLs, we can directly trigger download
-      if (pdfUrl.startsWith('blob:')) {
+
+      // Fetch PDF data as ArrayBuffer
+      const response = await fetch(pdfUrl);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const arrayBuffer = await response.arrayBuffer();
+      const uint8Array = new Uint8Array(arrayBuffer);
+
+      // Use Tauri save dialog if in desktop mode
+      if (isTauri()) {
+        const downloadDir = await getDownloadDir();
+        const defaultPath = downloadDir ? `${downloadDir}/${downloadName}` : downloadName;
+
+        const filePath = await saveFileDialog({
+          defaultPath,
+          filters: [
+            {
+              name: 'PDF Dateien',
+              extensions: ['pdf']
+            }
+          ]
+        });
+
+        if (filePath) {
+          const success = await writeBinaryFile(filePath, uint8Array);
+          if (success) {
+            toast({
+              title: "PDF gespeichert",
+              description: `Datei wurde erfolgreich gespeichert`
+            });
+            setDownloadAttempt(prev => prev + 1);
+          } else {
+            throw new Error('Fehler beim Speichern der Datei');
+          }
+        } else {
+          // User cancelled
+          toast({
+            title: "Abgebrochen",
+            description: "Speichern abgebrochen"
+          });
+        }
+      } else {
+        // Browser fallback - direct download
+        const blob = new Blob([uint8Array], { type: 'application/pdf' });
+        const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
-        link.href = pdfUrl;
+        link.href = url;
         link.download = downloadName;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
-      } 
-      // For data URLs, we might need to handle large files differently
-      else if (pdfUrl.startsWith('data:application/pdf;base64,')) {
-        // If the dataURL is too long, it might cause issues
-        if (pdfUrl.length > 10000000) { // ~10MB as string length estimate 
-          // Convert data URL to Blob
-          const base64 = pdfUrl.split(',')[1];
-          const byteCharacters = atob(base64);
-          const byteArrays = [];
-          
-          // Split into chunks to avoid memory issues
-          for (let offset = 0; offset < byteCharacters.length; offset += 512) {
-            const slice = byteCharacters.slice(offset, offset + 512);
-            const byteNumbers = new Array(slice.length);
-            for (let i = 0; i < slice.length; i++) {
-              byteNumbers[i] = slice.charCodeAt(i);
-            }
-            const byteArray = new Uint8Array(byteNumbers);
-            byteArrays.push(byteArray);
-          }
+        setTimeout(() => URL.revokeObjectURL(url), 100);
 
-          const blob = new Blob(byteArrays, {type: 'application/pdf'});
-          const url = URL.createObjectURL(blob);
-          
-          const link = document.createElement('a');
-          link.href = url;
-          link.download = downloadName;
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-          
-          // Clean up the blob URL after a delay
-          setTimeout(() => URL.revokeObjectURL(url), 100);
-        } else {
-          // For smaller data URLs, direct download works fine
-          const link = document.createElement('a');
-          link.href = pdfUrl;
-          link.download = downloadName;
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-        }
-      } else {
         toast({
-          title: "Fehler beim Herunterladen",
-          description: "Ungültiges PDF-Format",
-          variant: "destructive"
+          title: "Download gestartet",
+          description: `${downloadName} wird heruntergeladen`
         });
-        return;
+        setDownloadAttempt(prev => prev + 1);
       }
-      
-      toast({
-        title: "Download gestartet",
-        description: `${downloadName} wird heruntergeladen`
-      });
-      setDownloadAttempt(prev => prev + 1);
     } catch (error) {
-      console.error('Error downloading PDF:', error);
+      console.error('Error saving PDF:', error);
       toast({
-        title: "Fehler beim Herunterladen",
+        title: "Fehler beim Speichern",
         description: error instanceof Error ? error.message : "Unbekannter Fehler",
         variant: "destructive"
       });
-      handleLoadError(new Error('Fehler beim Herunterladen'));
+      handleLoadError(new Error('Fehler beim Speichern'));
     }
   };
 

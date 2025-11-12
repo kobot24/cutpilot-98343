@@ -24,42 +24,35 @@ const OptimizedPDFDocumentRenderer = memo(({
   onLoadSuccess,
   onLoadError
 }: OptimizedPDFDocumentRendererProps) => {
-  // Track if we have a cached thumbnail version
-  const [cachedThumbnail, setCachedThumbnail] = useState<string | null>(null);
-  
-  // Only load the PDF when not dragging
-  useEffect(() => {
-    if (!isDragging && pdfUrl && !cachedThumbnail) {
-      // Create a thumbnail from the PDF for future use
-      const img = new Image();
-      img.onload = () => {
-        try {
-          // Create a canvas to generate thumbnail
-          const canvas = document.createElement('canvas');
-          canvas.width = 300; // Fixed thumbnail width
-          canvas.height = (300 / img.width) * img.height;
-          const ctx = canvas.getContext('2d');
-          
-          if (ctx) {
-            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-            const dataUrl = canvas.toDataURL('image/png');
-            setCachedThumbnail(dataUrl);
-          }
-        } catch (e) {
-          console.error("Failed to create thumbnail:", e);
-        }
-      };
-      img.src = thumbnail || pdfUrl;
-    }
-  }, [pdfUrl, isDragging, thumbnail, cachedThumbnail]);
+  const [pdfLoaded, setPdfLoaded] = useState(false);
+  const [pdfError, setPdfError] = useState(false);
 
-  // During dragging, show only thumbnail or placeholder
+  // Reset loaded state when pdfUrl changes
+  useEffect(() => {
+    setPdfLoaded(false);
+    setPdfError(false);
+  }, [pdfUrl]);
+
+  const handleLoadSuccess = () => {
+    setPdfLoaded(true);
+    setPdfError(false);
+    onLoadSuccess();
+  };
+
+  const handleLoadError = (error: Error) => {
+    console.error('PDF load error:', error);
+    setPdfError(true);
+    setPdfLoaded(false);
+    onLoadError(error);
+  };
+
+  // During dragging, always show thumbnail for performance
   if (isDragging) {
-    if (cachedThumbnail || thumbnail) {
+    if (thumbnail) {
       return (
-        <img 
-          src={cachedThumbnail || thumbnail || ''} 
-          alt="PDF preview" 
+        <img
+          src={thumbnail}
+          alt="PDF preview"
           className="w-full h-full object-contain"
           style={{ opacity: 0.8 }}
         />
@@ -73,65 +66,63 @@ const OptimizedPDFDocumentRenderer = memo(({
     }
   }
 
-  // When not dragging, show full PDF
-  if (pdfUrl) {
-    return (
-      <Document
-        file={pdfUrl}
-        onLoadSuccess={onLoadSuccess}
-        onError={onLoadError}
-        loading={
-          <div className="flex items-center justify-center w-full h-full">
-            {cachedThumbnail || thumbnail ? (
-              <img 
-                src={cachedThumbnail || thumbnail || ''} 
-                alt="Loading PDF" 
-                className="w-full h-full object-contain opacity-70"
-              />
-            ) : (
-              <div className="animate-pulse text-xs text-gray-400">Lädt...</div>
-            )}
-          </div>
-        }
-        error={
-          <div className="flex items-center justify-center w-full h-full">
-            <div className="text-xs text-red-400">Fehler</div>
-          </div>
-        }
-        className="w-full h-full"
-      >
-        <Page
-          pageNumber={1}
-          width={pixelWidth}
-          height={pixelHeight}
-          renderTextLayer={false}
-          renderAnnotationLayer={false}
-          className="pdf-page"
+  // When not dragging, ALWAYS show the PDF (this was the bug!)
+  // The PDF should be visible all the time, not just when dragging
+  return (
+    <div className="relative w-full h-full">
+      {/* Show thumbnail while PDF is loading or if PDF failed */}
+      {(!pdfLoaded || pdfError) && thumbnail && (
+        <img
+          src={thumbnail}
+          alt="PDF preview"
+          className="absolute inset-0 w-full h-full object-contain"
+          style={{ opacity: pdfLoaded ? 0 : 1 }}
         />
-      </Document>
-    );
-  } else if (thumbnail || cachedThumbnail) {
-    // Fallback to thumbnail if PDF URL is not available
-    return (
-      <img 
-        src={cachedThumbnail || thumbnail || ''} 
-        alt="PDF preview" 
-        className="w-full h-full object-contain"
-      />
-    );
-  } else {
-    // No preview available
-    return (
-      <div className="flex items-center justify-center w-full h-full bg-gray-100">
-        <div className="text-xs text-gray-400">Keine Vorschau</div>
-      </div>
-    );
-  }
+      )}
+
+      {/* Always render the PDF Document, even when thumbnail is shown */}
+      {pdfUrl && !pdfError && (
+        <Document
+          file={pdfUrl}
+          onLoadSuccess={handleLoadSuccess}
+          onLoadError={handleLoadError}
+          loading={null} // Don't show default loading, we use thumbnail instead
+          error={null} // Don't show default error, we use thumbnail instead
+          className="w-full h-full"
+        >
+          <Page
+            pageNumber={1}
+            width={pixelWidth}
+            height={pixelHeight}
+            renderTextLayer={false}
+            renderAnnotationLayer={false}
+            className="pdf-page"
+            loading={null}
+            error={null}
+          />
+        </Document>
+      )}
+
+      {/* Fallback if no thumbnail and PDF failed */}
+      {pdfError && !thumbnail && (
+        <div className="flex items-center justify-center w-full h-full bg-gray-100">
+          <div className="text-xs text-red-400">PDF Fehler</div>
+        </div>
+      )}
+
+      {/* Fallback if no PDF and no thumbnail */}
+      {!pdfUrl && !thumbnail && (
+        <div className="flex items-center justify-center w-full h-full bg-gray-100">
+          <div className="text-xs text-gray-400">Keine Vorschau</div>
+        </div>
+      )}
+    </div>
+  );
 }, (prevProps, nextProps) => {
   // Custom comparison function to prevent unnecessary re-renders
   return prevProps.pdfUrl === nextProps.pdfUrl &&
-         prevProps.pixelWidth === nextProps.pixelWidth &&
-         prevProps.pixelHeight === nextProps.pixelHeight &&
+         Math.abs(prevProps.pixelWidth - nextProps.pixelWidth) < 1 &&
+         Math.abs(prevProps.pixelHeight - nextProps.pixelHeight) < 1 &&
          prevProps.isDragging === nextProps.isDragging &&
          prevProps.thumbnail === nextProps.thumbnail;
 });

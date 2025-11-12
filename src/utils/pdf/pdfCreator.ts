@@ -3,13 +3,25 @@ import { PDFDocument } from 'pdf-lib';
 import { optimizeImageIfNeeded } from '../fileValidationUtils';
 import { ProgressTracker } from '../progressUtils';
 import { FILE_STORAGE_LIMITS } from '../../constants/fileStorage';
-import { addPdfMetadata } from './pdfMetadataUtils';
+import { addPdfMetadata, embedICCProfile } from './pdfMetadataUtils';
 import { createCutContour } from './cutContourCreator';
+import { detectImageColorSpace, convertImageColorSpace } from './colorSpaceUtils';
+
+// Extended settings type to include ICC profile and color space settings
+export type PDFCreatorSettings = {
+  cutContourOffset: number;
+  spotColorName: string;
+  convertColorSpace?: boolean;
+  targetColorSpace?: 'DeviceCMYK' | 'DeviceRGB' | 'DeviceGray';
+  defaultICCProfile?: string | null;
+  iccProfileData?: string | null; // Base64 encoded ICC profile data
+  iccProfileMode?: 'preserve' | 'convert'; // NEW: preserve original or convert to new ICC
+};
 
 // Create PDF with cut contour from image URL
 export const createPdfWithCutContour = async (
-  imageUrl: string, 
-  settings: { cutContourOffset: number; spotColorName: string },
+  imageUrl: string,
+  settings: PDFCreatorSettings,
   onProgress?: (progress: number, status: string) => void
 ) => {
   // Initialize progress tracking if callback provided
@@ -77,10 +89,17 @@ export const createPdfWithCutContour = async (
     progress.incrementProgress(10, 'PDF wird erstellt...');
     
     try {
+      // Farbraum des Bildes erkennen
+      console.log('Detecting image color space');
+      const detectedColorSpace = await detectImageColorSpace(loadedImg);
+      console.log(`Detected color space: ${detectedColorSpace}`);
+
+      progress.incrementProgress(2, 'Farbraum erkannt');
+
       // Bild in PDF einbetten - unter Beibehaltung der Originaldimensionen
       console.log('Embedding image in PDF');
       const jpgImage = await pdfDoc.embedJpg(imageData);
-      
+
       progress.incrementProgress(5, 'Bild in PDF eingebettet');
       
       // Pixelabmessungen des Bildes erhalten
@@ -124,14 +143,14 @@ export const createPdfWithCutContour = async (
       });
       
       const pdfContext = pdfDoc.context;
-      
-      // Immer "CutContour" als Spot-Farbnamen verwenden
-      const spotColorName = "CutContour";
-      
+
+      // Spot-Farbnamen aus den Settings verwenden
+      const spotColorName = settings.spotColorName || "CutContour";
+
       // CutContour zum PDF hinzufügen
       await createCutContour({
         page,
-        pdfContext, 
+        pdfContext,
         pdfPageWidth,
         pdfPageHeight,
         spotColorName,
@@ -139,15 +158,63 @@ export const createPdfWithCutContour = async (
         progress
       });
       
+      // Farbraum-Management und ICC-Profil-Einbettung
+      let iccProfileEmbedded = false;
+      let targetColorSpace = detectedColorSpace;
+
+      if (settings.convertColorSpace && settings.targetColorSpace) {
+        // Farbraum-Konvertierung ist aktiviert
+        const iccProfileMode = settings.iccProfileMode || 'preserve';
+
+        if (iccProfileMode === 'preserve') {
+          // Modus: Original ICC-Profil beibehalten
+          console.log(`ICC Profile Mode: preserve - keeping original color space: ${detectedColorSpace}`);
+          targetColorSpace = detectedColorSpace;
+
+          // TODO: Extract and re-embed original ICC profile from source image
+          // This requires complex PDF parsing and is not yet implemented
+          // For now, we only preserve the color space (RGB/CMYK/Gray)
+          console.warn('ICC profile extraction from source not yet implemented - preserving color space only');
+        } else if (iccProfileMode === 'convert') {
+          // Modus: Zu neuem ICC-Profil konvertieren
+          targetColorSpace = settings.targetColorSpace;
+          console.log(`ICC Profile Mode: convert - ${detectedColorSpace} → ${targetColorSpace}`);
+
+          // ICC-Profil einbetten, falls vorhanden
+          if (settings.iccProfileData) {
+            console.log('Embedding ICC profile from settings');
+            progress.incrementProgress(2, 'ICC-Profil wird eingebettet...');
+
+            embedICCProfile(
+              pdfDoc,
+              pdfContext,
+              settings.iccProfileData,
+              targetColorSpace,
+              settings.defaultICCProfile || 'Custom ICC Profile'
+            );
+            iccProfileEmbedded = true;
+
+            progress.incrementProgress(3, 'ICC-Profil eingebettet');
+          } else {
+            console.warn('Color space conversion requested but no ICC profile selected in settings');
+          }
+        }
+      } else {
+        // Farbraum-Konvertierung deaktiviert - Original beibehalten
+        console.log(`Color space conversion disabled - preserving original: ${detectedColorSpace}`);
+        targetColorSpace = detectedColorSpace;
+      }
+
       // Dateinamen aus URL für Metadaten extrahieren
       const fileName = imageUrl.split('/').pop()?.split('.')[0] || 'Image';
-      
+
       // Abmessungen zum Dateinamen für Klarheit hinzufügen
       const fileNameWithDimensions = `${fileName}_${widthInCm.toFixed(1)}x${heightInCm.toFixed(1)}cm`;
-      
+
       console.log('Setting PDF metadata');
       // PDF-Metadaten mit Adobe Illustrator-Kompatibilität festlegen
-      addPdfMetadata(pdfDoc, pdfContext, fileNameWithDimensions);
+      // Skip OutputIntents if we already embedded an ICC profile
+      addPdfMetadata(pdfDoc, pdfContext, fileNameWithDimensions, iccProfileEmbedded);
       
       progress.incrementProgress(10, 'PDF wird finalisiert...');
       

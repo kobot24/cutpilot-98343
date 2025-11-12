@@ -2,6 +2,8 @@ import { useState, useRef } from 'react';
 import { UploadedFile } from '../types/fileTypes';
 import { usePDFConverter } from './usePDFConverter';
 import { updateFileInDB } from '../utils/indexedDBUtils';
+import { isTauri } from '../utils/tauri';
+import { saveFileDialog, writeBinaryFile, getDownloadDir } from '../utils/tauriFileDialog';
 
 export const usePDFOperations = (
   files: UploadedFile[],
@@ -128,14 +130,63 @@ export const usePDFOperations = (
         if (result) {
           successCount++;
           console.log(`PDF Operations: Successfully converted ${file.name} to PDF in batch process`);
-          
+
           // Update our local copy of the files array
-          updatedFiles = updatedFiles.map(f => 
-            f.id === fileId 
+          updatedFiles = updatedFiles.map(f =>
+            f.id === fileId
               ? { ...f, convertedPdfUrl: result }
               : f
           );
-          
+
+          // FIX: Automatically save each PDF after conversion
+          try {
+            const fileNameWithoutExt = file.name.replace(/\.[^/.]+$/, '');
+            const pdfFileName = `${fileNameWithoutExt}_cutcontour.pdf`;
+
+            // Fetch the PDF blob from the result URL
+            const response = await fetch(result);
+            const blob = await response.blob();
+            const arrayBuffer = await blob.arrayBuffer();
+            const uint8Array = new Uint8Array(arrayBuffer);
+
+            if (isTauri()) {
+              // Desktop: Open save dialog for each file
+              const downloadDir = await getDownloadDir();
+              const defaultPath = downloadDir ? `${downloadDir}/${pdfFileName}` : pdfFileName;
+
+              const filePath = await saveFileDialog({
+                defaultPath,
+                filters: [
+                  {
+                    name: 'PDF Files',
+                    extensions: ['pdf']
+                  }
+                ]
+              });
+
+              if (filePath) {
+                await writeBinaryFile(filePath, uint8Array);
+                console.log(`PDF Operations: Saved ${pdfFileName} to ${filePath}`);
+              } else {
+                console.log(`PDF Operations: User cancelled save for ${pdfFileName}`);
+              }
+            } else {
+              // Browser: Automatic download
+              const blobUrl = URL.createObjectURL(blob);
+              const link = document.createElement('a');
+              link.href = blobUrl;
+              link.download = pdfFileName;
+              document.body.appendChild(link);
+              link.click();
+              document.body.removeChild(link);
+              URL.revokeObjectURL(blobUrl);
+              console.log(`PDF Operations: Downloaded ${pdfFileName}`);
+            }
+          } catch (saveError) {
+            console.error(`PDF Operations: Error saving ${file.name}:`, saveError);
+            // Don't fail the whole batch if one save fails
+          }
+
           if (updateBatchProgress) {
             updateBatchProgress(i + 1, file.name, true);
           }

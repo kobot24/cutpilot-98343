@@ -2,9 +2,10 @@
 import { useState } from 'react';
 import { toast } from '@/components/ui/use-toast';
 import { UploadedFile } from '../types/fileTypes';
-import { createPdfWithCutContour } from '../utils/pdf/pdfCreator';
+import { createPdfWithCutContour, PDFCreatorSettings } from '../utils/pdf/pdfCreator';
 import { isImageTooLarge } from '../utils/fileValidationUtils';
 import { ProgressTracker } from '../utils/progressUtils';
+import { UserSettings } from './useSettings';
 
 export type ConversionProgress = {
   progress: number;
@@ -53,10 +54,39 @@ export const usePDFConverter = () => {
       
       // Get settings from localStorage
       const storedSettings = localStorage.getItem('userSettings');
-      const settings = storedSettings 
+      const userSettings: UserSettings = storedSettings
         ? JSON.parse(storedSettings)
-        : { cutContourOffset: 3, spotColorName: 'CutContour' };
-      
+        : {
+            cutContourOffset: 3,
+            spotColorName: 'CutContour',
+            iccProfiles: [],
+            defaultICCProfile: null,
+            convertColorSpace: false,
+            targetColorSpace: 'DeviceCMYK'
+          };
+
+      // Get ICC profile data if a default profile is set
+      let iccProfileData: string | null = null;
+      if (userSettings.defaultICCProfile) {
+        const profile = userSettings.iccProfiles.find(
+          p => p.fileName === userSettings.defaultICCProfile
+        );
+        if (profile) {
+          iccProfileData = profile.data;
+        }
+      }
+
+      // Prepare settings for PDF creator
+      const pdfSettings: PDFCreatorSettings = {
+        cutContourOffset: userSettings.cutContourOffset,
+        spotColorName: userSettings.spotColorName,
+        convertColorSpace: userSettings.convertColorSpace,
+        targetColorSpace: userSettings.targetColorSpace,
+        defaultICCProfile: userSettings.defaultICCProfile,
+        iccProfileData: iccProfileData,
+        iccProfileMode: userSettings.iccProfileMode
+      };
+
       // Show processing toast only when not in batch mode
       if (!batchProgress.isActive) {
         toast({
@@ -70,9 +100,9 @@ export const usePDFConverter = () => {
         console.log(`PDF Fortschritt: ${progress}%, Status: ${status}`);
         setConversionProgress({ progress, status });
       };
-      
+
       // Create PDF with cut contour
-      const pdfUrl = await createPdfWithCutContour(file.url, settings, handleProgress);
+      const pdfUrl = await createPdfWithCutContour(file.url, pdfSettings, handleProgress);
       
       if (!pdfUrl) {
         throw new Error("Keine PDF-URL zurückgegeben");
