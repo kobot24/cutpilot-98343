@@ -72,7 +72,9 @@ export const usePDFConverter = () => {
           p => p.fileName === userSettings.defaultICCProfile
         );
         if (profile) {
-          iccProfileData = profile.data;
+          // Load ICC profile from filesystem
+          const { loadICCProfile } = await import('@/utils/iccStorage');
+          iccProfileData = await loadICCProfile(profile.filePath);
         }
       }
 

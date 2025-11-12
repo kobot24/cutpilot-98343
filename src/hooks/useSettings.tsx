@@ -1,12 +1,19 @@
 
 import { useState, useEffect } from 'react';
+import {
+  saveICCProfile,
+  loadICCProfile,
+  deleteICCProfile,
+  ICCProfileMetadata
+} from '@/utils/iccStorage';
 
 export interface ICCProfile {
   id: string;
   name: string;
   fileName: string;
-  data: string; // Base64 encoded ICC profile data
+  filePath: string; // Path to file on disk (NOT Base64!)
   uploadedAt: Date;
+  size: number; // File size in bytes
 }
 
 export type UserSettings = {
@@ -44,13 +51,31 @@ export const useSettings = () => {
     if (storedSettings) {
       try {
         const parsed = JSON.parse(storedSettings);
-        // Convert date strings back to Date objects
+
+        // Migration: Filter out old ICC profiles that have 'data' field instead of 'filePath'
         if (parsed.iccProfiles) {
-          parsed.iccProfiles = parsed.iccProfiles.map((profile: any) => ({
+          const validProfiles = parsed.iccProfiles.filter((profile: any) => {
+            // Only keep profiles with filePath (new format)
+            if (profile.filePath) {
+              return true;
+            }
+            // Log migration of old profiles
+            console.log(`Migrating old ICC profile (will be removed): ${profile.fileName}`);
+            return false;
+          });
+
+          parsed.iccProfiles = validProfiles.map((profile: any) => ({
             ...profile,
             uploadedAt: new Date(profile.uploadedAt)
           }));
+
+          // Clear default profile if it was using old format
+          if (parsed.defaultICCProfile && !validProfiles.find((p: any) => p.fileName === parsed.defaultICCProfile)) {
+            console.log('Clearing old default ICC profile');
+            parsed.defaultICCProfile = null;
+          }
         }
+
         setSettings({ ...defaultSettings, ...parsed });
       } catch (error) {
         console.error('Error parsing stored settings:', error);
@@ -105,96 +130,66 @@ export const useSettings = () => {
 
   const addICCProfile = async (file: File): Promise<void> => {
     try {
-      // Validate file type
-      if (!file.name.toLowerCase().endsWith('.icc') && !file.name.toLowerCase().endsWith('.icm')) {
-        throw new Error('Ungültiger Dateityp. Bitte wählen Sie eine .icc oder .icm Datei.');
-      }
+      // Save ICC profile to filesystem (handles all validation)
+      const metadata: ICCProfileMetadata = await saveICCProfile(file);
 
-      // Validate file size (max 10MB for ICC profile)
-      const maxFileSize = 10 * 1024 * 1024; // 10MB
-      if (file.size > maxFileSize) {
-        throw new Error(`ICC-Profil ist zu groß (${(file.size / 1024 / 1024).toFixed(1)}MB). Maximum: ${maxFileSize / 1024 / 1024}MB.`);
-      }
-
-      // Read file as base64
-      const reader = new FileReader();
-      const base64Data = await new Promise<string>((resolve, reject) => {
-        reader.onload = () => {
-          const result = reader.result as string;
-          if (!result) {
-            reject(new Error('Datei konnte nicht gelesen werden'));
-            return;
-          }
-          resolve(result.split(',')[1]); // Remove data URL prefix
-        };
-        reader.onerror = () => reject(new Error('Fehler beim Lesen der Datei'));
-        reader.readAsDataURL(file);
-      });
-
+      // Convert metadata to ICCProfile format
       const profile: ICCProfile = {
-        id: `icc_${Date.now()}`,
-        name: file.name.replace(/\.[^/.]+$/, ''), // Remove extension
-        fileName: file.name,
-        data: base64Data,
-        uploadedAt: new Date()
+        id: metadata.id,
+        name: metadata.name,
+        fileName: metadata.fileName,
+        filePath: metadata.filePath,
+        uploadedAt: metadata.uploadedAt,
+        size: metadata.size
       };
 
       const newProfiles = [...settings.iccProfiles, profile];
 
-      // FIX: Check if new settings will fit in localStorage BEFORE updating
       const updates: Partial<UserSettings> = {
         iccProfiles: newProfiles
       };
 
+      // Set as default if it's the first profile
       if (newProfiles.length === 1) {
         updates.defaultICCProfile = profile.fileName;
       }
 
-      const newSettings = { ...settings, ...updates };
-      const settingsJson = JSON.stringify(newSettings);
-
-      // Check approximate size (localStorage limit is usually 5-10MB)
-      const approximateSize = new Blob([settingsJson]).size;
-      const maxSize = 5 * 1024 * 1024; // 5MB conservative limit
-
-      if (approximateSize > maxSize) {
-        throw new Error(`ICC-Profil ist zu groß (${(approximateSize / 1024 / 1024).toFixed(1)}MB). Maximum: ${(maxSize / 1024 / 1024).toFixed(0)}MB. Bitte verwenden Sie ein kleineres Profil.`);
-      }
-
-      // Try to actually save to localStorage to catch any quota errors
-      try {
-        localStorage.setItem('userSettings_test', settingsJson);
-        localStorage.removeItem('userSettings_test');
-      } catch (storageError) {
-        if (storageError instanceof Error && storageError.name === 'QuotaExceededError') {
-          throw new Error('Speicher voll: ICC-Profil ist zu groß. Bitte löschen Sie andere Profile oder verwenden Sie ein kleineres Profil.');
-        }
-        throw storageError;
-      }
-
+      // Update settings (no size limits because we're not storing Base64!)
       updateSettings(updates);
+
+      console.log(`ICC profile added successfully: ${profile.fileName} (${(profile.size / 1024).toFixed(1)} KB)`);
     } catch (error) {
       console.error('Error adding ICC profile:', error);
-
-      // Better error messages
-      if (error instanceof Error) {
-        if (error.message.includes('quota') || error.message.includes('storage') || error.message.includes('zu groß')) {
-          throw error; // Re-throw with the message we already created
-        }
-      }
-
       throw error;
     }
   };
 
-  const removeICCProfile = (profileId: string) => {
-    const newProfiles = settings.iccProfiles.filter(p => p.id !== profileId);
-    updateSettings({ iccProfiles: newProfiles });
+  const removeICCProfile = async (profileId: string) => {
+    try {
+      // Find the profile to delete
+      const removedProfile = settings.iccProfiles.find(p => p.id === profileId);
+      if (!removedProfile) return;
 
-    // Clear default if it was the removed profile
-    const removedProfile = settings.iccProfiles.find(p => p.id === profileId);
-    if (removedProfile && settings.defaultICCProfile === removedProfile.fileName) {
-      updateSettings({ defaultICCProfile: null });
+      // Delete file from filesystem
+      await deleteICCProfile(removedProfile.filePath);
+
+      // Update settings
+      const newProfiles = settings.iccProfiles.filter(p => p.id !== profileId);
+      const updates: Partial<UserSettings> = { iccProfiles: newProfiles };
+
+      // Clear default if it was the removed profile
+      if (settings.defaultICCProfile === removedProfile.fileName) {
+        updates.defaultICCProfile = null;
+      }
+
+      updateSettings(updates);
+
+      console.log(`ICC profile removed: ${removedProfile.fileName}`);
+    } catch (error) {
+      console.error('Error removing ICC profile:', error);
+      // Still update settings even if file deletion fails
+      const newProfiles = settings.iccProfiles.filter(p => p.id !== profileId);
+      updateSettings({ iccProfiles: newProfiles });
     }
   };
 
@@ -202,9 +197,18 @@ export const useSettings = () => {
     updateSettings({ defaultICCProfile: fileName });
   };
 
-  const getICCProfileData = (fileName: string): string | null => {
-    const profile = settings.iccProfiles.find(p => p.fileName === fileName);
-    return profile ? profile.data : null;
+  const getICCProfileData = async (fileName: string): Promise<string | null> => {
+    try {
+      const profile = settings.iccProfiles.find(p => p.fileName === fileName);
+      if (!profile) return null;
+
+      // Load ICC profile from filesystem
+      const base64Data = await loadICCProfile(profile.filePath);
+      return base64Data;
+    } catch (error) {
+      console.error('Error loading ICC profile data:', error);
+      return null;
+    }
   };
 
   const resetSettings = () => {

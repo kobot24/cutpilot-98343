@@ -87,9 +87,14 @@ export const Settings = () => {
     }
   };
 
-  const handleRemoveProfile = (profileId: string) => {
-    removeICCProfile(profileId);
-    toast.success('ICC-Profil entfernt');
+  const handleRemoveProfile = async (profileId: string) => {
+    try {
+      await removeICCProfile(profileId);
+      toast.success('ICC-Profil entfernt');
+    } catch (error) {
+      console.error('Error removing profile:', error);
+      toast.error('Fehler beim Entfernen des Profils');
+    }
   };
 
   const handleResetSettings = () => {
@@ -215,7 +220,7 @@ export const Settings = () => {
                           )}
                         </div>
                         <p className="text-xs text-muted-foreground">
-                          {profile.fileName} • {new Date(profile.uploadedAt).toLocaleDateString()}
+                          {profile.fileName} • {(profile.size / 1024 / 1024).toFixed(2)} MB • {new Date(profile.uploadedAt).toLocaleDateString()}
                         </p>
                       </div>
                       <div className="flex items-center gap-2">
