@@ -38,33 +38,42 @@ export interface ICCProfileMetadata {
 const ICC_PROFILES_DIR = 'icc_profiles';
 
 /**
- * Get the ICC profiles directory path
+ * Ensure ICC profiles directory exists
  */
-async function getICCProfilesDir(): Promise<string> {
+async function ensureICCProfilesDir(): Promise<void> {
   await ensureTauriImports();
 
-  if (!isTauri() || !tauriPath) {
+  if (!isTauri() || !tauriFs) {
     throw new Error('Tauri filesystem not available');
   }
 
-  const appDataDir = await tauriPath.appDataDir();
-  const iccDir = await tauriPath.join(appDataDir, ICC_PROFILES_DIR);
-
   // Create directory if it doesn't exist
+  // Using BaseDirectory.AppData for proper path resolution
   try {
-    await tauriFs.createDir(iccDir, { recursive: true });
+    console.log('[ensureICCProfilesDir] Creating directory:', ICC_PROFILES_DIR);
+    await tauriFs.createDir(ICC_PROFILES_DIR, {
+      dir: tauriFs.BaseDirectory.AppData,
+      recursive: true
+    });
+    console.log('[ensureICCProfilesDir] Directory created/verified');
   } catch (error) {
+    console.log('[ensureICCProfilesDir] Directory might already exist:', error);
     // Directory might already exist, ignore error
   }
-
-  return iccDir;
 }
 
 /**
  * Save an ICC profile to the filesystem
  */
 export async function saveICCProfile(file: File): Promise<ICCProfileMetadata> {
+  console.log('[saveICCProfile] Starting ICC profile save:', file.name, `(${file.size} bytes)`);
+
   await ensureTauriImports();
+  console.log('[saveICCProfile] Tauri imports loaded:', {
+    isTauri: isTauri(),
+    hasTauriFs: !!tauriFs,
+    hasTauriPath: !!tauriPath
+  });
 
   if (!isTauri() || !tauriFs || !tauriPath) {
     throw new Error('Diese Funktion ist nur in der Desktop-Version verfügbar');
@@ -76,38 +85,67 @@ export async function saveICCProfile(file: File): Promise<ICCProfileMetadata> {
       throw new Error('Ungültiger Dateityp. Bitte wählen Sie eine .icc oder .icm Datei.');
     }
 
-    // Get ICC profiles directory
-    const iccDir = await getICCProfilesDir();
+    // Ensure ICC profiles directory exists
+    console.log('[saveICCProfile] Ensuring ICC profiles directory exists...');
+    await ensureICCProfilesDir();
 
     // Generate unique filename to avoid conflicts
     const timestamp = Date.now();
     const safeFileName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
     const uniqueFileName = `${timestamp}_${safeFileName}`;
-    const filePath = await tauriPath.join(iccDir, uniqueFileName);
+    console.log('[saveICCProfile] Generated filename:', uniqueFileName);
+
+    // Relative path within AppData directory
+    const relativePath = `${ICC_PROFILES_DIR}/${uniqueFileName}`;
+    console.log('[saveICCProfile] Relative path:', relativePath);
 
     // Read file as array buffer
+    console.log('[saveICCProfile] Reading file as array buffer...');
     const arrayBuffer = await file.arrayBuffer();
     const uint8Array = new Uint8Array(arrayBuffer);
+    console.log('[saveICCProfile] Array buffer size:', uint8Array.length);
 
-    // Write to filesystem using Tauri fs API
-    await tauriFs.writeBinaryFile(filePath, uint8Array);
+    // Write to filesystem using Tauri fs API with BaseDirectory
+    console.log('[saveICCProfile] Writing binary file to disk...');
+    await tauriFs.writeBinaryFile(relativePath, uint8Array, {
+      dir: tauriFs.BaseDirectory.AppData
+    });
+    console.log('[saveICCProfile] File written successfully!');
 
-    console.log(`ICC profile saved to: ${filePath}`);
+    // Get the absolute path for metadata
+    const appDataDir = await tauriPath.appDataDir();
+    const absolutePath = await tauriPath.join(appDataDir, relativePath);
+    console.log('[saveICCProfile] Absolute path:', absolutePath);
 
     // Return metadata (no Base64 data!)
     const metadata: ICCProfileMetadata = {
       id: `icc_${timestamp}`,
       name: file.name.replace(/\.[^/.]+$/, ''), // Remove extension
       fileName: file.name,
-      filePath: filePath,
+      filePath: absolutePath, // Store absolute path for later retrieval
       uploadedAt: new Date(),
       size: file.size
     };
 
+    console.log('[saveICCProfile] Returning metadata:', metadata);
     return metadata;
   } catch (error) {
-    console.error('Error saving ICC profile:', error);
-    throw new Error(`Fehler beim Speichern des ICC-Profils: ${error instanceof Error ? error.message : 'Unbekannter Fehler'}`);
+    console.error('[saveICCProfile] ERROR:', error);
+    console.error('[saveICCProfile] Error type:', typeof error);
+    console.error('[saveICCProfile] Error stack:', error instanceof Error ? error.stack : 'No stack');
+
+    // More detailed error message
+    let errorMessage = 'Unbekannter Fehler';
+    if (error instanceof Error) {
+      errorMessage = error.message;
+      console.error('[saveICCProfile] Error message:', errorMessage);
+    } else if (typeof error === 'string') {
+      errorMessage = error;
+    } else {
+      errorMessage = JSON.stringify(error);
+    }
+
+    throw new Error(`Fehler beim Speichern des ICC-Profils: ${errorMessage}`);
   }
 }
 
