@@ -6,6 +6,11 @@ import { FILE_STORAGE_LIMITS } from '../../constants/fileStorage';
 import { addPdfMetadata, embedICCProfile } from './pdfMetadataUtils';
 import { createCutContour } from './cutContourCreator';
 import { detectImageColorSpace, convertImageColorSpace } from './colorSpaceUtils';
+import {
+  transformImageToCMYK,
+  transformImageToGrayscale,
+  shouldConvertImage
+} from './colorConversion';
 
 // Extended settings type to include ICC profile and color space settings
 export type PDFCreatorSettings = {
@@ -96,9 +101,76 @@ export const createPdfWithCutContour = async (
 
       progress.incrementProgress(2, 'Farbraum erkannt');
 
-      // Bild in PDF einbetten - unter Beibehaltung der Originaldimensionen
+      // Check if pixel-level color conversion is needed
+      let imageDataToEmbed = imageData;
+      let transformedImage: HTMLImageElement | null = null;
+
+      if (settings.convertColorSpace &&
+          settings.targetColorSpace &&
+          settings.iccProfileMode === 'convert') {
+
+        const needsConversion = shouldConvertImage(
+          detectedColorSpace,
+          settings.targetColorSpace,
+          settings.convertColorSpace
+        );
+
+        if (needsConversion) {
+          console.log(`Pixel-level conversion: ${detectedColorSpace} → ${settings.targetColorSpace}`);
+          progress.setProgress('CONVERTING_PIXELS', 'Konvertiere Pixel-Daten...');
+
+          try {
+            let transformedDataUrl: string;
+
+            if (settings.targetColorSpace === 'DeviceCMYK') {
+              // Transform RGB to CMYK
+              console.log('Transforming pixels to CMYK');
+              const result = await transformImageToCMYK(loadedImg);
+              transformedDataUrl = result.dataUrl;
+              console.log(`CMYK transformation complete: ${result.width}x${result.height}`);
+            } else if (settings.targetColorSpace === 'DeviceGray') {
+              // Transform to Grayscale
+              console.log('Transforming pixels to Grayscale');
+              const result = await transformImageToGrayscale(loadedImg);
+              transformedDataUrl = result.dataUrl;
+              console.log(`Grayscale transformation complete: ${result.width}x${result.height}`);
+            } else {
+              // RGB - no transformation needed (already RGB)
+              console.log('Target is RGB, no pixel transformation needed');
+              transformedDataUrl = optimizedImageUrl;
+            }
+
+            // Fetch the transformed image data
+            if (transformedDataUrl !== optimizedImageUrl) {
+              const response = await fetch(transformedDataUrl);
+              imageDataToEmbed = await response.arrayBuffer();
+              console.log('Transformed image data ready for embedding');
+              progress.incrementProgress(5, 'Pixel-Konvertierung abgeschlossen');
+            }
+          } catch (conversionError) {
+            console.error('Error during pixel conversion:', conversionError);
+            console.warn('Falling back to original image without pixel conversion');
+            // Fall back to original image if conversion fails
+            imageDataToEmbed = imageData;
+          }
+        } else {
+          console.log('No pixel conversion needed - source and target color spaces match');
+        }
+      } else {
+        console.log('Pixel-level conversion skipped (disabled or preserve mode)');
+      }
+
+      // Bild in PDF einbetten - mit transformierten Pixeln falls konvertiert
       console.log('Embedding image in PDF');
-      const jpgImage = await pdfDoc.embedJpg(imageData);
+
+      // Try to embed as JPG first, fall back to PNG if it fails
+      let embeddedImage;
+      try {
+        embeddedImage = await pdfDoc.embedJpg(imageDataToEmbed);
+      } catch (jpgError) {
+        console.warn('Failed to embed as JPG, trying PNG:', jpgError);
+        embeddedImage = await pdfDoc.embedPng(imageDataToEmbed);
+      }
 
       progress.incrementProgress(5, 'Bild in PDF eingebettet');
       
@@ -135,7 +207,7 @@ export const createPdfWithCutContour = async (
       
       // Bild in voller Seitengröße zeichnen
       console.log('Drawing image on page');
-      page.drawImage(jpgImage, {
+      page.drawImage(embeddedImage, {
         x: 0,
         y: 0,
         width: pdfPageWidth,
