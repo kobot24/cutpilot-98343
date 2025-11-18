@@ -4,9 +4,16 @@ import { FILE_STORAGE_LIMITS } from '../constants/fileStorage';
 
 /**
  * Checks if an image is too large for PDF processing
+ * Note: This only applies to images, not PDFs
  */
 export const isImageTooLarge = (url: string): Promise<boolean> => {
   return new Promise((resolve) => {
+    // Skip check for PDF files (they don't need pixel dimension checks)
+    if (url.includes('.pdf') || url.startsWith('data:application/pdf')) {
+      resolve(false);
+      return;
+    }
+
     const img = new Image();
     img.onload = () => {
       const megapixels = (img.naturalWidth * img.naturalHeight) / 1000000;
@@ -29,15 +36,16 @@ export const isLargeFile = (file: File): boolean => {
  */
 export const validateFiles = (files: File[]): File[] => {
   return files.filter(file => {
-    if (!file.type.startsWith('image/')) {
+    // Accept both images and PDFs
+    if (!file.type.startsWith('image/') && file.type !== 'application/pdf') {
       toast({
         title: "Nicht unterstützt",
-        description: `Datei "${file.name}" ist kein unterstütztes Bildformat`,
+        description: `Datei "${file.name}" ist kein unterstütztes Format (nur Bilder und PDFs)`,
         variant: "destructive"
       });
       return false;
     }
-    
+
     if (file.size > FILE_STORAGE_LIMITS.MAX_FILE_SIZE_BYTES) {
       toast({
         title: "Datei zu groß",
@@ -46,7 +54,7 @@ export const validateFiles = (files: File[]): File[] => {
       });
       return false;
     }
-    
+
     return true;
   });
 };

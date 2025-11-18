@@ -19,12 +19,12 @@
         "writeFile": true,
         "readDir": true,
         "copyFile": false,
-        "createDir": false,
+        "createDir": true,
         "removeDir": false,
-        "removeFile": false,
+        "removeFile": true,
         "renameFile": false,
         "exists": true,
-        "scope": ["$DOWNLOAD/*", "$DOCUMENT/*", "$DESKTOP/*", "$HOME/*"]
+        "scope": ["$DOWNLOAD/*", "$DOCUMENT/*", "$DESKTOP/*", "$HOME/*", "$APPDATA/*"]
       },
       "dialog": {
         "all": false,
