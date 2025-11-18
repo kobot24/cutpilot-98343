@@ -30,7 +30,7 @@ export interface ICCProfileMetadata {
   id: string;
   name: string;
   fileName: string;
-  filePath: string; // Path to the actual file on disk
+  filePath: string; // RELATIVE path within AppData (e.g., "icc_profiles/123_profile.icc")
   uploadedAt: Date;
   size: number; // File size in bytes
 }
@@ -112,17 +112,13 @@ export async function saveICCProfile(file: File): Promise<ICCProfileMetadata> {
     });
     console.log('[saveICCProfile] File written successfully!');
 
-    // Get the absolute path for metadata
-    const appDataDir = await tauriPath.appDataDir();
-    const absolutePath = await tauriPath.join(appDataDir, relativePath);
-    console.log('[saveICCProfile] Absolute path:', absolutePath);
-
-    // Return metadata (no Base64 data!)
+    // Return metadata with RELATIVE path (not absolute!)
+    // This allows us to use BaseDirectory.AppData when reading/deleting
     const metadata: ICCProfileMetadata = {
       id: `icc_${timestamp}`,
       name: file.name.replace(/\.[^/.]+$/, ''), // Remove extension
       fileName: file.name,
-      filePath: absolutePath, // Store absolute path for later retrieval
+      filePath: relativePath, // Store RELATIVE path (e.g., "icc_profiles/123_profile.icc")
       uploadedAt: new Date(),
       size: file.size
     };
@@ -151,6 +147,7 @@ export async function saveICCProfile(file: File): Promise<ICCProfileMetadata> {
 
 /**
  * Load an ICC profile from the filesystem as Base64
+ * @param filePath - RELATIVE path within AppData (e.g., "icc_profiles/123_profile.icc")
  */
 export async function loadICCProfile(filePath: string): Promise<string> {
   await ensureTauriImports();
@@ -160,8 +157,14 @@ export async function loadICCProfile(filePath: string): Promise<string> {
   }
 
   try {
-    // Read binary file
-    const uint8Array = await tauriFs.readBinaryFile(filePath);
+    console.log('[loadICCProfile] Loading ICC profile from relative path:', filePath);
+
+    // Read binary file using RELATIVE path with BaseDirectory.AppData
+    const uint8Array = await tauriFs.readBinaryFile(filePath, {
+      dir: tauriFs.BaseDirectory.AppData
+    });
+
+    console.log('[loadICCProfile] File loaded successfully, size:', uint8Array.length);
 
     // Convert to Base64
     const base64 = btoa(
@@ -172,13 +175,14 @@ export async function loadICCProfile(filePath: string): Promise<string> {
 
     return base64;
   } catch (error) {
-    console.error('Error loading ICC profile:', error);
+    console.error('[loadICCProfile] Error loading ICC profile:', error);
     throw new Error(`Fehler beim Laden des ICC-Profils: ${error instanceof Error ? error.message : 'Unbekannter Fehler'}`);
   }
 }
 
 /**
  * Delete an ICC profile from the filesystem
+ * @param filePath - RELATIVE path within AppData (e.g., "icc_profiles/123_profile.icc")
  */
 export async function deleteICCProfile(filePath: string): Promise<void> {
   await ensureTauriImports();
@@ -188,16 +192,23 @@ export async function deleteICCProfile(filePath: string): Promise<void> {
   }
 
   try {
-    await tauriFs.removeFile(filePath);
-    console.log(`ICC profile deleted: ${filePath}`);
+    console.log('[deleteICCProfile] Deleting ICC profile at relative path:', filePath);
+
+    // Delete file using RELATIVE path with BaseDirectory.AppData
+    await tauriFs.removeFile(filePath, {
+      dir: tauriFs.BaseDirectory.AppData
+    });
+
+    console.log('[deleteICCProfile] ICC profile deleted successfully:', filePath);
   } catch (error) {
-    console.error('Error deleting ICC profile:', error);
+    console.error('[deleteICCProfile] Error deleting ICC profile:', error);
     throw new Error(`Fehler beim Löschen des ICC-Profils: ${error instanceof Error ? error.message : 'Unbekannter Fehler'}`);
   }
 }
 
 /**
  * Check if an ICC profile file exists
+ * @param filePath - RELATIVE path within AppData (e.g., "icc_profiles/123_profile.icc")
  */
 export async function iccProfileExists(filePath: string): Promise<boolean> {
   await ensureTauriImports();
@@ -207,7 +218,10 @@ export async function iccProfileExists(filePath: string): Promise<boolean> {
   }
 
   try {
-    await tauriFs.readBinaryFile(filePath);
+    // Check if file exists using RELATIVE path with BaseDirectory.AppData
+    await tauriFs.readBinaryFile(filePath, {
+      dir: tauriFs.BaseDirectory.AppData
+    });
     return true;
   } catch {
     return false;

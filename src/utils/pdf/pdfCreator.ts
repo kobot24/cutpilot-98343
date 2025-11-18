@@ -105,9 +105,10 @@ export const createPdfWithCutContour = async (
       let imageDataToEmbed = imageData;
       let transformedImage: HTMLImageElement | null = null;
 
-      if (settings.convertColorSpace &&
-          settings.targetColorSpace &&
-          settings.iccProfileMode === 'convert') {
+      // IMPORTANT: Perform pixel conversion if color space conversion is enabled,
+      // regardless of ICC profile mode. The ICC profile mode only affects whether
+      // an ICC profile is embedded, not whether pixel conversion happens.
+      if (settings.convertColorSpace && settings.targetColorSpace) {
 
         const needsConversion = shouldConvertImage(
           detectedColorSpace,
@@ -157,7 +158,7 @@ export const createPdfWithCutContour = async (
           console.log('No pixel conversion needed - source and target color spaces match');
         }
       } else {
-        console.log('Pixel-level conversion skipped (disabled or preserve mode)');
+        console.log('Pixel-level conversion skipped (color space conversion disabled)');
       }
 
       // Bild in PDF einbetten - mit transformierten Pixeln falls konvertiert
@@ -236,20 +237,22 @@ export const createPdfWithCutContour = async (
 
       if (settings.convertColorSpace && settings.targetColorSpace) {
         // Farbraum-Konvertierung ist aktiviert
+        // Set target color space to the requested one
+        targetColorSpace = settings.targetColorSpace;
+        console.log(`Color space conversion enabled: ${detectedColorSpace} → ${targetColorSpace}`);
+
         const iccProfileMode = settings.iccProfileMode || 'preserve';
 
         if (iccProfileMode === 'preserve') {
-          // Modus: Original ICC-Profil beibehalten
-          console.log(`ICC Profile Mode: preserve - keeping original color space: ${detectedColorSpace}`);
-          targetColorSpace = detectedColorSpace;
+          // Modus: Original ICC-Profil beibehalten (if it exists)
+          console.log(`ICC Profile Mode: preserve - converting to ${targetColorSpace} without ICC profile`);
 
           // TODO: Extract and re-embed original ICC profile from source image
           // This requires complex PDF parsing and is not yet implemented
-          // For now, we only preserve the color space (RGB/CMYK/Gray)
-          console.warn('ICC profile extraction from source not yet implemented - preserving color space only');
+          // For now, we perform pixel conversion but don't embed an ICC profile
+          console.warn('ICC profile extraction from source not yet implemented - using standard color space');
         } else if (iccProfileMode === 'convert') {
           // Modus: Zu neuem ICC-Profil konvertieren
-          targetColorSpace = settings.targetColorSpace;
           console.log(`ICC Profile Mode: convert - ${detectedColorSpace} → ${targetColorSpace}`);
 
           // ICC-Profil einbetten, falls vorhanden
@@ -268,7 +271,7 @@ export const createPdfWithCutContour = async (
 
             progress.incrementProgress(3, 'ICC-Profil eingebettet');
           } else {
-            console.warn('Color space conversion requested but no ICC profile selected in settings');
+            console.warn('ICC profile mode is "convert" but no ICC profile data available - using standard color space');
           }
         }
       } else {
