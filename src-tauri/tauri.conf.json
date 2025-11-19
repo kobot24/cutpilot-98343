@@ -14,29 +14,26 @@
     "allowlist": {
       "all": false,
       "fs": {
-        "all": false,
-        "readFile": true,
-        "writeFile": true,
-        "readBinaryFile": true,
-        "writeBinaryFile": true,
-        "readDir": true,
-        "copyFile": false,
-        "createDir": true,
-        "removeDir": false,
-        "removeFile": true,
-        "renameFile": false,
-        "exists": true,
+        "all": true,
         "scope": [
+          "$DOWNLOAD",
           "$DOWNLOAD/*",
           "$DOWNLOAD/**",
+          "$DOCUMENT",
           "$DOCUMENT/*",
           "$DOCUMENT/**",
+          "$DESKTOP",
           "$DESKTOP/*",
           "$DESKTOP/**",
+          "$HOME",
           "$HOME/*",
           "$HOME/**",
+          "$APPDATA",
           "$APPDATA/*",
-          "$APPDATA/**"
+          "$APPDATA/**",
+          "$TEMP",
+          "$TEMP/*",
+          "$TEMP/**"
         ]
       },
       "dialog": {
