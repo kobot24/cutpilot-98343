@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
@@ -8,9 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Slider } from '@/components/ui/slider';
 import { toast } from 'sonner';
 import { useSettings } from '@/hooks/useSettings';
-import { Upload, X, Check, Settings as SettingsIcon, Trash2 } from 'lucide-react';
+import { Upload, X, Check, Settings as SettingsIcon } from 'lucide-react';
 import { isTauri } from '@/utils/tauri';
-import { openFileDialog, readBinaryFile } from '@/utils/tauriFileDialog';
 import { UpdateChecker } from '@/components/UpdateChecker';
 
 export const Settings = () => {
@@ -25,56 +24,6 @@ export const Settings = () => {
   } = useSettings();
 
   const [isSelecting, setIsSelecting] = useState(false);
-  const [debugLogs, setDebugLogs] = useState<string[]>([]);
-  const logContainerRef = useRef<HTMLDivElement>(null);
-
-  // Intercept console.log messages for debugging
-  useEffect(() => {
-    const originalConsoleLog = console.log;
-    const originalConsoleError = console.error;
-
-    console.log = (...args: any[]) => {
-      originalConsoleLog(...args);
-      const message = args.map(arg =>
-        typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)
-      ).join(' ');
-
-      // Only capture ICC profile related logs
-      if (message.includes('[saveICCProfile]') ||
-          message.includes('[ensureICCProfilesDir]') ||
-          message.includes('[loadICCProfile]') ||
-          message.includes('ICC profile')) {
-        setDebugLogs(prev => [...prev, `[LOG] ${message}`].slice(-50)); // Keep last 50 logs
-      }
-    };
-
-    console.error = (...args: any[]) => {
-      originalConsoleError(...args);
-      const message = args.map(arg =>
-        typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)
-      ).join(' ');
-
-      // Only capture ICC profile related errors
-      if (message.includes('[saveICCProfile]') ||
-          message.includes('[ensureICCProfilesDir]') ||
-          message.includes('[loadICCProfile]') ||
-          message.includes('ICC profile')) {
-        setDebugLogs(prev => [...prev, `[ERROR] ${message}`].slice(-50));
-      }
-    };
-
-    return () => {
-      console.log = originalConsoleLog;
-      console.error = originalConsoleError;
-    };
-  }, []);
-
-  // Auto-scroll logs to bottom
-  useEffect(() => {
-    if (logContainerRef.current) {
-      logContainerRef.current.scrollTop = logContainerRef.current.scrollHeight;
-    }
-  }, [debugLogs]);
 
   /**
    * VEREINFACHT: Nur Pfad auswählen, keine Uploads!
@@ -284,51 +233,6 @@ export const Settings = () => {
             </Button>
           </CardContent>
         </Card>
-
-        {/* Debug Logs */}
-        {isTauri() && debugLogs.length > 0 && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center justify-between">
-                <span>Debug Logs (ICC Profile)</span>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => setDebugLogs([])}
-                >
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  Logs löschen
-                </Button>
-              </CardTitle>
-              <CardDescription>
-                Echtzeit-Logs für ICC-Profil Upload Debugging
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div
-                ref={logContainerRef}
-                className="bg-gray-900 text-gray-100 p-4 rounded-md font-mono text-xs overflow-auto max-h-96 space-y-1"
-              >
-                {debugLogs.map((log, index) => (
-                  <div
-                    key={index}
-                    className={
-                      log.startsWith('[ERROR]')
-                        ? 'text-red-400'
-                        : log.includes('ERROR')
-                        ? 'text-red-400'
-                        : log.includes('successfully')
-                        ? 'text-green-400'
-                        : 'text-gray-300'
-                    }
-                  >
-                    {log}
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
       </div>
     </div>
   );
