@@ -64,6 +64,7 @@ async function ensureICCProfilesDir(): Promise<void> {
 
 /**
  * Save an ICC profile to the filesystem
+ * FALLBACK: If filesystem save fails, falls back to localStorage (with size warnings)
  */
 export async function saveICCProfile(file: File): Promise<ICCProfileMetadata> {
   console.log('[saveICCProfile] Starting ICC profile save:', file.name, `(${file.size} bytes)`);
@@ -107,10 +108,50 @@ export async function saveICCProfile(file: File): Promise<ICCProfileMetadata> {
 
     // Write to filesystem using Tauri fs API with BaseDirectory
     console.log('[saveICCProfile] Writing binary file to disk...');
-    await tauriFs.writeBinaryFile(relativePath, uint8Array, {
-      dir: tauriFs.BaseDirectory.AppData
-    });
-    console.log('[saveICCProfile] File written successfully!');
+    try {
+      await tauriFs.writeBinaryFile(relativePath, uint8Array, {
+        dir: tauriFs.BaseDirectory.AppData
+      });
+      console.log('[saveICCProfile] File written successfully to filesystem!');
+    } catch (fsError) {
+      console.error('[saveICCProfile] Filesystem write failed:', fsError);
+      console.warn('[saveICCProfile] FALLBACK: Attempting localStorage save (not recommended for large files)');
+
+      // FALLBACK: Try localStorage (with warnings)
+      if (file.size > 1024 * 1024) { // > 1MB
+        console.error('[saveICCProfile] ICC Profile too large for localStorage fallback (>1MB)');
+        throw new Error('Dateisystem-Speicherung fehlgeschlagen und Profil zu groß für localStorage (>1MB). Bitte Berechtigungen prüfen.');
+      }
+
+      // Convert to Base64 for localStorage
+      const base64 = btoa(
+        Array.from(uint8Array)
+          .map(byte => String.fromCharCode(byte))
+          .join('')
+      );
+
+      // Store in localStorage with special prefix
+      const localStorageKey = `icc_fallback_${timestamp}`;
+      try {
+        localStorage.setItem(localStorageKey, base64);
+        console.warn(`[saveICCProfile] Stored in localStorage as fallback: ${localStorageKey}`);
+
+        // Return metadata with fallback marker
+        const metadata: ICCProfileMetadata = {
+          id: `icc_${timestamp}`,
+          name: file.name.replace(/\.[^/.]+$/, ''),
+          fileName: file.name,
+          filePath: `__FALLBACK_LOCALSTORAGE__${localStorageKey}`, // Special marker
+          uploadedAt: new Date(),
+          size: file.size
+        };
+
+        return metadata;
+      } catch (localStorageError) {
+        console.error('[saveICCProfile] localStorage fallback also failed:', localStorageError);
+        throw new Error('Weder Dateisystem noch localStorage verfügbar. Bitte Anwendung neu starten.');
+      }
+    }
 
     // Return metadata with RELATIVE path (not absolute!)
     // This allows us to use BaseDirectory.AppData when reading/deleting
@@ -148,6 +189,7 @@ export async function saveICCProfile(file: File): Promise<ICCProfileMetadata> {
 /**
  * Load an ICC profile from the filesystem as Base64
  * @param filePath - RELATIVE path within AppData (e.g., "icc_profiles/123_profile.icc")
+ *                   OR localStorage key with prefix "__FALLBACK_LOCALSTORAGE__"
  */
 export async function loadICCProfile(filePath: string): Promise<string> {
   await ensureTauriImports();
@@ -157,6 +199,21 @@ export async function loadICCProfile(filePath: string): Promise<string> {
   }
 
   try {
+    // Check if this is a localStorage fallback
+    if (filePath.startsWith('__FALLBACK_LOCALSTORAGE__')) {
+      const localStorageKey = filePath.replace('__FALLBACK_LOCALSTORAGE__', '');
+      console.log('[loadICCProfile] Loading from localStorage fallback:', localStorageKey);
+
+      const base64 = localStorage.getItem(localStorageKey);
+      if (!base64) {
+        throw new Error(`localStorage key not found: ${localStorageKey}`);
+      }
+
+      console.log('[loadICCProfile] Loaded from localStorage, size:', base64.length);
+      return base64;
+    }
+
+    // Normal filesystem load
     console.log('[loadICCProfile] Loading ICC profile from relative path:', filePath);
 
     // Read binary file using RELATIVE path with BaseDirectory.AppData
@@ -183,6 +240,7 @@ export async function loadICCProfile(filePath: string): Promise<string> {
 /**
  * Delete an ICC profile from the filesystem
  * @param filePath - RELATIVE path within AppData (e.g., "icc_profiles/123_profile.icc")
+ *                   OR localStorage key with prefix "__FALLBACK_LOCALSTORAGE__"
  */
 export async function deleteICCProfile(filePath: string): Promise<void> {
   await ensureTauriImports();
@@ -192,6 +250,17 @@ export async function deleteICCProfile(filePath: string): Promise<void> {
   }
 
   try {
+    // Check if this is a localStorage fallback
+    if (filePath.startsWith('__FALLBACK_LOCALSTORAGE__')) {
+      const localStorageKey = filePath.replace('__FALLBACK_LOCALSTORAGE__', '');
+      console.log('[deleteICCProfile] Deleting from localStorage fallback:', localStorageKey);
+
+      localStorage.removeItem(localStorageKey);
+      console.log('[deleteICCProfile] Removed from localStorage:', localStorageKey);
+      return;
+    }
+
+    // Normal filesystem deletion
     console.log('[deleteICCProfile] Deleting ICC profile at relative path:', filePath);
 
     // Delete file using RELATIVE path with BaseDirectory.AppData
