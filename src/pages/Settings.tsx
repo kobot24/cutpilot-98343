@@ -18,13 +18,13 @@ export const Settings = () => {
     settings,
     isLoading,
     updateSetting,
-    addICCProfile,
+    selectICCProfile,
     removeICCProfile,
-    setDefaultICCProfile,
+    getCurrentICCProfileName,
     resetSettings
   } = useSettings();
 
-  const [isUploading, setIsUploading] = useState(false);
+  const [isSelecting, setIsSelecting] = useState(false);
   const [debugLogs, setDebugLogs] = useState<string[]>([]);
   const logContainerRef = useRef<HTMLDivElement>(null);
 
@@ -76,70 +76,29 @@ export const Settings = () => {
     }
   }, [debugLogs]);
 
-  const handleICCUpload = async () => {
-    if (isTauri()) {
-      // Use Tauri file dialog
-      try {
-        setIsUploading(true);
-        const selected = await openFileDialog({
-          multiple: false,
-          filters: [
-            {
-              name: 'ICC Profile',
-              extensions: ['icc', 'icm']
-            }
-          ]
-        });
-
-        if (!selected || Array.isArray(selected)) return;
-
-        const contents = await readBinaryFile(selected);
-        if (!contents) {
-          toast.error('Fehler beim Lesen der Datei');
-          return;
-        }
-
-        const fileName = selected.split('/').pop() || selected.split('\\').pop() || 'profile.icc';
-        const blob = new Blob([contents], { type: 'application/octet-stream' });
-        const file = new File([blob], fileName, { type: 'application/octet-stream' });
-
-        await addICCProfile(file);
-        toast.success(`ICC-Profil "${fileName}" hinzugefügt`);
-      } catch (error) {
-        console.error('Error uploading ICC profile:', error);
-        const errorMessage = error instanceof Error ? error.message : 'Fehler beim Hochladen des ICC-Profils';
-        toast.error(errorMessage);
-      } finally {
-        setIsUploading(false);
+  /**
+   * VEREINFACHT: Nur Pfad auswählen, keine Uploads!
+   */
+  const handleICCProfileSelect = async () => {
+    try {
+      setIsSelecting(true);
+      await selectICCProfile();
+      const fileName = getCurrentICCProfileName();
+      if (fileName) {
+        toast.success(`ICC-Profil ausgewählt: ${fileName}`);
       }
-    } else {
-      // Browser file input fallback
-      const input = document.createElement('input');
-      input.type = 'file';
-      input.accept = '.icc,.icm';
-      input.onchange = async (e) => {
-        const file = (e.target as HTMLInputElement).files?.[0];
-        if (file) {
-          try {
-            setIsUploading(true);
-            await addICCProfile(file);
-            toast.success(`ICC-Profil "${file.name}" hinzugefügt`);
-          } catch (error) {
-            console.error('Error uploading ICC profile:', error);
-            const errorMessage = error instanceof Error ? error.message : 'Fehler beim Hochladen des ICC-Profils';
-            toast.error(errorMessage);
-          } finally {
-            setIsUploading(false);
-          }
-        }
-      };
-      input.click();
+    } catch (error) {
+      console.error('Error selecting ICC profile:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Fehler bei der Auswahl';
+      toast.error(errorMessage);
+    } finally {
+      setIsSelecting(false);
     }
   };
 
-  const handleRemoveProfile = async (profileId: string) => {
+  const handleRemoveProfile = () => {
     try {
-      await removeICCProfile(profileId);
+      removeICCProfile();
       toast.success('ICC-Profil entfernt');
     } catch (error) {
       console.error('Error removing profile:', error);
@@ -228,160 +187,65 @@ export const Settings = () => {
           </CardContent>
         </Card>
 
-        {/* ICC Profile Settings */}
+        {/* ICC Profile Settings - VEREINFACHT! */}
         <Card>
           <CardHeader>
-            <CardTitle>ICC-Profile Verwaltung</CardTitle>
+            <CardTitle>ICC-Profil (Optional)</CardTitle>
             <CardDescription>
-              Verwalten Sie ICC-Profile für die Farbkonvertierung
+              Wählen Sie ein ICC-Profil für Ghostscript CMYK-Konvertierung.
+              Nur benötigt wenn Sie externe Ghostscript-Konvertierung nutzen möchten.
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-6">
-            {/* Upload Button */}
-            <div>
-              <Button
-                onClick={handleICCUpload}
-                disabled={isUploading}
-                className="w-full sm:w-auto"
-              >
-                <Upload className="h-4 w-4 mr-2" />
-                {isUploading ? 'Wird hochgeladen...' : 'ICC-Profil hochladen'}
-              </Button>
-            </div>
-
-            {/* Profile List */}
-            {settings.iccProfiles.length > 0 ? (
-              <div className="space-y-3">
-                <Label>Hochgeladene Profile ({settings.iccProfiles.length})</Label>
-                <div className="space-y-2">
-                  {settings.iccProfiles.map((profile) => (
-                    <div
-                      key={profile.id}
-                      className="flex items-center justify-between p-3 bg-muted rounded-lg"
-                    >
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <p className="font-medium truncate">{profile.name}</p>
-                          {settings.defaultICCProfile === profile.fileName && (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-primary text-primary-foreground text-xs rounded-full">
-                              <Check className="h-3 w-3" />
-                              Standard
-                            </span>
-                          )}
-                        </div>
-                        <p className="text-xs text-muted-foreground">
-                          {profile.fileName} • {(profile.size / 1024 / 1024).toFixed(2)} MB • {new Date(profile.uploadedAt).toLocaleDateString()}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        {settings.defaultICCProfile !== profile.fileName && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => setDefaultICCProfile(profile.fileName)}
-                          >
-                            Als Standard
-                          </Button>
-                        )}
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => handleRemoveProfile(profile.id)}
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
+          <CardContent className="space-y-4">
+            {/* Current Profile Display */}
+            {settings.iccProfilePath ? (
+              <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <Check className="h-4 w-4 text-green-600" />
+                    <p className="font-medium truncate">{getCurrentICCProfileName()}</p>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {settings.iccProfilePath}
+                  </p>
                 </div>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={handleRemoveProfile}
+                  className="ml-2"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
               </div>
             ) : (
-              <div className="text-center py-8 text-muted-foreground">
-                <p>Keine ICC-Profile hochgeladen</p>
+              <div className="text-center py-6 text-muted-foreground bg-muted/50 rounded-lg">
+                <p>Kein ICC-Profil ausgewählt</p>
                 <p className="text-xs mt-1">
-                  Laden Sie ICC-Profile hoch für präzise Farbkonvertierung
+                  Optional: Wählen Sie ein Profil für CMYK-Konvertierung
                 </p>
               </div>
             )}
-          </CardContent>
-        </Card>
 
-        {/* Color Space Settings */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Farbraum-Einstellungen</CardTitle>
-            <CardDescription>
-              Konfigurieren Sie die Farbkonvertierung für importierte PDFs
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {/* Convert Color Space Switch */}
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label htmlFor="convertColorSpace">PDF Farbraum konvertieren</Label>
-                <p className="text-xs text-muted-foreground">
-                  Hochgeladene PDFs in anderen Farbraum konvertieren
-                </p>
-              </div>
-              <Switch
-                id="convertColorSpace"
-                checked={settings.convertColorSpace}
-                onCheckedChange={(checked) => updateSetting('convertColorSpace', checked)}
-              />
-            </div>
+            {/* Select Button */}
+            <Button
+              onClick={handleICCProfileSelect}
+              disabled={isSelecting || !isTauri()}
+              className="w-full sm:w-auto"
+              variant={settings.iccProfilePath ? 'outline' : 'default'}
+            >
+              <Upload className="h-4 w-4 mr-2" />
+              {isSelecting
+                ? 'Wird ausgewählt...'
+                : settings.iccProfilePath
+                  ? 'Anderes Profil wählen'
+                  : 'ICC-Profil auswählen'}
+            </Button>
 
-            {/* ICC Profile Mode */}
-            {settings.convertColorSpace && (
-              <>
-                <div className="space-y-2">
-                  <Label htmlFor="iccProfileMode">ICC-Profil Modus</Label>
-                  <Select
-                    value={settings.iccProfileMode}
-                    onValueChange={(value) =>
-                      updateSetting('iccProfileMode', value as any)
-                    }
-                  >
-                    <SelectTrigger id="iccProfileMode" className="max-w-xs">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="preserve">Original ICC-Profil beibehalten</SelectItem>
-                      <SelectItem value="convert">Zu neuem ICC-Profil konvertieren</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <p className="text-xs text-muted-foreground">
-                    {settings.iccProfileMode === 'preserve'
-                      ? 'Verwendet das ICC-Profil vom hochgeladenen PDF'
-                      : 'Verwendet das ausgewählte ICC-Profil aus den Einstellungen'
-                    }
-                  </p>
-                </div>
-
-                {/* Target Color Space - only show when converting */}
-                {settings.iccProfileMode === 'convert' && (
-                  <div className="space-y-2">
-                    <Label htmlFor="targetColorSpace">Ziel-Farbraum</Label>
-                    <Select
-                      value={settings.targetColorSpace}
-                      onValueChange={(value) =>
-                        updateSetting('targetColorSpace', value as any)
-                      }
-                    >
-                      <SelectTrigger id="targetColorSpace" className="max-w-xs">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="DeviceCMYK">CMYK (DeviceCMYK)</SelectItem>
-                        <SelectItem value="DeviceRGB">RGB (DeviceRGB)</SelectItem>
-                        <SelectItem value="DeviceGray">Graustufen (DeviceGray)</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <p className="text-xs text-muted-foreground">
-                      Farbraum für konvertierte PDFs
-                    </p>
-                  </div>
-                )}
-              </>
+            {!isTauri() && (
+              <p className="text-xs text-yellow-600 mt-2">
+                ICC-Profil-Auswahl nur in der Desktop-App verfügbar
+              </p>
             )}
           </CardContent>
         </Card>

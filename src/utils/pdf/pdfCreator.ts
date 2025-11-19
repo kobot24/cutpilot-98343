@@ -1,404 +1,218 @@
+/**
+ * PDF Creator - VEREINFACHT!
+ *
+ * Erstellt PDF mit Cut-Kontur OHNE Farbraum-Konvertierung.
+ * Das Original-PDF/Bild wird durchgereicht (RGB bleibt RGB, CMYK bleibt CMYK).
+ *
+ * Philosophie: "Wie Photoshop" - Keine automatische Konvertierung!
+ */
 
 import { PDFDocument } from 'pdf-lib';
 import { optimizeImageIfNeeded } from '../fileValidationUtils';
 import { ProgressTracker } from '../progressUtils';
-import { FILE_STORAGE_LIMITS } from '../../constants/fileStorage';
-import { addPdfMetadata, embedICCProfile } from './pdfMetadataUtils';
+import { setPdfMetadata } from './pdfMetadataUtils';
 import { createCutContour } from './cutContourCreator';
-import { detectImageColorSpace, convertImageColorSpace } from './colorSpaceUtils';
-import {
-  transformImageToCMYK,
-  transformImageToGrayscale,
-  shouldConvertImage
-} from './colorConversion';
 
-// Extended settings type to include ICC profile and color space settings
+// Vereinfachte Settings - NUR das Nötigste!
 export type PDFCreatorSettings = {
   cutContourOffset: number;
   spotColorName: string;
-  convertColorSpace?: boolean;
-  targetColorSpace?: 'DeviceCMYK' | 'DeviceRGB' | 'DeviceGray';
-  defaultICCProfile?: string | null;
-  iccProfileData?: string | null; // Base64 encoded ICC profile data
-  iccProfileMode?: 'preserve' | 'convert'; // NEW: preserve original or convert to new ICC
 };
 
-// Create PDF with cut contour from image URL
+/**
+ * Erstellt PDF mit Cut-Kontur aus Bild
+ *
+ * WICHTIG: KEINE Farbraum-Konvertierung!
+ * Das Bild wird im Original-Farbraum eingebettet.
+ */
 export const createPdfWithCutContour = async (
   imageUrl: string,
   settings: PDFCreatorSettings,
   onProgress?: (progress: number, status: string) => void
 ) => {
-  // Initialize progress tracking if callback provided
-  const progress = onProgress 
-    ? new ProgressTracker(onProgress) 
-    : { 
-        setProgress: () => {}, 
-        incrementProgress: () => {}, 
-        complete: () => {} 
+  const progress = onProgress
+    ? new ProgressTracker(onProgress)
+    : {
+        setProgress: () => {},
+        incrementProgress: () => {},
+        complete: () => {}
       };
-  
+
   try {
-    console.log('Starting PDF creation process');
-    console.log('Settings:', settings);
-    
+    console.log('[createPdfWithCutContour] Starting PDF creation (NO conversion)');
+    console.log('[createPdfWithCutContour] Settings:', settings);
+
     progress.setProgress('LOADING_IMAGE', 'Lade Bild...');
-    
-    // Für sehr große Bilder zuerst optimieren
-    console.log('Optimiere Bild wenn nötig...');
+
+    // Bild optimieren falls nötig
     const optimizedImageUrl = await optimizeImageIfNeeded(imageUrl);
     if (optimizedImageUrl !== imageUrl) {
-      console.log('Bild wurde für bessere Performance optimiert');
+      console.log('[createPdfWithCutContour] Image optimized for performance');
     }
-    
-    // Image-Element erstellen, um Dimensionen zu erhalten
+
+    // Bild laden
     const img = document.createElement('img');
-    
-    // Promise erstellen, um auf das Laden des Bildes zu warten
+
     const imageLoadPromise = new Promise<HTMLImageElement>((resolve, reject) => {
       img.onload = () => resolve(img);
       img.onerror = (e) => reject(new Error(`Failed to load image: ${e}`));
-      
-      // crossOrigin auf anonymous setzen, um CORS-Probleme mit Daten-URLs zu vermeiden
       img.crossOrigin = "anonymous";
       img.src = optimizedImageUrl;
     });
-    
+
     progress.incrementProgress(5, 'Bild wird geladen...');
-    
-    // Auf das Laden des Bildes mit einem Timeout warten
+
     const loadedImg = await Promise.race([
       imageLoadPromise,
-      new Promise<never>((_, reject) => 
+      new Promise<never>((_, reject) =>
         setTimeout(() => reject(new Error('Zeitüberschreitung beim Laden des Bildes')), 30000)
       )
     ]);
-    
-    console.log(`Image loaded: ${img.naturalWidth}x${img.naturalHeight} pixels`);
+
+    console.log(`[createPdfWithCutContour] Image loaded: ${img.naturalWidth}x${img.naturalHeight}px`);
     progress.incrementProgress(5, 'Bild geladen');
-    
-    // PDF-Dokument mit kompatiblen Optionen für Illustrator erstellen
+
+    // PDF-Dokument erstellen
     const pdfDoc = await PDFDocument.create({
-      updateMetadata: false // Keine Standardmetadaten hinzufügen, die Probleme verursachen könnten
+      updateMetadata: false
     });
-    
+
     progress.setProgress('PROCESSING_IMAGE', 'Verarbeite Bild...');
-    
-    // Bilddaten abrufen - mit verbesserter Handhabung für große Daten-URLs
-    const imageData = await fetchImageData(optimizedImageUrl, progress);
-    
+
+    // Bilddaten abrufen
+    const imageData = await fetchImageData(optimizedImageUrl);
     if (!imageData) {
       throw new Error("Keine Bilddaten verfügbar");
     }
-    
+
     progress.incrementProgress(10, 'PDF wird erstellt...');
-    
+
+    // Bild in PDF einbetten - OHNE KONVERTIERUNG!
+    // pdf-lib bettet das Bild im Original-Farbraum ein
+    console.log('[createPdfWithCutContour] Embedding image (original color space preserved)');
+
+    let embeddedImage;
     try {
-      // Farbraum des Bildes erkennen
-      console.log('Detecting image color space');
-      const detectedColorSpace = await detectImageColorSpace(loadedImg);
-      console.log(`Detected color space: ${detectedColorSpace}`);
-
-      progress.incrementProgress(2, 'Farbraum erkannt');
-
-      // Check if pixel-level color conversion is needed
-      let imageDataToEmbed = imageData;
-      let transformedImage: HTMLImageElement | null = null;
-
-      // IMPORTANT: Perform pixel conversion if color space conversion is enabled,
-      // regardless of ICC profile mode. The ICC profile mode only affects whether
-      // an ICC profile is embedded, not whether pixel conversion happens.
-      if (settings.convertColorSpace && settings.targetColorSpace) {
-
-        const needsConversion = shouldConvertImage(
-          detectedColorSpace,
-          settings.targetColorSpace,
-          settings.convertColorSpace
-        );
-
-        if (needsConversion) {
-          console.log(`Pixel-level conversion: ${detectedColorSpace} → ${settings.targetColorSpace}`);
-          progress.setProgress('CONVERTING_PIXELS', 'Konvertiere Pixel-Daten...');
-
-          try {
-            let transformedDataUrl: string;
-
-            if (settings.targetColorSpace === 'DeviceCMYK') {
-              // Transform RGB to CMYK
-              console.log('Transforming pixels to CMYK');
-              const result = await transformImageToCMYK(loadedImg);
-              transformedDataUrl = result.dataUrl;
-              console.log(`CMYK transformation complete: ${result.width}x${result.height}`);
-            } else if (settings.targetColorSpace === 'DeviceGray') {
-              // Transform to Grayscale
-              console.log('Transforming pixels to Grayscale');
-              const result = await transformImageToGrayscale(loadedImg);
-              transformedDataUrl = result.dataUrl;
-              console.log(`Grayscale transformation complete: ${result.width}x${result.height}`);
-            } else {
-              // RGB - no transformation needed (already RGB)
-              console.log('Target is RGB, no pixel transformation needed');
-              transformedDataUrl = optimizedImageUrl;
-            }
-
-            // Fetch the transformed image data
-            if (transformedDataUrl !== optimizedImageUrl) {
-              const response = await fetch(transformedDataUrl);
-              imageDataToEmbed = await response.arrayBuffer();
-              console.log('Transformed image data ready for embedding');
-              progress.incrementProgress(5, 'Pixel-Konvertierung abgeschlossen');
-            }
-          } catch (conversionError) {
-            console.error('Error during pixel conversion:', conversionError);
-            console.warn('Falling back to original image without pixel conversion');
-            // Fall back to original image if conversion fails
-            imageDataToEmbed = imageData;
-          }
-        } else {
-          console.log('No pixel conversion needed - source and target color spaces match');
-        }
-      } else {
-        console.log('Pixel-level conversion skipped (color space conversion disabled)');
-      }
-
-      // Bild in PDF einbetten - mit transformierten Pixeln falls konvertiert
-      console.log('Embedding image in PDF');
-
-      // Try to embed as JPG first, fall back to PNG if it fails
-      let embeddedImage;
-      try {
-        embeddedImage = await pdfDoc.embedJpg(imageDataToEmbed);
-      } catch (jpgError) {
-        console.warn('Failed to embed as JPG, trying PNG:', jpgError);
-        embeddedImage = await pdfDoc.embedPng(imageDataToEmbed);
-      }
-
-      progress.incrementProgress(5, 'Bild in PDF eingebettet');
-      
-      // Pixelabmessungen des Bildes erhalten
-      const pixelWidth = img.naturalWidth;
-      const pixelHeight = img.naturalHeight;
-      
-      // DPI aus den Pixelabmessungen berechnen
-      const imageDPI = detectImageDPI(img);
-      
-      console.log(`Image dimensions: ${pixelWidth}x${pixelHeight} pixels`);
-      console.log(`Detected DPI: ${imageDPI}`);
-      
-      // Physikalische Abmessungen in Zoll basierend auf Pixelabmessungen und DPI berechnen
-      const widthInInches = pixelWidth / imageDPI;
-      const heightInInches = pixelHeight / imageDPI;
-      
-      // Physikalische Abmessungen in Punkte umrechnen (72 Punkte = 1 Zoll, was der PDF-Standard ist)
-      const pdfPageWidth = widthInInches * 72;
-      const pdfPageHeight = heightInInches * 72;
-      
-      // In cm umrechnen zur Anzeige
-      const widthInCm = widthInInches * 2.54;
-      const heightInCm = heightInInches * 2.54;
-      
-      console.log(`Physical dimensions: ${widthInCm.toFixed(2)}x${heightInCm.toFixed(2)} cm`);
-      console.log(`PDF page size in points: ${pdfPageWidth.toFixed(2)}x${pdfPageHeight.toFixed(2)} pt`);
-      
-      // Seite mit Abmessungen erstellen, die der physikalischen Größe entsprechen
-      console.log('Creating PDF page');
-      const page = pdfDoc.addPage([pdfPageWidth, pdfPageHeight]);
-      
-      progress.setProgress('CREATING_PDF', 'Erstelle PDF mit CutContour...');
-      
-      // Bild in voller Seitengröße zeichnen
-      console.log('Drawing image on page');
-      page.drawImage(embeddedImage, {
-        x: 0,
-        y: 0,
-        width: pdfPageWidth,
-        height: pdfPageHeight,
-      });
-      
-      const pdfContext = pdfDoc.context;
-
-      // Spot-Farbnamen aus den Settings verwenden
-      const spotColorName = settings.spotColorName || "CutContour";
-
-      // CutContour zum PDF hinzufügen
-      await createCutContour({
-        page,
-        pdfContext,
-        pdfPageWidth,
-        pdfPageHeight,
-        spotColorName,
-        cutContourOffset: settings.cutContourOffset,
-        progress
-      });
-      
-      // Farbraum-Management und ICC-Profil-Einbettung
-      let iccProfileEmbedded = false;
-      let targetColorSpace = detectedColorSpace;
-
-      if (settings.convertColorSpace && settings.targetColorSpace) {
-        // Farbraum-Konvertierung ist aktiviert
-        // Set target color space to the requested one
-        targetColorSpace = settings.targetColorSpace;
-        console.log(`Color space conversion enabled: ${detectedColorSpace} → ${targetColorSpace}`);
-
-        const iccProfileMode = settings.iccProfileMode || 'preserve';
-
-        if (iccProfileMode === 'preserve') {
-          // Modus: Original ICC-Profil beibehalten (if it exists)
-          console.log(`ICC Profile Mode: preserve - converting to ${targetColorSpace} without ICC profile`);
-
-          // TODO: Extract and re-embed original ICC profile from source image
-          // This requires complex PDF parsing and is not yet implemented
-          // For now, we perform pixel conversion but don't embed an ICC profile
-          console.warn('ICC profile extraction from source not yet implemented - using standard color space');
-        } else if (iccProfileMode === 'convert') {
-          // Modus: Zu neuem ICC-Profil konvertieren
-          console.log(`ICC Profile Mode: convert - ${detectedColorSpace} → ${targetColorSpace}`);
-
-          // ICC-Profil einbetten, falls vorhanden
-          if (settings.iccProfileData) {
-            console.log('Embedding ICC profile from settings');
-            progress.incrementProgress(2, 'ICC-Profil wird eingebettet...');
-
-            embedICCProfile(
-              pdfDoc,
-              pdfContext,
-              settings.iccProfileData,
-              targetColorSpace,
-              settings.defaultICCProfile || 'Custom ICC Profile'
-            );
-            iccProfileEmbedded = true;
-
-            progress.incrementProgress(3, 'ICC-Profil eingebettet');
-          } else {
-            console.warn('ICC profile mode is "convert" but no ICC profile data available - using standard color space');
-          }
-        }
-      } else {
-        // Farbraum-Konvertierung deaktiviert - Original beibehalten
-        console.log(`Color space conversion disabled - preserving original: ${detectedColorSpace}`);
-        targetColorSpace = detectedColorSpace;
-      }
-
-      // Dateinamen aus URL für Metadaten extrahieren
-      const fileName = imageUrl.split('/').pop()?.split('.')[0] || 'Image';
-
-      // Abmessungen zum Dateinamen für Klarheit hinzufügen
-      const fileNameWithDimensions = `${fileName}_${widthInCm.toFixed(1)}x${heightInCm.toFixed(1)}cm`;
-
-      console.log('Setting PDF metadata');
-      // PDF-Metadaten mit Adobe Illustrator-Kompatibilität festlegen
-      // Skip OutputIntents if we already embedded an ICC profile
-      addPdfMetadata(pdfDoc, pdfContext, fileNameWithDimensions, iccProfileEmbedded);
-      
-      progress.incrementProgress(10, 'PDF wird finalisiert...');
-      
-      // PDF mit optimalen Einstellungen für Print-Workflows speichern
-      console.log('Saving PDF document');
-      
-      // Verwenden Sie einen höheren Wert für objectsPerTick für große PDF-Dateien
-      // Dies verhindert Timing-Out bei der Verarbeitung
-      const pdfBytes = await pdfDoc.save({ 
-        useObjectStreams: false,      // Bessere Kompatibilität mit RIP-Systemen
-        addDefaultPage: false,        // Keine leeren Seiten
-        objectsPerTick: 100,          // In kleineren Batches verarbeiten, aber mehr pro Tick für große Dateien
-        updateFieldAppearances: false, // Keine Formularfelder
-      });
-      
-      console.log(`PDF created successfully: ${pdfBytes.byteLength} bytes`);
-      
-      progress.setProgress('FINALIZING', 'PDF wird fertiggestellt...');
-      
-      // Bei großen PDFs direkt einen Blob-URL erstellen statt einer Daten-URL
-      // Dies ist speichereffizienter für große Dateien
-      const blob = new Blob([pdfBytes], { type: 'application/pdf' });
-      const pdfUrl = URL.createObjectURL(blob);
-      
-      progress.complete('PDF fertiggestellt');
-      
-      return pdfUrl;
-    } catch (error) {
-      console.error('Fehler beim Erstellen des PDFs:', error);
-      if (error instanceof Error && error.message.includes("allocation")) {
-        throw new Error("Nicht genügend Speicher, um das Bild zu verarbeiten. Bitte verkleinern Sie das Bild.");
-      } else {
-        throw error;
-      }
+      embeddedImage = await pdfDoc.embedJpg(imageData);
+    } catch (jpgError) {
+      console.warn('[createPdfWithCutContour] JPG embedding failed, trying PNG:', jpgError);
+      embeddedImage = await pdfDoc.embedPng(imageData);
     }
+
+    progress.incrementProgress(5, 'Bild in PDF eingebettet');
+
+    // Bildabmessungen berechnen
+    const pixelWidth = img.naturalWidth;
+    const pixelHeight = img.naturalHeight;
+
+    // DPI erkennen (Standard: 72 DPI für Web-Bilder)
+    const imageDPI = 72;
+
+    console.log(`[createPdfWithCutContour] Image: ${pixelWidth}x${pixelHeight}px @ ${imageDPI}dpi`);
+
+    // Physikalische Abmessungen berechnen
+    const widthInInches = pixelWidth / imageDPI;
+    const heightInInches = pixelHeight / imageDPI;
+
+    // In PDF-Punkte umrechnen (72 Punkte = 1 Zoll)
+    const pdfPageWidth = widthInInches * 72;
+    const pdfPageHeight = heightInInches * 72;
+
+    // In cm für Anzeige
+    const widthInCm = widthInInches * 2.54;
+    const heightInCm = heightInInches * 2.54;
+
+    console.log(`[createPdfWithCutContour] Physical size: ${widthInCm.toFixed(2)}x${heightInCm.toFixed(2)}cm`);
+    console.log(`[createPdfWithCutContour] PDF size: ${pdfPageWidth.toFixed(2)}x${pdfPageHeight.toFixed(2)}pt`);
+
+    // Seite erstellen
+    console.log('[createPdfWithCutContour] Creating PDF page');
+    const page = pdfDoc.addPage([pdfPageWidth, pdfPageHeight]);
+
+    progress.setProgress('CREATING_PDF', 'Erstelle PDF mit CutContour...');
+
+    // Bild in voller Größe einzeichnen
+    console.log('[createPdfWithCutContour] Drawing image on page');
+    page.drawImage(embeddedImage, {
+      x: 0,
+      y: 0,
+      width: pdfPageWidth,
+      height: pdfPageHeight,
+    });
+
+    const pdfContext = pdfDoc.context;
+    const spotColorName = settings.spotColorName || "CutContour";
+
+    // Cut-Kontur hinzufügen
+    console.log('[createPdfWithCutContour] Adding cut contour');
+    await createCutContour({
+      page,
+      pdfContext,
+      pdfPageWidth,
+      pdfPageHeight,
+      spotColorName,
+      cutContourOffset: settings.cutContourOffset,
+      progress
+    });
+
+    // Dateiname für Metadaten
+    const fileName = imageUrl.split('/').pop()?.split('.')[0] || 'Image';
+    const fileNameWithDimensions = `${fileName}_${widthInCm.toFixed(1)}x${heightInCm.toFixed(1)}cm`;
+
+    console.log('[createPdfWithCutContour] Setting PDF metadata');
+    setPdfMetadata(pdfDoc, fileNameWithDimensions);
+
+    progress.incrementProgress(10, 'PDF wird finalisiert...');
+
+    // PDF speichern
+    console.log('[createPdfWithCutContour] Saving PDF document');
+
+    const pdfBytes = await pdfDoc.save({
+      useObjectStreams: false,
+      addDefaultPage: false,
+      objectsPerTick: 100,
+      updateFieldAppearances: false,
+    });
+
+    console.log(`[createPdfWithCutContour] SUCCESS! PDF created: ${pdfBytes.byteLength} bytes`);
+
+    progress.setProgress('FINALIZING', 'PDF wird fertiggestellt...');
+
+    // Blob URL erstellen
+    const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+    const pdfUrl = URL.createObjectURL(blob);
+
+    progress.complete('PDF fertiggestellt');
+
+    return pdfUrl;
   } catch (error) {
-    console.error('Error creating PDF with cut contour:', error);
+    console.error('[createPdfWithCutContour] ERROR:', error);
     progress.complete('Fehler bei der PDF-Erstellung');
     throw new Error(`PDF-Erstellung fehlgeschlagen: ${error instanceof Error ? error.message : 'Unbekannter Fehler'}`);
   }
 };
 
-// Function to detect DPI from image
-const detectImageDPI = (img: HTMLImageElement): number => {
-  // For now we're using a simple approach - read image size in pixels
-  // and estimate DPI based on reasonable physical size
-  
-  // The actual detection happens client-side - for now we'll log what we're using
-  const inferredDPI = 72; // Default DPI for PDFs and web display
-  console.log(`Using DPI: ${inferredDPI}`);
-  return inferredDPI;
-};
-
-// Function to fetch image data with progress tracking
-const fetchImageData = async (imageUrl: string, progress: any): Promise<ArrayBuffer> => {
+/**
+ * Bilddaten abrufen
+ */
+const fetchImageData = async (imageUrl: string): Promise<ArrayBuffer> => {
   try {
-    console.log('Processing image data');
-    
-    // Whether we're dealing with a blob or data URL, handle appropriately
-    if (imageUrl.startsWith('blob:')) {
-      // For blob URLs, fetch the blob and convert to array buffer
+    console.log('[fetchImageData] Fetching image data from URL');
+
+    if (imageUrl.startsWith('blob:') || imageUrl.startsWith('data:')) {
       const response = await fetch(imageUrl);
-      if (!response.ok) throw new Error(`Failed to fetch blob: ${response.status}`);
       return await response.arrayBuffer();
     }
-    // For data URLs, process differently based on size
-    else if (imageUrl.startsWith('data:')) {
-      // Extract base64 content from data URL
-      const base64Content = imageUrl.split(',')[1];
-      
-      // Estimate size (base64 is ~4/3 the size of binary)
-      const estimatedSize = (base64Content.length * 3) / 4;
-      
-      if (estimatedSize > FILE_STORAGE_LIMITS.MAX_FETCH_SIZE) {
-        console.log('Large data URL detected, using direct conversion');
-        // For very large data URLs, convert directly to binary without using fetch
-        const binaryString = atob(base64Content);
-        const bytes = new Uint8Array(binaryString.length);
-        
-        // Process in chunks to avoid call stack errors with very large strings
-        const chunkSize = 1024 * 1024; // 1MB chunks
-        for (let i = 0; i < binaryString.length; i += chunkSize) {
-          const chunk = Math.min(chunkSize, binaryString.length - i);
-          for (let j = 0; j < chunk; j++) {
-            bytes[i + j] = binaryString.charCodeAt(i + j);
-          }
-          // Allow UI thread to breathe between chunks
-          if (i + chunk < binaryString.length && (i % (chunkSize * 5) === 0)) {
-            await new Promise(resolve => setTimeout(resolve, 0));
-            progress.incrementProgress(1, 'Verarbeite Bilddaten...');
-          }
-        }
-        
-        return bytes.buffer;
-      } else {
-        console.log('Using fetch for data URL');
-        // For smaller data URLs, we can use fetch which is more efficient
-        const response = await fetch(imageUrl);
-        if (!response.ok) throw new Error(`Fetch failed: ${response.status} ${response.statusText}`);
-        return await response.arrayBuffer();
-      }
-    } else {
-      // For regular URLs, fetch the data
-      const response = await fetch(imageUrl);
-      if (!response.ok) throw new Error(`Failed to fetch image: ${response.status} ${response.statusText}`);
-      return await response.arrayBuffer();
+
+    // Für andere URLs
+    const response = await fetch(imageUrl);
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     }
+
+    return await response.arrayBuffer();
   } catch (error) {
-    console.error('Error fetching image:', error);
-    throw new Error(`Fehler beim Laden des Bildes: ${error.message}`);
+    console.error('[fetchImageData] ERROR:', error);
+    throw new Error(`Fehler beim Laden der Bilddaten: ${error instanceof Error ? error.message : 'Unbekannter Fehler'}`);
   }
 };

@@ -8,6 +8,7 @@ import { de } from 'date-fns/locale';
 import { UploadedFile } from '@/types/fileTypes';
 import { UserSettings } from '@/hooks/useSettings';
 import { PDFDownloadButton } from '@/components/pdf/PDFDownloadButton';
+import { getColorSpaceLabel, getColorSpaceIcon } from '@/utils/pdf/colorSpaceDetector';
 
 type FileCardProps = {
   file: UploadedFile;
@@ -81,6 +82,21 @@ export const FileCard = ({
             disabled={isBatchProcessing}
           />
         </div>
+
+        {/* Color Space Badge */}
+        {file.colorSpace && (
+          <div className={`absolute top-2 left-2 text-white text-xs px-2 py-1 rounded flex items-center gap-1 ${
+            file.colorSpace === 'CMYK' ? 'bg-green-600' :
+            file.colorSpace === 'RGB' ? 'bg-blue-600' :
+            file.colorSpace === 'Gray' ? 'bg-gray-600' :
+            file.colorSpace === 'Mixed' ? 'bg-yellow-600' :
+            'bg-red-600'
+          }`}>
+            <span>{getColorSpaceIcon(file.colorSpace)}</span>
+            <span>{getColorSpaceLabel(file.colorSpace)}</span>
+          </div>
+        )}
+
         {file.convertedPdfUrl && (
           <div className="absolute bottom-2 left-2 bg-green-500 text-white text-xs px-2 py-1 rounded">
             PDF

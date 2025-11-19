@@ -52,42 +52,23 @@ export const usePDFConverter = () => {
         // Wir versuchen es trotzdem, da wir nun eine bessere Optimierung haben
       }
       
-      // Get settings from localStorage
+      // Get settings from localStorage (simplified!)
       const storedSettings = localStorage.getItem('userSettings');
       const userSettings: UserSettings = storedSettings
         ? JSON.parse(storedSettings)
         : {
             cutContourOffset: 3,
-            spotColorName: 'CutContour',
-            iccProfiles: [],
-            defaultICCProfile: null,
-            convertColorSpace: false,
-            targetColorSpace: 'DeviceCMYK'
+            spotColorName: 'CUT',
+            iccProfilePath: null
           };
 
-      // Get ICC profile data if a default profile is set
-      let iccProfileData: string | null = null;
-      if (userSettings.defaultICCProfile) {
-        const profile = userSettings.iccProfiles.find(
-          p => p.fileName === userSettings.defaultICCProfile
-        );
-        if (profile) {
-          // Load ICC profile from filesystem
-          const { loadICCProfile } = await import('@/utils/iccStorage');
-          iccProfileData = await loadICCProfile(profile.filePath);
-        }
-      }
-
-      // Prepare settings for PDF creator
+      // Prepare settings for PDF creator (simplified - NO conversion!)
       const pdfSettings: PDFCreatorSettings = {
         cutContourOffset: userSettings.cutContourOffset,
-        spotColorName: userSettings.spotColorName,
-        convertColorSpace: userSettings.convertColorSpace,
-        targetColorSpace: userSettings.targetColorSpace,
-        defaultICCProfile: userSettings.defaultICCProfile,
-        iccProfileData: iccProfileData,
-        iccProfileMode: userSettings.iccProfileMode
+        spotColorName: userSettings.spotColorName
       };
+
+      console.log('[convertToPdf] Settings:', pdfSettings);
 
       // Show processing toast only when not in batch mode
       if (!batchProgress.isActive) {
