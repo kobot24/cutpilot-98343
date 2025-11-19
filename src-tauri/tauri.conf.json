@@ -17,6 +17,8 @@
         "all": false,
         "readFile": true,
         "writeFile": true,
+        "readBinaryFile": true,
+        "writeBinaryFile": true,
         "readDir": true,
         "copyFile": false,
         "createDir": true,
@@ -24,7 +26,18 @@
         "removeFile": true,
         "renameFile": false,
         "exists": true,
-        "scope": ["$DOWNLOAD/*", "$DOCUMENT/*", "$DESKTOP/*", "$HOME/*", "$APPDATA/*"]
+        "scope": [
+          "$DOWNLOAD/*",
+          "$DOWNLOAD/**",
+          "$DOCUMENT/*",
+          "$DOCUMENT/**",
+          "$DESKTOP/*",
+          "$DESKTOP/**",
+          "$HOME/*",
+          "$HOME/**",
+          "$APPDATA/*",
+          "$APPDATA/**"
+        ]
       },
       "dialog": {
         "all": false,
