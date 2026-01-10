@@ -1,0 +1,7 @@
+# This directory will contain ICC profiles
+# Download them from the sources mentioned in README.md
+#
+# Required profiles:
+# - ISOcoated_v2_eci.icc (https://www.eci.org/downloads)
+# - sRGB.icc (https://www.adobe.com/support/downloads/iccprofiles/)
+# - PSO_Coated_v3.icc (https://www.eci.org/downloads)

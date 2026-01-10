@@ -46,7 +46,9 @@
       "deb": {
         "depends": []
       },
-      "externalBin": [],
+      "externalBin": [
+        "binaries/gs"
+      ],
       "icon": [
         "icons/32x32.png",
         "icons/128x128.png",
@@ -64,7 +66,9 @@
         "signingIdentity": null,
         "minimumSystemVersion": "10.13"
       },
-      "resources": [],
+      "resources": [
+        "resources/icc-profiles/*"
+      ],
       "shortDescription": "PDF Cut Contour Tool für Druckereien",
       "targets": "all",
       "windows": {
