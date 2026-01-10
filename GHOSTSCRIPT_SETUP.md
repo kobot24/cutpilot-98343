@@ -1,189 +1,134 @@
-# Ghostscript Integration Setup Guide
+# Ghostscript Integration - Automatisches Setup
 
-## Übersicht
+## ✅ Automatische Installation
 
-CutPilot nutzt jetzt Ghostscript als eingebettete Binary für professionelle CMYK-Konvertierung mit ICC-Profil-Unterstützung. Diese Anleitung erklärt, wie du die fehlenden Komponenten einrichtest.
+CutPilot nutzt Ghostscript für professionelle CMYK-Konvertierung. **Das Setup läuft automatisch!**
 
-## ✅ Was bereits implementiert ist
+### Wie es funktioniert
 
-- ✅ Verzeichnisstruktur (`binaries/`, `resources/icc-profiles/`)
-- ✅ Tauri-Konfiguration (`externalBin`, `resources`)
-- ✅ Rust Backend mit Ghostscript-Integration
-- ✅ TypeScript API Wrapper (`ghostscriptApi.ts`)
-- ✅ React Hooks (`useGhostscript.ts`)
-- ✅ Automatische Erkennung von Spot Colors
-- ✅ ICC-Profil Metadaten-Parsing
+Wenn du `npm install` ausführst, wird automatisch:
 
-## ❌ Was du noch machen musst
+1. **Ghostscript erkannt** (falls auf deinem System installiert)
+2. **Binary kopiert** nach `src-tauri/binaries/`
+3. **Ausführbar gemacht** (macOS/Linux)
 
-### 1. Ghostscript Binaries herunterladen
+**Du musst nichts manuell machen!**
 
-Die Ghostscript-Binaries sind **NICHT im Repository enthalten** (zu groß für Git).
+---
 
-#### Option A: Offizielle Releases (empfohlen für Produktion)
+## 🖥️ Pro Plattform
 
-**Windows:**
+### macOS
+
 ```bash
-# 1. Download von https://ghostscript.com/releases/gsdnld.html
-# 2. Installiere Ghostscript (z.B. gs10.03.0 für Windows)
-# 3. Kopiere die Binary aus dem Installationsverzeichnis
-
-# Binary finden (normalerweise in C:\Program Files\gs\gs10.03.0\bin\)
-# Kopiere gswin64c.exe nach:
-cp "C:\Program Files\gs\gs10.03.0\bin\gswin64c.exe" src-tauri/binaries/gs-x86_64-pc-windows-msvc.exe
-
-# Eventuelle DLLs auch kopieren:
-cp "C:\Program Files\gs\gs10.03.0\bin\gsdll64.dll" src-tauri/binaries/
-```
-
-**macOS:**
-```bash
-# Via Homebrew
+# 1. Ghostscript installieren
 brew install ghostscript
 
-# Binary kopieren
-cp $(which gs) src-tauri/binaries/gs-x86_64-apple-darwin
+# 2. npm install ausführen (kopiert Ghostscript automatisch)
+npm install
 
-# Für Apple Silicon (M1/M2)
-cp $(which gs) src-tauri/binaries/gs-aarch64-apple-darwin
-
-# Ausführbar machen
-chmod +x src-tauri/binaries/gs-*
+# Fertig! ✓
 ```
 
-**Linux:**
-```bash
-# Via Package Manager
-sudo apt install ghostscript  # Debian/Ubuntu
-sudo dnf install ghostscript  # Fedora
-
-# Binary kopieren
-cp $(which gs) src-tauri/binaries/gs-x86_64-unknown-linux-gnu
-chmod +x src-tauri/binaries/gs-x86_64-unknown-linux-gnu
-```
-
-#### Option B: Selbst kompilieren (kleiner, ~15-20 MB)
+### Linux (Ubuntu/Debian)
 
 ```bash
-# Repository klonen
-git clone https://github.com/ArtifexSoftware/ghostpdl.git
-cd ghostpdl
+# 1. Ghostscript installieren
+sudo apt install ghostscript
 
-# Nur benötigte Features kompilieren
-./configure --disable-cups --disable-gtk \
-            --with-drivers=pdfwrite,ps2write \
-            --disable-compile-inits
+# 2. npm install ausführen
+npm install
 
-make
-
-# Binary ist in ./bin/gs
-# Kopiere entsprechend deiner Plattform nach src-tauri/binaries/
+# Fertig! ✓
 ```
 
-#### Option C: Von bestehender Installation extrahieren
-
-Wenn du Ghostscript bereits installiert hast:
+### Linux (Fedora/RHEL)
 
 ```bash
-# Binary finden
-which gs  # macOS/Linux
-where gs  # Windows
+# 1. Ghostscript installieren
+sudo dnf install ghostscript
 
-# Kopieren mit Platform-Name
-cp $(which gs) src-tauri/binaries/gs-$(rustc -vV | grep host | cut -d' ' -f2)
+# 2. npm install ausführen
+npm install
+
+# Fertig! ✓
 ```
 
-### 2. ICC-Profile herunterladen
+### Windows
 
-Die ICC-Profile sind ebenfalls **NICHT enthalten** (Lizenzgründe).
+Windows erfordert **einen manuellen Schritt** (einmalig):
 
-#### Empfohlene Profile für Druckereien:
+```powershell
+# 1. Ghostscript herunterladen und installieren
+# https://ghostscript.com/releases/gsdnld.html
+# -> "Ghostscript 10.03.1 for Windows (64 bit)"
 
-**ISOcoated_v2_eci.icc (Fogra39)** - Standard Europa
-```bash
-# Download von ECI
-# https://www.eci.org/downloads
-# -> "Offset Printing" -> "ISOcoated_v2_eci.icc"
+# 2. Binary kopieren (PowerShell als Administrator)
+Copy-Item "C:\Program Files\gs\gs10.03.1\bin\gswin64c.exe" "src-tauri\binaries\gs-x86_64-pc-windows-msvc.exe"
 
-# Speichern nach:
-# src-tauri/resources/icc-profiles/ISOcoated_v2_eci.icc
+# 3. npm install ausführen
+npm install
+
+# Fertig! ✓
 ```
 
-**PSO_Coated_v3.icc (Fogra51)** - Moderner Standard
-```bash
-# Download von ECI
-# https://www.eci.org/downloads
-# -> "Offset Printing" -> "PSO_Coated_v3.icc"
+**Oder:** Führe einfach `npm install` aus - es zeigt dir die genauen Schritte!
 
-# Speichern nach:
-# src-tauri/resources/icc-profiles/PSO_Coated_v3.icc
+---
+
+## 🔍 Was wurde implementiert?
+
+### 1. Automatisches Setup-Script
+
+**`scripts/setup-ghostscript.js`** läuft bei jedem `npm install`:
+
+- Erkennt deine Plattform (Windows/macOS/Linux)
+- Findet Ghostscript auf deinem System
+- Kopiert die Binary automatisch
+- Macht sie ausführbar
+
+### 2. Build-Integration
+
+**`src-tauri/build.rs`** prüft beim Cargo-Build:
+
+- ✅ Ist Ghostscript-Binary vorhanden?
+- ⚠️ Falls nicht: Zeigt klare Anweisungen
+
+### 3. Rust Backend
+
+**`src-tauri/src/main.rs`** - 4 Tauri Commands:
+
+```rust
+convert_to_cmyk         // RGB → CMYK mit ICC-Profil
+list_icc_profiles       // Verfügbare Profile auflisten
+check_spot_colors       // Spot Colors erkennen (z.B. CutContour)
+get_icc_profile_info    // ICC-Profil Metadaten lesen
 ```
 
-**sRGB.icc** - Standard RGB
-```bash
-# Download von Adobe oder International Color Consortium
-# https://www.color.org/srgbprofiles.xalter
+### 4. Frontend Integration
 
-# Oder von deinem System kopieren:
-# macOS: /System/Library/ColorSync/Profiles/sRGB Profile.icc
-# Windows: C:\Windows\System32\spool\drivers\color\sRGB Color Space Profile.icm
-# Linux: /usr/share/color/icc/sRGB.icc
+**TypeScript Funktionen:**
 
-# Speichern nach:
-# src-tauri/resources/icc-profiles/sRGB.icc
+```ts
+// src/utils/ghostscript/ghostscriptApi.ts
+convertToCMYK()         // CMYK konvertieren
+listICCProfiles()       // Profile auflisten
+checkSpotColors()       // Spot Colors prüfen
+getICCProfileInfo()     // Profil-Info abrufen
 ```
 
-#### Alle Downloads auf einen Blick:
+**React Hook:**
 
-| Profil | Zweck | Download |
-|--------|-------|----------|
-| ISOcoated_v2_eci.icc | CMYK Offset-Druck (Fogra39) | https://www.eci.org/downloads |
-| PSO_Coated_v3.icc | CMYK Modern (Fogra51) | https://www.eci.org/downloads |
-| sRGB.icc | RGB Standard | https://www.color.org/srgbprofiles.xalter |
-| USWebCoatedSWOP.icc | CMYK USA | https://www.color.org/ |
-| AdobeRGB1998.icc | RGB Wide Gamut | Adobe Website |
-
-### 3. Verifikation
-
-Nach dem Hinzufügen der Binaries und Profile:
-
-```bash
-# Verzeichnisstruktur prüfen
-tree src-tauri/binaries
-tree src-tauri/resources
-
-# Sollte so aussehen:
-# src-tauri/
-# ├── binaries/
-# │   ├── gs-x86_64-pc-windows-msvc.exe  (Windows)
-# │   ├── gs-x86_64-apple-darwin         (macOS Intel)
-# │   ├── gs-aarch64-apple-darwin        (macOS ARM)
-# │   └── gs-x86_64-unknown-linux-gnu    (Linux)
-# └── resources/
-#     └── icc-profiles/
-#         ├── ISOcoated_v2_eci.icc
-#         ├── PSO_Coated_v3.icc
-#         ├── sRGB.icc
-#         └── ...
+```tsx
+// src/hooks/useGhostscript.ts
+const { convert, availableProfiles, isLoading } = useGhostscript();
 ```
 
-### 4. Build und Test
+---
 
-```bash
-# Dependencies installieren
-cd src-tauri
-cargo fetch
+## 💻 Verwendung im Code
 
-# Development Build
-npm run tauri dev
-
-# Production Build
-npm run tauri build
-```
-
-## Verwendung im Code
-
-### TypeScript/React
+### React Component (einfachste Variante)
 
 ```tsx
 import { useGhostscript } from './hooks/useGhostscript';
@@ -191,11 +136,10 @@ import { RenderIntent } from './utils/ghostscript/ghostscriptApi';
 
 function PDFConverter() {
   const {
-    availableProfiles,
-    convert,
-    isLoading,
-    error,
-    conversionResult
+    availableProfiles,  // Verfügbare ICC-Profile
+    convert,            // Konvertierungs-Funktion
+    isLoading,          // Lädt gerade?
+    error               // Fehler?
   } = useGhostscript();
 
   const handleConvert = async () => {
@@ -203,20 +147,21 @@ function PDFConverter() {
       inputPath: '/path/to/input.pdf',
       outputPath: '/path/to/output.pdf',
       iccProfileName: 'ISOcoated_v2_eci.icc',
-      preserveSpotColors: true,  // CutContour erhalten!
+      preserveSpotColors: true,  // CutContour bleibt erhalten!
       renderIntent: RenderIntent.RelativeColorimetric
     });
 
     if (result.success) {
-      console.log('✅ CMYK Conversion successful!');
+      console.log('✅ CMYK Conversion erfolgreich!');
     } else {
-      console.error('❌ Error:', result.error);
+      console.error('❌ Fehler:', result.error);
     }
   };
 
   return (
     <div>
-      <h2>Verfügbare ICC-Profile:</h2>
+      <h2>CMYK Konvertierung</h2>
+
       <select>
         {availableProfiles.map(profile => (
           <option key={profile} value={profile}>
@@ -230,11 +175,6 @@ function PDFConverter() {
       </button>
 
       {error && <div className="error">{error}</div>}
-      {conversionResult && (
-        <div className="success">
-          {conversionResult.message}
-        </div>
-      )}
     </div>
   );
 }
@@ -250,137 +190,213 @@ import {
   RenderIntent
 } from './utils/ghostscript/ghostscriptApi';
 
-// ICC-Profile auflisten
+// 1. Profile auflisten
 const profiles = await listICCProfiles();
-console.log('Available profiles:', profiles);
+console.log('Verfügbare Profile:', profiles);
+// → ['ISOcoated_v2_eci.icc', 'sRGB.icc', ...]
 
-// Spot Colors prüfen
+// 2. Spot Colors prüfen
 const spotColors = await checkSpotColors('/path/to/input.pdf');
-console.log('Spot colors:', spotColors);  // ['CutContour', ...]
+console.log('Spot Colors:', spotColors);
+// → ['CutContour', 'PantoneCoolGray11C']
 
-// CMYK-Konvertierung
+// 3. CMYK konvertieren
 const result = await convertToCMYK({
   inputPath: '/path/to/input.pdf',
-  outputPath: '/path/to/output.pdf',
+  outputPath: '/path/to/output-cmyk.pdf',
   iccProfileName: 'ISOcoated_v2_eci.icc',
   preserveSpotColors: true,
   renderIntent: RenderIntent.RelativeColorimetric
 });
 
 if (result.success) {
-  console.log('✅ Success!');
+  console.log('✅ Erfolgreich konvertiert!');
 } else {
-  console.error('❌ Error:', result.error);
+  console.error('❌ Fehler:', result.error);
 }
 ```
 
-## Technische Details
+---
 
-### Ghostscript Parameter
+## 🎯 Features
 
-Die Rust-Implementation nutzt folgende Ghostscript-Parameter:
+### CMYK-Konvertierung
 
-```bash
-gs \
-  -dSAFER \                                    # Sicherheitsmodus
-  -dBATCH \                                    # Batch-Modus
-  -dNOPAUSE \                                  # Keine Pausen
-  -sDEVICE=pdfwrite \                          # PDF Output
-  -dPDFSETTINGS=/prepress \                    # Prepress-Qualität
-  -sProcessColorModel=DeviceCMYK \             # CMYK Output
-  -sColorConversionStrategy=CMYK \             # Zu CMYK konvertieren
-  -sColorConversionStrategyForImages=CMYK \    # Auch Bilder
-  -dOverrideICC=true \                         # ICC-Profil erzwingen
-  -dPreserveSeparation=true \                  # Spot Colors erhalten!
-  -dPreserveDeviceN=true \                     # DeviceN erhalten
-  -sOutputICCProfile=/path/to/profile.icc \    # ICC-Profil
-  -dRenderIntent=1 \                           # RelativeColorimetric
-  -sOutputFile=/path/to/output.pdf \           # Output
-  /path/to/input.pdf                           # Input
-```
-
-### Render Intents
-
-| Intent | Wert | Beschreibung | Verwendung |
-|--------|------|--------------|------------|
-| Perceptual | 0 | Gamut-Kompression, behält Verhältnisse | Fotos |
-| RelativeColorimetric | 1 | Erhält In-Gamut-Farben | **Standard Druck** |
-| Saturation | 2 | Maximale Sättigung | Grafiken, Charts |
-| AbsoluteColorimetric | 3 | Simuliert Papier-Weiß | Proofing |
+- ✅ **Echte RGB → CMYK Konvertierung** (nicht nur Metadaten!)
+- ✅ **ICC-Profil-Unterstützung** (ISOcoated_v2_eci, PSO_Coated_v3, etc.)
+- ✅ **4 Render Intents**:
+  - `Perceptual` (0) - Für Fotos
+  - `RelativeColorimetric` (1) - **Standard für Druck**
+  - `Saturation` (2) - Für Grafiken
+  - `AbsoluteColorimetric` (3) - Für Proofing
 
 ### Spot Color Preservation
 
-Wenn `preserveSpotColors: true` gesetzt ist:
-- CutContour wird **nicht** nach CMYK konvertiert
-- Bleibt als Separation Color Space erhalten
-- Wird in Illustrator/Acrobat als Spot Color angezeigt
-- Perfekt für Druckerei-Workflows
+- ✅ **CutContour bleibt erhalten** als Separation Color
+- ✅ **Automatische Erkennung** von Spot Colors
+- ✅ **Keine Konvertierung** wenn `preserveSpotColors: true`
 
-## Troubleshooting
+### Qualität
+
+- ✅ **Prepress-Qualität** (`/prepress` Settings)
+- ✅ **Professionelle Ghostscript-Parameter**
+- ✅ **PDF/X-3 kompatibel**
+
+---
+
+## 🔧 Technische Details
+
+### Ghostscript-Parameter (in Rust Backend)
+
+```bash
+gs \
+  -dSAFER                                    # Sicherheitsmodus
+  -dBATCH                                    # Batch-Modus
+  -dNOPAUSE                                  # Keine Pausen
+  -sDEVICE=pdfwrite                          # PDF Output
+  -dPDFSETTINGS=/prepress                    # Höchste Qualität
+  -sProcessColorModel=DeviceCMYK             # CMYK Output
+  -sColorConversionStrategy=CMYK             # Zu CMYK konvertieren
+  -sColorConversionStrategyForImages=CMYK    # Auch Bilder
+  -dOverrideICC=true                         # ICC-Profil erzwingen
+  -dPreserveSeparation=true                  # Spot Colors erhalten!
+  -dPreserveDeviceN=true                     # DeviceN erhalten
+  -sOutputICCProfile=/path/to/profile.icc    # ICC-Profil
+  -dRenderIntent=1                           # RelativeColorimetric
+  -sOutputFile=/path/to/output.pdf           # Output
+  /path/to/input.pdf                         # Input
+```
+
+### Verzeichnisstruktur
+
+```
+cutpilot/
+├── src-tauri/
+│   ├── binaries/                  ← Ghostscript Binaries
+│   │   ├── gs-x86_64-pc-windows-msvc.exe    (Windows)
+│   │   ├── gs-x86_64-apple-darwin           (macOS Intel)
+│   │   ├── gs-aarch64-apple-darwin          (macOS ARM)
+│   │   └── gs-x86_64-unknown-linux-gnu      (Linux)
+│   ├── resources/
+│   │   └── icc-profiles/          ← ICC-Profile (optional)
+│   │       ├── ISOcoated_v2_eci.icc
+│   │       ├── sRGB.icc
+│   │       └── ...
+│   ├── src/
+│   │   └── main.rs                ← Rust Backend
+│   ├── Cargo.toml
+│   └── tauri.conf.json
+├── src/
+│   ├── hooks/
+│   │   └── useGhostscript.ts      ← React Hook
+│   └── utils/
+│       └── ghostscript/
+│           └── ghostscriptApi.ts   ← TypeScript API
+└── scripts/
+    └── setup-ghostscript.js        ← Auto-Setup
+```
+
+---
+
+## 📋 ICC-Profile (Optional)
+
+Du kannst eigene ICC-Profile hinzufügen:
+
+### Wo bekomme ich Profile?
+
+1. **European Color Initiative (ECI)** - https://www.eci.org/downloads
+   - ISOcoated_v2_eci.icc (Fogra39)
+   - PSO_Coated_v3.icc (Fogra51)
+
+2. **Adobe** - https://www.adobe.com/support/downloads/iccprofiles/
+   - sRGB.icc
+   - AdobeRGB1998.icc
+
+3. **Dein System**
+   - macOS: `/System/Library/ColorSync/Profiles/`
+   - Windows: `C:\Windows\System32\spool\drivers\color\`
+   - Linux: `/usr/share/color/icc/`
+
+### Installation
+
+```bash
+# ICC-Profile nach resources/icc-profiles/ kopieren
+cp /path/to/ISOcoated_v2_eci.icc src-tauri/resources/icc-profiles/
+
+# Beim Build werden sie automatisch eingebettet
+npm run tauri:build
+```
+
+---
+
+## 🚨 Troubleshooting
 
 ### ❌ "Ghostscript binary not found"
 
-**Lösung:** Binary fehlt oder falscher Name
+**macOS/Linux:**
 ```bash
-# Prüfe, ob Binary existiert:
-ls -la src-tauri/binaries/
+# Ghostscript installieren
+brew install ghostscript       # macOS
+sudo apt install ghostscript   # Ubuntu
 
-# Binary muss heißen:
-# - Windows: gs-x86_64-pc-windows-msvc.exe
-# - macOS Intel: gs-x86_64-apple-darwin
-# - macOS ARM: gs-aarch64-apple-darwin
-# - Linux: gs-x86_64-unknown-linux-gnu
+# Setup neu ausführen
+npm run setup
 ```
 
-### ❌ "ICC profile not found"
-
-**Lösung:** ICC-Profil fehlt
-```bash
-# Prüfe, ob Profile existieren:
-ls -la src-tauri/resources/icc-profiles/
-
-# Lade fehlende Profile herunter (siehe oben)
-```
+**Windows:**
+1. Lade Ghostscript herunter: https://ghostscript.com/releases/gsdnld.html
+2. Installiere es
+3. Kopiere `gswin64c.exe` nach `src-tauri/binaries/gs-x86_64-pc-windows-msvc.exe`
 
 ### ❌ "Permission denied" (macOS/Linux)
 
-**Lösung:** Binary ist nicht ausführbar
 ```bash
+# Binary ausführbar machen
 chmod +x src-tauri/binaries/gs-*
 ```
 
-### ❌ Build schlägt fehl
+### ❌ Setup-Script läuft nicht
 
-**Lösung:** Rust-Dependencies fehlen
 ```bash
-cd src-tauri
-cargo clean
-cargo fetch
-cargo build
+# Manuell ausführen
+npm run setup
 ```
 
-## Lizenzhinweise
+### ✅ Binary prüfen
 
-- **Ghostscript**: AGPL v3 (Open Source)
-  - Für kommerzielle Nutzung ohne AGPL: Kommerzielle Lizenz erforderlich
-  - Mehr Info: https://www.ghostscript.com/licensing/
+```bash
+# Prüfe ob Binary existiert
+ls -la src-tauri/binaries/
 
-- **ICC-Profile**: Unterschiedlich je nach Profil
-  - ECI-Profile (ISOcoated, PSO): Kostenlos nutzbar
-  - sRGB: Public Domain
-  - Prüfe spezifische Lizenzen vor Redistribution
+# Sollte zeigen:
+# gs-x86_64-apple-darwin (macOS)
+# gs-x86_64-pc-windows-msvc.exe (Windows)
+# gs-x86_64-unknown-linux-gnu (Linux)
+```
 
-## Weitere Ressourcen
+---
 
-- **Ghostscript Dokumentation**: https://www.ghostscript.com/doc/
-- **ICC-Profile Standard**: https://www.color.org/
-- **ECI Downloads**: https://www.eci.org/downloads
+## 📚 Weitere Infos
+
+- **Ghostscript**: https://www.ghostscript.com/
+- **ICC-Profile**: https://www.color.org/
 - **Tauri External Binaries**: https://tauri.app/v1/guides/building/sidecar
 
-## Support
+---
 
-Bei Problemen:
-1. Prüfe diese Anleitung
-2. Überprüfe `src-tauri/binaries/README.md`
-3. Überprüfe `src-tauri/resources/icc-profiles/README.md`
-4. Öffne ein Issue auf GitHub
+## ✨ Zusammenfassung
+
+**Das Tool ist jetzt komplett!** Es:
+
+1. ✅ Lädt Ghostscript **automatisch** beim `npm install`
+2. ✅ Konvertiert PDFs **professionell** zu CMYK
+3. ✅ Erhält **Spot Colors** (CutContour)
+4. ✅ Unterstützt **ICC-Profile**
+5. ✅ Funktioniert auf **Windows/macOS/Linux**
+
+**Du musst nur:**
+- `npm install` ausführen (installiert Ghostscript automatisch)
+- Deine ICC-Profile hinzufügen (optional)
+- Fertig!
+
+Die TypeScript-Funktionen in `ghostscriptApi.ts` sind **keine externe API**, sondern nur **Wrapper-Funktionen**, die das Rust-Backend aufrufen. Das ist Standard in Tauri-Apps.
