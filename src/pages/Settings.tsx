@@ -12,6 +12,8 @@ import { Upload, X, Check, Settings as SettingsIcon } from 'lucide-react';
 import { isTauri } from '@/utils/tauri';
 import { openFileDialog, readBinaryFile } from '@/utils/tauriFileDialog';
 import { UpdateChecker } from '@/components/UpdateChecker';
+import { BundledICCProfiles } from '@/components/settings/BundledICCProfiles';
+import { PDFCMYKConverter } from '@/components/pdf/PDFCMYKConverter';
 
 export const Settings = () => {
   const {
@@ -247,6 +249,12 @@ export const Settings = () => {
             )}
           </CardContent>
         </Card>
+
+        {/* Bundled ICC Profiles */}
+        <BundledICCProfiles />
+
+        {/* PDF CMYK Converter */}
+        <PDFCMYKConverter />
 
         {/* Color Space Settings */}
         <Card>
