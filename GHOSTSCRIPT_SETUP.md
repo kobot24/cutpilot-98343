@@ -1,402 +1,341 @@
-# Ghostscript Integration - Automatisches Setup
+# Ghostscript Integration - Embedded Binary
 
-## ✅ Automatische Installation
+## ✅ Für End-User: **KEINE Installation nötig!**
 
-CutPilot nutzt Ghostscript für professionelle CMYK-Konvertierung. **Das Setup läuft automatisch!**
+CutPilot kommt mit **eingebettetem Ghostscript**. User müssen **nichts** installieren - einfach die App öffnen und loslegen!
 
-### Wie es funktioniert
-
-Wenn du `npm install` ausführst, wird automatisch:
-
-1. **Ghostscript erkannt** (falls auf deinem System installiert)
-2. **Binary kopiert** nach `src-tauri/binaries/`
-3. **Ausführbar gemacht** (macOS/Linux)
-
-**Du musst nichts manuell machen!**
+Genau wie **Illustrator**, **Photoshop** etc. - alle benötigten Komponenten sind im App-Bundle enthalten.
 
 ---
 
-## 🖥️ Pro Plattform
+## 🛠️ Für Entwickler: Einmalige Einrichtung
 
-### macOS
+### Workflow
 
+1. **Ghostscript einmalig installieren** (einmalig auf deinem Entwickler-System)
+2. **Ersten Build ausführen** → Ghostscript wird automatisch kopiert
+3. **Binary committen** → Wird Teil des Repos
+4. **Fertig!** Alle weiteren Builds und Users haben Ghostscript automatisch
+
+### Schritt-für-Schritt
+
+#### 1. Ghostscript installieren (Entwickler-System)
+
+**macOS:**
 ```bash
-# 1. Ghostscript installieren
 brew install ghostscript
-
-# 2. npm install ausführen (kopiert Ghostscript automatisch)
-npm install
-
-# Fertig! ✓
 ```
 
-### Linux (Ubuntu/Debian)
-
+**Linux (Ubuntu/Debian):**
 ```bash
-# 1. Ghostscript installieren
 sudo apt install ghostscript
-
-# 2. npm install ausführen
-npm install
-
-# Fertig! ✓
 ```
 
-### Linux (Fedora/RHEL)
+**Linux (Fedora/RHEL):**
+```bash
+sudo dnf install ghostscript
+```
+
+**Windows:**
+1. Download: https://ghostscript.com/releases/gsdnld.html
+2. Installiere "Ghostscript 10.03.1 for Windows (64 bit)"
+
+#### 2. Ersten Build ausführen
 
 ```bash
-# 1. Ghostscript installieren
-sudo dnf install ghostscript
+# Clone Repository
+git clone <your-repo>
+cd cutpilot
 
-# 2. npm install ausführen
+# Dependencies installieren
 npm install
 
-# Fertig! ✓
+# Entwickler-Build (kopiert Ghostscript automatisch!)
+npm run tauri:dev
 ```
 
-### Windows
+Beim ersten Build passiert **automatisch**:
+- ✓ build.rs findet Ghostscript auf deinem System
+- ✓ Kopiert Binary nach `src-tauri/binaries/`
+- ✓ Macht sie ausführbar (macOS/Linux)
+- ✓ Zeigt Success-Meldung
 
-Windows erfordert **einen manuellen Schritt** (einmalig):
+#### 3. Binary committen (einmalig)
 
-```powershell
-# 1. Ghostscript herunterladen und installieren
-# https://ghostscript.com/releases/gsdnld.html
-# -> "Ghostscript 10.03.1 for Windows (64 bit)"
+```bash
+# Git LFS installieren (falls noch nicht vorhanden)
+git lfs install
 
-# 2. Binary kopieren (PowerShell als Administrator)
-Copy-Item "C:\Program Files\gs\gs10.03.1\bin\gswin64c.exe" "src-tauri\binaries\gs-x86_64-pc-windows-msvc.exe"
-
-# 3. npm install ausführen
-npm install
-
-# Fertig! ✓
+# Binary committen
+git add src-tauri/binaries/
+git commit -m "Add Ghostscript binary for [platform]"
+git push
 ```
 
-**Oder:** Führe einfach `npm install` aus - es zeigt dir die genauen Schritte!
+**Das war's!** Alle anderen Entwickler und End-User haben jetzt Ghostscript automatisch.
 
 ---
 
-## 🔍 Was wurde implementiert?
+## 🔧 Wie funktioniert das?
 
-### 1. Automatisches Setup-Script
+### Build-Process (automatisch)
 
-**`scripts/setup-ghostscript.js`** läuft bei jedem `npm install`:
+```
+┌─────────────────────────────────────────────────────────┐
+│  cargo build / npm run tauri:build                      │
+└───────────────────────┬─────────────────────────────────┘
+                        │
+                        ▼
+┌─────────────────────────────────────────────────────────┐
+│  build.rs (Rust Build Script)                           │
+├─────────────────────────────────────────────────────────┤
+│  1. Prüft: Existiert binaries/gs-[platform]?            │
+│                                                          │
+│  ✓ JA  → Build weiter, Binary wird eingebettet          │
+│                                                          │
+│  ✗ NEIN → Sucht Ghostscript auf System:                 │
+│           - which gs (macOS/Linux)                       │
+│           - Common paths (C:\Program Files\gs\...)      │
+│                                                          │
+│  ✓ Gefunden → Kopiert nach binaries/                    │
+│  ✗ Nicht gefunden → Zeigt Installations-Anweisungen     │
+└─────────────────────────────────────────────────────────┘
+                        │
+                        ▼
+┌─────────────────────────────────────────────────────────┐
+│  Tauri Bundle Process                                    │
+├─────────────────────────────────────────────────────────┤
+│  - Packt Binary ins App-Bundle                          │
+│  - macOS: CutPilot.app/Contents/Resources/binaries/     │
+│  - Windows: CutPilot/resources/binaries/                │
+│  - Linux: /usr/lib/cutpilot/binaries/                   │
+└─────────────────────────────────────────────────────────┘
+                        │
+                        ▼
+┌─────────────────────────────────────────────────────────┐
+│  Fertige App (Standalone!)                              │
+│  ✓ Ghostscript embedded                                 │
+│  ✓ ICC-Profile embedded (optional)                      │
+│  ✓ Keine externe Abhängigkeiten                         │
+└─────────────────────────────────────────────────────────┘
+```
 
-- Erkennt deine Plattform (Windows/macOS/Linux)
-- Findet Ghostscript auf deinem System
-- Kopiert die Binary automatisch
-- Macht sie ausführbar
-
-### 2. Build-Integration
-
-**`src-tauri/build.rs`** prüft beim Cargo-Build:
-
-- ✅ Ist Ghostscript-Binary vorhanden?
-- ⚠️ Falls nicht: Zeigt klare Anweisungen
-
-### 3. Rust Backend
-
-**`src-tauri/src/main.rs`** - 4 Tauri Commands:
+### Zur Laufzeit
 
 ```rust
-convert_to_cmyk         // RGB → CMYK mit ICC-Profil
-list_icc_profiles       // Verfügbare Profile auflisten
-check_spot_colors       // Spot Colors erkennen (z.B. CutContour)
-get_icc_profile_info    // ICC-Profil Metadaten lesen
+// src-tauri/src/main.rs
+let gs_binary = app_handle
+    .path_resolver()
+    .resolve_resource("binaries/gs")  // ← Aus App-Bundle
+    .expect("Ghostscript binary not found");
+
+// Ghostscript ausführen
+Command::new(gs_binary)
+    .args(["-dBATCH", "-dNOPAUSE", ...])
+    .output()?;
 ```
 
-### 4. Frontend Integration
-
-**TypeScript Funktionen:**
-
-```ts
-// src/utils/ghostscript/ghostscriptApi.ts
-convertToCMYK()         // CMYK konvertieren
-listICCProfiles()       // Profile auflisten
-checkSpotColors()       // Spot Colors prüfen
-getICCProfileInfo()     // Profil-Info abrufen
-```
-
-**React Hook:**
-
-```tsx
-// src/hooks/useGhostscript.ts
-const { convert, availableProfiles, isLoading } = useGhostscript();
-```
+Die Binary ist **fest im App-Bundle** integriert - genau wie bei Illustrator!
 
 ---
 
-## 💻 Verwendung im Code
+## 📦 Git LFS für große Binaries
 
-### React Component (einfachste Variante)
+Ghostscript-Binaries sind ~30 MB. Wir nutzen **Git LFS** (Large File Storage) für effizientes Handling:
 
-```tsx
-import { useGhostscript } from './hooks/useGhostscript';
-import { RenderIntent } from './utils/ghostscript/ghostscriptApi';
-
-function PDFConverter() {
-  const {
-    availableProfiles,  // Verfügbare ICC-Profile
-    convert,            // Konvertierungs-Funktion
-    isLoading,          // Lädt gerade?
-    error               // Fehler?
-  } = useGhostscript();
-
-  const handleConvert = async () => {
-    const result = await convert({
-      inputPath: '/path/to/input.pdf',
-      outputPath: '/path/to/output.pdf',
-      iccProfileName: 'ISOcoated_v2_eci.icc',
-      preserveSpotColors: true,  // CutContour bleibt erhalten!
-      renderIntent: RenderIntent.RelativeColorimetric
-    });
-
-    if (result.success) {
-      console.log('✅ CMYK Conversion erfolgreich!');
-    } else {
-      console.error('❌ Fehler:', result.error);
-    }
-  };
-
-  return (
-    <div>
-      <h2>CMYK Konvertierung</h2>
-
-      <select>
-        {availableProfiles.map(profile => (
-          <option key={profile} value={profile}>
-            {profile}
-          </option>
-        ))}
-      </select>
-
-      <button onClick={handleConvert} disabled={isLoading}>
-        {isLoading ? 'Konvertiere...' : 'Zu CMYK konvertieren'}
-      </button>
-
-      {error && <div className="error">{error}</div>}
-    </div>
-  );
-}
-```
-
-### Direkte API-Nutzung
-
-```ts
-import {
-  convertToCMYK,
-  listICCProfiles,
-  checkSpotColors,
-  RenderIntent
-} from './utils/ghostscript/ghostscriptApi';
-
-// 1. Profile auflisten
-const profiles = await listICCProfiles();
-console.log('Verfügbare Profile:', profiles);
-// → ['ISOcoated_v2_eci.icc', 'sRGB.icc', ...]
-
-// 2. Spot Colors prüfen
-const spotColors = await checkSpotColors('/path/to/input.pdf');
-console.log('Spot Colors:', spotColors);
-// → ['CutContour', 'PantoneCoolGray11C']
-
-// 3. CMYK konvertieren
-const result = await convertToCMYK({
-  inputPath: '/path/to/input.pdf',
-  outputPath: '/path/to/output-cmyk.pdf',
-  iccProfileName: 'ISOcoated_v2_eci.icc',
-  preserveSpotColors: true,
-  renderIntent: RenderIntent.RelativeColorimetric
-});
-
-if (result.success) {
-  console.log('✅ Erfolgreich konvertiert!');
-} else {
-  console.error('❌ Fehler:', result.error);
-}
-```
-
----
-
-## 🎯 Features
-
-### CMYK-Konvertierung
-
-- ✅ **Echte RGB → CMYK Konvertierung** (nicht nur Metadaten!)
-- ✅ **ICC-Profil-Unterstützung** (ISOcoated_v2_eci, PSO_Coated_v3, etc.)
-- ✅ **4 Render Intents**:
-  - `Perceptual` (0) - Für Fotos
-  - `RelativeColorimetric` (1) - **Standard für Druck**
-  - `Saturation` (2) - Für Grafiken
-  - `AbsoluteColorimetric` (3) - Für Proofing
-
-### Spot Color Preservation
-
-- ✅ **CutContour bleibt erhalten** als Separation Color
-- ✅ **Automatische Erkennung** von Spot Colors
-- ✅ **Keine Konvertierung** wenn `preserveSpotColors: true`
-
-### Qualität
-
-- ✅ **Prepress-Qualität** (`/prepress` Settings)
-- ✅ **Professionelle Ghostscript-Parameter**
-- ✅ **PDF/X-3 kompatibel**
-
----
-
-## 🔧 Technische Details
-
-### Ghostscript-Parameter (in Rust Backend)
+### Setup Git LFS (einmalig)
 
 ```bash
-gs \
-  -dSAFER                                    # Sicherheitsmodus
-  -dBATCH                                    # Batch-Modus
-  -dNOPAUSE                                  # Keine Pausen
-  -sDEVICE=pdfwrite                          # PDF Output
-  -dPDFSETTINGS=/prepress                    # Höchste Qualität
-  -sProcessColorModel=DeviceCMYK             # CMYK Output
-  -sColorConversionStrategy=CMYK             # Zu CMYK konvertieren
-  -sColorConversionStrategyForImages=CMYK    # Auch Bilder
-  -dOverrideICC=true                         # ICC-Profil erzwingen
-  -dPreserveSeparation=true                  # Spot Colors erhalten!
-  -dPreserveDeviceN=true                     # DeviceN erhalten
-  -sOutputICCProfile=/path/to/profile.icc    # ICC-Profil
-  -dRenderIntent=1                           # RelativeColorimetric
-  -sOutputFile=/path/to/output.pdf           # Output
-  /path/to/input.pdf                         # Input
+# Git LFS installieren
+brew install git-lfs        # macOS
+sudo apt install git-lfs    # Ubuntu
+
+# Im Repository aktivieren
+git lfs install
+
+# .gitattributes ist bereits konfiguriert:
+# src-tauri/binaries/gs-* filter=lfs
 ```
 
-### Verzeichnisstruktur
+### Verifizieren
 
-```
-cutpilot/
-├── src-tauri/
-│   ├── binaries/                  ← Ghostscript Binaries
-│   │   ├── gs-x86_64-pc-windows-msvc.exe    (Windows)
-│   │   ├── gs-x86_64-apple-darwin           (macOS Intel)
-│   │   ├── gs-aarch64-apple-darwin          (macOS ARM)
-│   │   └── gs-x86_64-unknown-linux-gnu      (Linux)
-│   ├── resources/
-│   │   └── icc-profiles/          ← ICC-Profile (optional)
-│   │       ├── ISOcoated_v2_eci.icc
-│   │       ├── sRGB.icc
-│   │       └── ...
-│   ├── src/
-│   │   └── main.rs                ← Rust Backend
-│   ├── Cargo.toml
-│   └── tauri.conf.json
-├── src/
-│   ├── hooks/
-│   │   └── useGhostscript.ts      ← React Hook
-│   └── utils/
-│       └── ghostscript/
-│           └── ghostscriptApi.ts   ← TypeScript API
-└── scripts/
-    └── setup-ghostscript.js        ← Auto-Setup
+```bash
+# Prüfen ob Binary mit LFS getrackt wird
+git lfs ls-files
+
+# Sollte zeigen:
+# src-tauri/binaries/gs-x86_64-apple-darwin
+# src-tauri/binaries/gs-x86_64-pc-windows-msvc.exe
+# ...
 ```
 
 ---
 
-## 📋 ICC-Profile (Optional)
+## 🎯 Multi-Platform Builds
 
-Du kannst eigene ICC-Profile hinzufügen:
+### Für alle Plattformen builden
 
-### Wo bekomme ich Profile?
-
-1. **European Color Initiative (ECI)** - https://www.eci.org/downloads
-   - ISOcoated_v2_eci.icc (Fogra39)
-   - PSO_Coated_v3.icc (Fogra51)
-
-2. **Adobe** - https://www.adobe.com/support/downloads/iccprofiles/
-   - sRGB.icc
-   - AdobeRGB1998.icc
-
-3. **Dein System**
-   - macOS: `/System/Library/ColorSync/Profiles/`
-   - Windows: `C:\Windows\System32\spool\drivers\color\`
-   - Linux: `/usr/share/color/icc/`
-
-### Installation
+Du kannst Binaries für mehrere Plattformen committen:
 
 ```bash
-# ICC-Profile nach resources/icc-profiles/ kopieren
-cp /path/to/ISOcoated_v2_eci.icc src-tauri/resources/icc-profiles/
+# macOS (Intel)
+src-tauri/binaries/gs-x86_64-apple-darwin
 
-# Beim Build werden sie automatisch eingebettet
-npm run tauri:build
+# macOS (Apple Silicon)
+src-tauri/binaries/gs-aarch64-apple-darwin
+
+# Windows
+src-tauri/binaries/gs-x86_64-pc-windows-msvc.exe
+
+# Linux
+src-tauri/binaries/gs-x86_64-unknown-linux-gnu
+```
+
+**Beim Build wird automatisch die richtige Binary verwendet!**
+
+### Cross-Platform Build
+
+```bash
+# Windows Binary auf macOS hinzufügen
+# 1. Lade Ghostscript für Windows herunter
+# 2. Extrahiere gswin64c.exe
+# 3. Kopiere nach src-tauri/binaries/gs-x86_64-pc-windows-msvc.exe
+# 4. Commit
+
+git add src-tauri/binaries/gs-x86_64-pc-windows-msvc.exe
+git commit -m "Add Windows Ghostscript binary"
 ```
 
 ---
 
 ## 🚨 Troubleshooting
 
-### ❌ "Ghostscript binary not found"
+### ❌ Build Error: "Ghostscript binary required for release build"
 
-**macOS/Linux:**
+**Problem:** Du versuchst einen Release-Build, aber Binary fehlt.
+
+**Lösung:**
 ```bash
-# Ghostscript installieren
-brew install ghostscript       # macOS
-sudo apt install ghostscript   # Ubuntu
+# 1. Ghostscript installieren (siehe oben)
+# 2. Debug-Build zuerst (kopiert Binary)
+cargo build
 
-# Setup neu ausführen
-npm run setup
+# 3. Prüfen ob Binary vorhanden
+ls src-tauri/binaries/
+
+# 4. Jetzt Release-Build
+cargo build --release
 ```
 
-**Windows:**
-1. Lade Ghostscript herunter: https://ghostscript.com/releases/gsdnld.html
-2. Installiere es
-3. Kopiere `gswin64c.exe` nach `src-tauri/binaries/gs-x86_64-pc-windows-msvc.exe`
+### ❌ "Ghostscript not found on system"
 
-### ❌ "Permission denied" (macOS/Linux)
+**Problem:** build.rs kann Ghostscript nicht finden.
 
+**Lösung:**
 ```bash
-# Binary ausführbar machen
-chmod +x src-tauri/binaries/gs-*
+# Prüfe ob installiert
+which gs              # macOS/Linux
+where gswin64c        # Windows
+
+# Falls nicht gefunden, nochmal installieren
+brew reinstall ghostscript  # macOS
 ```
 
-### ❌ Setup-Script läuft nicht
+### ❌ Git LFS Fehler beim Pushen
 
+**Problem:** Binary ist zu groß für normales Git.
+
+**Lösung:**
 ```bash
-# Manuell ausführen
-npm run setup
+# Git LFS installieren
+git lfs install
+
+# Binary zu LFS migrieren
+git lfs migrate import --include="src-tauri/binaries/gs-*"
+
+# Nochmal pushen
+git push
 ```
 
-### ✅ Binary prüfen
+### ✅ Binary manuell hinzufügen
+
+Falls automatisches Kopieren nicht funktioniert:
 
 ```bash
-# Prüfe ob Binary existiert
-ls -la src-tauri/binaries/
+# macOS/Linux
+cp $(which gs) src-tauri/binaries/gs-x86_64-apple-darwin
+chmod +x src-tauri/binaries/gs-x86_64-apple-darwin
 
-# Sollte zeigen:
-# gs-x86_64-apple-darwin (macOS)
-# gs-x86_64-pc-windows-msvc.exe (Windows)
-# gs-x86_64-unknown-linux-gnu (Linux)
+# Windows (PowerShell)
+Copy-Item "C:\Program Files\gs\gs10.03.1\bin\gswin64c.exe" `
+          "src-tauri\binaries\gs-x86_64-pc-windows-msvc.exe"
 ```
 
 ---
 
-## 📚 Weitere Infos
+## 📊 Binary Größen
 
-- **Ghostscript**: https://www.ghostscript.com/
-- **ICC-Profile**: https://www.color.org/
-- **Tauri External Binaries**: https://tauri.app/v1/guides/building/sidecar
+| Platform | Binary | Größe | Mit LFS |
+|----------|--------|-------|---------|
+| macOS Intel | gs-x86_64-apple-darwin | ~23 MB | ~100 KB pointer |
+| macOS ARM | gs-aarch64-apple-darwin | ~21 MB | ~100 KB pointer |
+| Windows | gs-x86_64-pc-windows-msvc.exe | ~35 MB | ~100 KB pointer |
+| Linux | gs-x86_64-unknown-linux-gnu | ~23 MB | ~100 KB pointer |
+
+Mit Git LFS werden nur kleine Pointer-Dateien in Git gespeichert, die großen Binaries liegen auf LFS-Server.
 
 ---
 
-## ✨ Zusammenfassung
+## 🎨 ICC-Profile (Optional)
 
-**Das Tool ist jetzt komplett!** Es:
+Funktioniert genauso wie Ghostscript:
 
-1. ✅ Lädt Ghostscript **automatisch** beim `npm install`
-2. ✅ Konvertiert PDFs **professionell** zu CMYK
-3. ✅ Erhält **Spot Colors** (CutContour)
-4. ✅ Unterstützt **ICC-Profile**
-5. ✅ Funktioniert auf **Windows/macOS/Linux**
+```bash
+# ICC-Profile hinzufügen
+cp /path/to/ISOcoated_v2_eci.icc src-tauri/resources/icc-profiles/
 
-**Du musst nur:**
-- `npm install` ausführen (installiert Ghostscript automatisch)
-- Deine ICC-Profile hinzufügen (optional)
-- Fertig!
+# Committen (wird auch mit LFS getrackt)
+git add src-tauri/resources/icc-profiles/
+git commit -m "Add ISOcoated_v2_eci ICC profile"
 
-Die TypeScript-Funktionen in `ghostscriptApi.ts` sind **keine externe API**, sondern nur **Wrapper-Funktionen**, die das Rust-Backend aufrufen. Das ist Standard in Tauri-Apps.
+# Werden automatisch ins App-Bundle gepackt!
+```
+
+---
+
+## ✨ End-User Erlebnis
+
+**Nach diesem Setup:**
+
+1. User lädt `CutPilot.app` (oder `.exe` / `.deb`) herunter
+2. User öffnet die App
+3. **Alles funktioniert sofort!**
+   - ✓ Ghostscript ist drin
+   - ✓ ICC-Profile sind drin
+   - ✓ Keine Installation nötig
+   - ✓ Keine Konfiguration nötig
+
+**Genau wie Illustrator, Photoshop, InDesign etc.!**
+
+---
+
+## 🔐 Lizenz-Hinweise
+
+- **Ghostscript**: AGPL v3 (Open Source)
+  - Für Open-Source-Projekte: ✓ Kostenlos
+  - Für kommerzielle Closed-Source-Projekte: Kommerzielle Lizenz erforderlich
+  - Mehr Info: https://www.ghostscript.com/licensing/
+
+- **Embedding erlaubt**: Ja, du darfst Ghostscript in deine App einbetten, solange du die AGPL-Lizenz einhältst (oder eine kommerzielle Lizenz kaufst).
+
+---
+
+## 📚 Zusammenfassung
+
+| Wer | Was | Wie |
+|-----|-----|-----|
+| **Entwickler (einmalig)** | Ghostscript einrichten | `brew install ghostscript` → `npm run tauri:dev` → `git commit` |
+| **Weitere Entwickler** | Repository klonen | `git clone` → `npm install` → **Fertig!** |
+| **End-User** | App installieren | App herunterladen → Öffnen → **Fertig!** |
+
+**Keine manuellen Schritte für End-User!** 🎉
