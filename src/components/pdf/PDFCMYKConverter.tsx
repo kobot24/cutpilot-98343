@@ -16,7 +16,7 @@ import { Label } from '../ui/label';
 import { Switch } from '../ui/switch';
 import { AlertCircle, CheckCircle2, FileText, Loader2 } from 'lucide-react';
 import { Alert, AlertDescription } from '../ui/alert';
-import { openFileDialog, saveFileDialog } from '../../utils/tauriHelpers';
+import { openFileDialog, saveFileDialog } from '../../utils/tauriFileDialog';
 
 export function PDFCMYKConverter() {
   const { availableProfiles, convert, isLoading, error, conversionResult, clearError } = useGhostscript();
