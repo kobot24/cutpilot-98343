@@ -65,16 +65,9 @@ fn main() {
 }
 
 fn get_binary_name(target: &str) -> String {
+    // Use simple name that matches tauri.conf.json externalBin entry
     if target.contains("windows") {
-        "gs-x86_64-pc-windows-msvc.exe".to_string()
-    } else if target.contains("darwin") {
-        if target.contains("aarch64") {
-            "gs-aarch64-apple-darwin".to_string()
-        } else {
-            "gs-x86_64-apple-darwin".to_string()
-        }
-    } else if target.contains("linux") {
-        "gs-x86_64-unknown-linux-gnu".to_string()
+        "gs.exe".to_string()
     } else {
         "gs".to_string()
     }
