@@ -1,0 +1,84 @@
+name: 'Build CutPilot Installers'
+
+on:
+  push:
+    branches:
+      - 'claude/embed-ghostscript-binary-KXTSr'
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build-tauri:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: 'macos-latest'
+            target: 'aarch64-apple-darwin'
+            name: 'macOS-ARM'
+          - platform: 'macos-latest'
+            target: 'x86_64-apple-darwin'
+            name: 'macOS-Intel'
+          - platform: 'ubuntu-22.04'
+            target: 'x86_64-unknown-linux-gnu'
+            name: 'Linux'
+          - platform: 'windows-latest'
+            target: 'x86_64-pc-windows-msvc'
+            name: 'Windows'
+
+    runs-on: ${{ matrix.platform }}
+    name: Build for ${{ matrix.name }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Install dependencies (ubuntu only)
+        if: matrix.platform == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev libappindicator3-dev librsvg2-dev patchelf ghostscript
+
+      - name: Install Ghostscript (macOS)
+        if: matrix.platform == 'macos-latest'
+        run: brew install ghostscript
+
+      - name: Install Ghostscript (Windows)
+        if: matrix.platform == 'windows-latest'
+        run: |
+          choco install ghostscript -y
+          echo "C:\Program Files\gs\gs10.03.1\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Build Tauri app
+        run: npm run tauri build -- --target ${{ matrix.target }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: cutpilot-${{ matrix.target }}
+          path: |
+            src-tauri/target/${{ matrix.target }}/release/bundle/**/*
+          retention-days: 90
+          if-no-files-found: error
+
+      - name: List bundle contents (debug)
+        if: always()
+        run: |
+          echo "=== Bundle directory contents ==="
+          ls -R src-tauri/target/${{ matrix.target }}/release/bundle/ || echo "Bundle directory not found"
