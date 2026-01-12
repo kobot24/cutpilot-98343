@@ -1,11 +1,8 @@
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use std::path::PathBuf;
 use std::process::Command as StdCommand;
-use tauri::Manager;
 use serde::{Deserialize, Serialize};
-use anyhow::{Result, Context};
 
 #[derive(Debug, Serialize, Deserialize)]
 struct ConversionOptions {
@@ -146,20 +143,33 @@ async fn check_spot_colors(pdf_path: String) -> Result<Vec<String>, String> {
 
     let mut spot_colors = Vec::new();
 
+    // Get all pages
+    let pages = doc.get_pages();
+
     // Iterate through all pages
-    for page_id in doc.page_iter() {
-        if let Ok(page) = doc.get_page(page_id) {
-            // Check Resources dictionary for ColorSpace entries
-            if let Ok(resources) = page.resources() {
-                if let Ok(colorspaces) = resources.get(b"ColorSpace") {
-                    if let Ok(cs_dict) = colorspaces.as_dict() {
-                        for (name, _value) in cs_dict.iter() {
-                            if let Ok(name_str) = String::from_utf8(name.to_vec()) {
-                                // Spot colors are typically named (not DeviceCMYK, DeviceRGB, etc.)
-                                if !name_str.starts_with("Device")
-                                    && !name_str.starts_with("Indexed")
-                                    && !name_str.starts_with("Pattern") {
-                                    spot_colors.push(name_str);
+    for (_page_num, page_id) in pages.iter() {
+        // Try to get the page object
+        if let Ok(page_obj) = doc.get_object(*page_id) {
+            if let Ok(page_dict) = page_obj.as_dict() {
+                // Try to get Resources dictionary
+                if let Ok(resources_ref) = page_dict.get(b"Resources") {
+                    if let Ok(resources) = doc.dereference(resources_ref) {
+                        if let Ok(resources_dict) = resources.as_dict() {
+                            // Try to get ColorSpace entry
+                            if let Ok(colorspace_ref) = resources_dict.get(b"ColorSpace") {
+                                if let Ok(colorspace) = doc.dereference(colorspace_ref) {
+                                    if let Ok(cs_dict) = colorspace.as_dict() {
+                                        for (name, _value) in cs_dict.iter() {
+                                            if let Ok(name_str) = String::from_utf8(name.to_vec()) {
+                                                // Spot colors are typically named (not DeviceCMYK, DeviceRGB, etc.)
+                                                if !name_str.starts_with("Device")
+                                                    && !name_str.starts_with("Indexed")
+                                                    && !name_str.starts_with("Pattern") {
+                                                    spot_colors.push(name_str);
+                                                }
+                                            }
+                                        }
+                                    }
                                 }
                             }
                         }
