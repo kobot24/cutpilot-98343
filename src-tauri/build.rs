@@ -65,11 +65,12 @@ fn main() {
 }
 
 fn get_binary_name(target: &str) -> String {
-    // Use simple name that matches tauri.conf.json externalBin entry
+    // Tauri automatically appends the target triple to the binary name
+    // So "binaries/gs" in tauri.conf.json becomes "binaries/gs-x86_64-unknown-linux-gnu" etc.
     if target.contains("windows") {
-        "gs.exe".to_string()
+        format!("gs-{}.exe", target)
     } else {
-        "gs".to_string()
+        format!("gs-{}", target)
     }
 }
 
