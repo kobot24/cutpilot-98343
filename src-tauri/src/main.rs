@@ -153,12 +153,12 @@ async fn check_spot_colors(pdf_path: String) -> Result<Vec<String>, String> {
             if let Ok(page_dict) = page_obj.as_dict() {
                 // Try to get Resources dictionary
                 if let Ok(resources_ref) = page_dict.get(b"Resources") {
-                    if let Ok(resources) = doc.dereference(resources_ref) {
-                        if let Ok(resources_dict) = resources.as_dict() {
+                    if let Ok(resources_obj) = doc.dereference(resources_ref) {
+                        if let Ok(resources_dict) = resources_obj.1.as_dict() {
                             // Try to get ColorSpace entry
                             if let Ok(colorspace_ref) = resources_dict.get(b"ColorSpace") {
-                                if let Ok(colorspace) = doc.dereference(colorspace_ref) {
-                                    if let Ok(cs_dict) = colorspace.as_dict() {
+                                if let Ok(colorspace_obj) = doc.dereference(colorspace_ref) {
+                                    if let Ok(cs_dict) = colorspace_obj.1.as_dict() {
                                         for (name, _value) in cs_dict.iter() {
                                             if let Ok(name_str) = String::from_utf8(name.to_vec()) {
                                                 // Spot colors are typically named (not DeviceCMYK, DeviceRGB, etc.)
