@@ -9,7 +9,6 @@ fn main() {
 
     let target = env::var("TARGET").unwrap();
     let manifest_dir = env::var("CARGO_MANIFEST_DIR").unwrap();
-    let profile = env::var("PROFILE").unwrap(); // "debug" or "release"
 
     println!("cargo:rerun-if-changed=build.rs");
     println!("cargo:warning=Building for target: {}", target);
@@ -50,17 +49,46 @@ fn main() {
         }
     }
 
-    // Warn if binary is still missing (but don't panic - let it fail at runtime if needed)
+    // Ghostscript not found - create a stub binary so Tauri build doesn't fail
     println!("cargo:warning=");
     println!("cargo:warning=╔═══════════════════════════════════════════════════════════╗");
-    println!("cargo:warning=║  ⚠ WARNING: GHOSTSCRIPT BINARY NOT FOUND                ║");
+    println!("cargo:warning=║  ⚠ WARNING: GHOSTSCRIPT NOT FOUND - CREATING STUB       ║");
     println!("cargo:warning=╚═══════════════════════════════════════════════════════════╝");
     println!("cargo:warning=");
-    println!("cargo:warning=Build will continue, but CMYK conversion won't work!");
+    println!("cargo:warning=Creating stub binary so build can continue...");
+    println!("cargo:warning=CMYK conversion will NOT work at runtime!");
     println!("cargo:warning=");
-    println!("cargo:warning=To fix:");
+
+    // Create a stub script that outputs an error message
+    let stub_content = if target.contains("windows") {
+        "@echo off\necho ERROR: Ghostscript not installed during build\nexit /b 1\n"
+    } else {
+        "#!/bin/sh\necho 'ERROR: Ghostscript not installed during build'\nexit 1\n"
+    };
+
+    if let Err(e) = fs::write(&binary_path, stub_content) {
+        println!("cargo:warning=Failed to create stub binary: {}", e);
+        println!("cargo:warning=");
+        println!("cargo:warning=To fix:");
+        print_install_instructions(&target);
+        return;
+    }
+
+    // Make stub executable on Unix
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        if let Ok(metadata) = fs::metadata(&binary_path) {
+            let mut perms = metadata.permissions();
+            perms.set_mode(0o755);
+            let _ = fs::set_permissions(&binary_path, perms);
+        }
+    }
+
+    println!("cargo:warning=✓ Stub binary created: {}", binary_name);
+    println!("cargo:warning=");
+    println!("cargo:warning=To add real Ghostscript support:");
     print_install_instructions(&target);
-    println!("cargo:warning=Then rebuild: cargo build");
     println!("cargo:warning=");
 }
 
