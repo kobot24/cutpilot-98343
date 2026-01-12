@@ -4,9 +4,6 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 
 fn main() {
-    // Run Tauri build
-    tauri_build::build();
-
     let target = env::var("TARGET").unwrap();
     let manifest_dir = env::var("CARGO_MANIFEST_DIR").unwrap();
 
@@ -24,72 +21,71 @@ fn main() {
     let binary_path = binaries_dir.join(&binary_name);
 
     // Check if binary already exists (committed to repo or from previous build)
-    if binary_path.exists() {
-        println!(
-            "cargo:warning=✓ Ghostscript binary found: {}",
-            binary_name
-        );
-        return;
-    }
-
-    println!("cargo:warning=");
-    println!("cargo:warning=╔═══════════════════════════════════════════════════════════╗");
-    println!("cargo:warning=║  GHOSTSCRIPT BINARY NOT FOUND - AUTO-SETUP STARTING...   ║");
-    println!("cargo:warning=╚═══════════════════════════════════════════════════════════╝");
-    println!("cargo:warning=");
-
-    // Try to find and copy from system
-    if let Some(system_gs) = find_system_ghostscript() {
-        if copy_system_ghostscript(&system_gs, &binary_path) {
-            println!("cargo:warning=✓ Successfully copied Ghostscript from system!");
-            println!("cargo:warning=  From: {}", system_gs.display());
-            println!("cargo:warning=  To:   {}", binary_path.display());
-            println!("cargo:warning=");
-            return;
-        }
-    }
-
-    // Ghostscript not found - create a stub binary so Tauri build doesn't fail
-    println!("cargo:warning=");
-    println!("cargo:warning=╔═══════════════════════════════════════════════════════════╗");
-    println!("cargo:warning=║  ⚠ WARNING: GHOSTSCRIPT NOT FOUND - CREATING STUB       ║");
-    println!("cargo:warning=╚═══════════════════════════════════════════════════════════╝");
-    println!("cargo:warning=");
-    println!("cargo:warning=Creating stub binary so build can continue...");
-    println!("cargo:warning=CMYK conversion will NOT work at runtime!");
-    println!("cargo:warning=");
-
-    // Create a stub script that outputs an error message
-    let stub_content = if target.contains("windows") {
-        "@echo off\necho ERROR: Ghostscript not installed during build\nexit /b 1\n"
-    } else {
-        "#!/bin/sh\necho 'ERROR: Ghostscript not installed during build'\nexit 1\n"
-    };
-
-    if let Err(e) = fs::write(&binary_path, stub_content) {
-        println!("cargo:warning=Failed to create stub binary: {}", e);
+    if !binary_path.exists() {
         println!("cargo:warning=");
-        println!("cargo:warning=To fix:");
-        print_install_instructions(&target);
-        return;
-    }
+        println!("cargo:warning=╔═══════════════════════════════════════════════════════════╗");
+        println!("cargo:warning=║  GHOSTSCRIPT BINARY NOT FOUND - AUTO-SETUP STARTING...   ║");
+        println!("cargo:warning=╚═══════════════════════════════════════════════════════════╝");
+        println!("cargo:warning=");
 
-    // Make stub executable on Unix
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::PermissionsExt;
-        if let Ok(metadata) = fs::metadata(&binary_path) {
-            let mut perms = metadata.permissions();
-            perms.set_mode(0o755);
-            let _ = fs::set_permissions(&binary_path, perms);
+        // Try to find and copy from system
+        if let Some(system_gs) = find_system_ghostscript() {
+            if copy_system_ghostscript(&system_gs, &binary_path) {
+                println!("cargo:warning=✓ Successfully copied Ghostscript from system!");
+                println!("cargo:warning=  From: {}", system_gs.display());
+                println!("cargo:warning=  To:   {}", binary_path.display());
+                println!("cargo:warning=");
+            }
         }
+
+        // If still not found, create a stub binary so Tauri build doesn't fail
+        if !binary_path.exists() {
+            println!("cargo:warning=");
+            println!("cargo:warning=╔═══════════════════════════════════════════════════════════╗");
+            println!("cargo:warning=║  ⚠ WARNING: GHOSTSCRIPT NOT FOUND - CREATING STUB       ║");
+            println!("cargo:warning=╚═══════════════════════════════════════════════════════════╝");
+            println!("cargo:warning=");
+            println!("cargo:warning=Creating stub binary so build can continue...");
+            println!("cargo:warning=CMYK conversion will NOT work at runtime!");
+            println!("cargo:warning=");
+
+            // Create a stub script that outputs an error message
+            let stub_content = if target.contains("windows") {
+                "@echo off\necho ERROR: Ghostscript not installed during build\nexit /b 1\n"
+            } else {
+                "#!/bin/sh\necho 'ERROR: Ghostscript not installed during build'\nexit 1\n"
+            };
+
+            if let Err(e) = fs::write(&binary_path, stub_content) {
+                println!("cargo:warning=Failed to create stub binary: {}", e);
+                println!("cargo:warning=");
+                println!("cargo:warning=To fix:");
+                print_install_instructions(&target);
+            } else {
+                // Make stub executable on Unix
+                #[cfg(unix)]
+                {
+                    use std::os::unix::fs::PermissionsExt;
+                    if let Ok(metadata) = fs::metadata(&binary_path) {
+                        let mut perms = metadata.permissions();
+                        perms.set_mode(0o755);
+                        let _ = fs::set_permissions(&binary_path, perms);
+                    }
+                }
+
+                println!("cargo:warning=✓ Stub binary created: {}", binary_name);
+                println!("cargo:warning=");
+                println!("cargo:warning=To add real Ghostscript support:");
+                print_install_instructions(&target);
+                println!("cargo:warning=");
+            }
+        }
+    } else {
+        println!("cargo:warning=✓ Ghostscript binary found: {}", binary_name);
     }
 
-    println!("cargo:warning=✓ Stub binary created: {}", binary_name);
-    println!("cargo:warning=");
-    println!("cargo:warning=To add real Ghostscript support:");
-    print_install_instructions(&target);
-    println!("cargo:warning=");
+    // Run Tauri build AFTER ensuring the binary exists
+    tauri_build::build();
 }
 
 fn get_binary_name(target: &str) -> String {
