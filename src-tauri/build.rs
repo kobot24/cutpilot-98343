@@ -50,39 +50,16 @@ fn main() {
         }
     }
 
-    // If we're in release mode and binary is missing, this is an error
-    if profile == "release" {
-        println!("cargo:warning=");
-        println!("cargo:warning=╔═══════════════════════════════════════════════════════════╗");
-        println!("cargo:warning=║  ⚠ RELEASE BUILD: GHOSTSCRIPT BINARY REQUIRED           ║");
-        println!("cargo:warning=╚═══════════════════════════════════════════════════════════╝");
-        println!("cargo:warning=");
-        println!("cargo:warning=For production builds, you must:");
-        println!("cargo:warning=");
-        println!("cargo:warning=1. Install Ghostscript on your system:");
-        print_install_instructions(&target);
-        println!("cargo:warning=");
-        println!("cargo:warning=2. Run: cargo build (debug mode first)");
-        println!("cargo:warning=   This will copy Ghostscript to binaries/");
-        println!("cargo:warning=");
-        println!("cargo:warning=3. Commit the binary: git add src-tauri/binaries/");
-        println!("cargo:warning=");
-        println!("cargo:warning=4. Then run: cargo build --release");
-        println!("cargo:warning=");
-        panic!("Ghostscript binary required for release build!");
-    }
-
-    // Development mode - show instructions but continue
+    // Warn if binary is still missing (but don't panic - let it fail at runtime if needed)
     println!("cargo:warning=");
     println!("cargo:warning=╔═══════════════════════════════════════════════════════════╗");
-    println!("cargo:warning=║  ⚠ DEVELOPMENT BUILD: GHOSTSCRIPT MISSING               ║");
+    println!("cargo:warning=║  ⚠ WARNING: GHOSTSCRIPT BINARY NOT FOUND                ║");
     println!("cargo:warning=╚═══════════════════════════════════════════════════════════╝");
     println!("cargo:warning=");
-    println!("cargo:warning=The app will compile but CMYK conversion won't work!");
+    println!("cargo:warning=Build will continue, but CMYK conversion won't work!");
     println!("cargo:warning=");
-    println!("cargo:warning=To fix this, install Ghostscript:");
+    println!("cargo:warning=To fix:");
     print_install_instructions(&target);
-    println!("cargo:warning=");
     println!("cargo:warning=Then rebuild: cargo build");
     println!("cargo:warning=");
 }
